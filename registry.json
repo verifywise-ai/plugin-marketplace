@@ -1,0 +1,158 @@
+{
+  "version": "1.0.0",
+  "generated": "2024-12-07T00:00:00Z",
+  "plugins": [
+    {
+      "id": "gdpr-compliance-checker",
+      "name": "GDPR compliance checker",
+      "description": "Automated GDPR compliance checking for your AI systems. Validates data processing activities, consent management, and privacy requirements against EU regulations.",
+      "version": "1.0.0",
+      "author": {
+        "name": "VerifyWise",
+        "url": "https://verifywise.ai"
+      },
+      "type": "framework",
+      "tags": ["gdpr", "privacy", "compliance", "eu"],
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" fill=\"none\"><rect width=\"32\" height=\"32\" rx=\"6\" fill=\"#E0F2FE\"/><path d=\"M16 7C11.029 7 7 11.029 7 16s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9zm0 16c-3.86 0-7-3.14-7-7s3.14-7 7-7 7 3.14 7 7-3.14 7-7 7z\" fill=\"#0369A1\"/><path d=\"M16 11a1 1 0 00-1 1v4a1 1 0 00.293.707l2.5 2.5a1 1 0 001.414-1.414L17 15.586V12a1 1 0 00-1-1z\" fill=\"#0369A1\"/><circle cx=\"16\" cy=\"16\" r=\"2\" fill=\"#0369A1\"/></svg>",
+      "download": "https://github.com/bluewave-labs/plugin-marketplace/releases/download/v1.0.0/gdpr-compliance-checker.zip",
+      "checksum": "sha256:placeholder",
+      "compatibility": {
+        "minVersion": "1.0.0"
+      },
+      "permissions": ["database:read", "config:read"]
+    },
+    {
+      "id": "iso-27001-mapper",
+      "name": "ISO 27001 mapper",
+      "description": "Map your existing controls and policies to ISO 27001 requirements. Automatically identifies gaps and suggests remediation steps for certification readiness.",
+      "version": "1.0.0",
+      "author": {
+        "name": "VerifyWise",
+        "url": "https://verifywise.ai"
+      },
+      "type": "framework",
+      "tags": ["iso27001", "security", "mapping", "certification"],
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" fill=\"none\"><rect width=\"32\" height=\"32\" rx=\"6\" fill=\"#E0F2FE\"/><path d=\"M16 6l-8 4v6c0 5.55 3.4 10.74 8 12 4.6-1.26 8-6.45 8-12v-6l-8-4zm6 10c0 4.52-2.79 8.69-6 9.93-3.21-1.24-6-5.41-6-9.93v-4.7l6-3 6 3v4.7z\" fill=\"#0369A1\"/><path d=\"M14.5 17.5l-2-2-1.5 1.5 3.5 3.5 6-6-1.5-1.5-4.5 4.5z\" fill=\"#0369A1\"/></svg>",
+      "download": "https://github.com/bluewave-labs/plugin-marketplace/releases/download/v1.0.0/iso-27001-mapper.zip",
+      "checksum": "sha256:placeholder",
+      "compatibility": {
+        "minVersion": "1.0.0"
+      },
+      "permissions": ["database:read", "database:write", "config:read"]
+    },
+    {
+      "id": "teams-notifications",
+      "name": "Microsoft Teams notifications",
+      "description": "Send real-time notifications to Microsoft Teams channels. Get alerts for risk updates, policy changes, compliance deadlines, and audit events.",
+      "version": "1.0.0",
+      "author": {
+        "name": "VerifyWise",
+        "url": "https://verifywise.ai"
+      },
+      "type": "integration",
+      "tags": ["teams", "microsoft", "notifications", "alerts"],
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" fill=\"none\"><rect width=\"32\" height=\"32\" rx=\"6\" fill=\"#FEF3C7\"/><path d=\"M20.5 10a2.5 2.5 0 100-5 2.5 2.5 0 000 5z\" fill=\"#92400E\"/><path d=\"M20.5 11c-2.5 0-4.5 2-4.5 4.5V19h9v-3.5c0-2.5-2-4.5-4.5-4.5z\" fill=\"#92400E\"/><path d=\"M13 12a3 3 0 100-6 3 3 0 000 6z\" fill=\"#92400E\"/><path d=\"M13 13c-3 0-5.5 2.5-5.5 5.5V23h11v-4.5c0-3-2.5-5.5-5.5-5.5z\" fill=\"#92400E\"/></svg>",
+      "download": "https://github.com/bluewave-labs/plugin-marketplace/releases/download/v1.0.0/teams-notifications.zip",
+      "checksum": "sha256:placeholder",
+      "compatibility": {
+        "minVersion": "1.0.0"
+      },
+      "permissions": ["events:listen", "config:read", "http:outbound"]
+    },
+    {
+      "id": "servicenow-sync",
+      "name": "ServiceNow sync",
+      "description": "Bidirectional synchronization with ServiceNow. Create incidents from risks, sync control statuses, and maintain audit trails across both platforms.",
+      "version": "1.0.0",
+      "author": {
+        "name": "VerifyWise",
+        "url": "https://verifywise.ai"
+      },
+      "type": "integration",
+      "tags": ["servicenow", "sync", "incidents", "itsm"],
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" fill=\"none\"><rect width=\"32\" height=\"32\" rx=\"6\" fill=\"#FEF3C7\"/><path d=\"M16 8l-6 3.5v9l6 3.5 6-3.5v-9L16 8zm4 10.9l-4 2.3-4-2.3v-5.8l4-2.3 4 2.3v5.8z\" fill=\"#92400E\"/><circle cx=\"16\" cy=\"16\" r=\"3\" fill=\"#92400E\"/></svg>",
+      "download": "https://github.com/bluewave-labs/plugin-marketplace/releases/download/v1.0.0/servicenow-sync.zip",
+      "checksum": "sha256:placeholder",
+      "compatibility": {
+        "minVersion": "1.0.0"
+      },
+      "permissions": ["database:read", "database:write", "http:outbound", "config:read"]
+    },
+    {
+      "id": "risk-heatmap",
+      "name": "Risk heatmap dashboard",
+      "description": "Interactive risk heatmap visualization for your dashboard. View risks by severity, likelihood, and category with drill-down capabilities.",
+      "version": "1.0.0",
+      "author": {
+        "name": "VerifyWise",
+        "url": "https://verifywise.ai"
+      },
+      "type": "feature",
+      "tags": ["dashboard", "visualization", "heatmap", "risks"],
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" fill=\"none\"><rect width=\"32\" height=\"32\" rx=\"6\" fill=\"#DCFCE7\"/><rect x=\"7\" y=\"7\" width=\"6\" height=\"6\" rx=\"1\" fill=\"#166534\"/><rect x=\"15\" y=\"7\" width=\"6\" height=\"6\" rx=\"1\" fill=\"#22C55E\"/><rect x=\"7\" y=\"15\" width=\"6\" height=\"6\" rx=\"1\" fill=\"#FBBF24\"/><rect x=\"15\" y=\"15\" width=\"6\" height=\"6\" rx=\"1\" fill=\"#EF4444\"/><rect x=\"23\" y=\"7\" width=\"2\" height=\"18\" rx=\"1\" fill=\"#166534\"/></svg>",
+      "download": "https://github.com/bluewave-labs/plugin-marketplace/releases/download/v1.0.0/risk-heatmap.zip",
+      "checksum": "sha256:placeholder",
+      "compatibility": {
+        "minVersion": "1.0.0"
+      },
+      "permissions": ["database:read", "ui:extend"]
+    },
+    {
+      "id": "bulk-import-export",
+      "name": "Bulk import/export",
+      "description": "Import and export risks, controls, and policies in bulk via CSV and Excel formats. Includes data validation and mapping tools.",
+      "version": "1.0.0",
+      "author": {
+        "name": "VerifyWise",
+        "url": "https://verifywise.ai"
+      },
+      "type": "feature",
+      "tags": ["import", "export", "csv", "excel", "bulk"],
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" fill=\"none\"><rect width=\"32\" height=\"32\" rx=\"6\" fill=\"#DCFCE7\"/><path d=\"M10 8h8l4 4v12a2 2 0 01-2 2H10a2 2 0 01-2-2V10a2 2 0 012-2z\" fill=\"#166534\"/><path d=\"M18 8v4h4\" fill=\"none\" stroke=\"#DCFCE7\" stroke-width=\"2\"/><path d=\"M16 14v6m-2-2l2 2 2-2\" stroke=\"#DCFCE7\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>",
+      "download": "https://github.com/bluewave-labs/plugin-marketplace/releases/download/v1.0.0/bulk-import-export.zip",
+      "checksum": "sha256:placeholder",
+      "compatibility": {
+        "minVersion": "1.0.0"
+      },
+      "permissions": ["database:read", "database:write", "filesystem:read", "filesystem:write"]
+    },
+    {
+      "id": "executive-reports",
+      "name": "Executive reports",
+      "description": "Generate executive-level compliance reports with customizable templates. Includes board-ready presentations and compliance scorecards.",
+      "version": "1.0.0",
+      "author": {
+        "name": "VerifyWise",
+        "url": "https://verifywise.ai"
+      },
+      "type": "reporting",
+      "tags": ["reports", "executive", "board", "presentation"],
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" fill=\"none\"><rect width=\"32\" height=\"32\" rx=\"6\" fill=\"#F3E8FF\"/><path d=\"M8 10h16v2H8v-2zm0 4h12v2H8v-2zm0 4h8v2H8v-2z\" fill=\"#7C3AED\"/><rect x=\"20\" y=\"16\" width=\"6\" height=\"6\" rx=\"1\" fill=\"#7C3AED\"/><path d=\"M22 18l1.5 1.5L26 17\" stroke=\"#F3E8FF\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>",
+      "download": "https://github.com/bluewave-labs/plugin-marketplace/releases/download/v1.0.0/executive-reports.zip",
+      "checksum": "sha256:placeholder",
+      "compatibility": {
+        "minVersion": "1.0.0"
+      },
+      "permissions": ["database:read", "filesystem:write"]
+    },
+    {
+      "id": "audit-analytics",
+      "name": "Audit analytics",
+      "description": "Advanced analytics for audit findings and trends. Track remediation progress, identify patterns, and predict potential compliance gaps.",
+      "version": "1.0.0",
+      "author": {
+        "name": "VerifyWise",
+        "url": "https://verifywise.ai"
+      },
+      "type": "reporting",
+      "tags": ["analytics", "audit", "trends", "predictions"],
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" fill=\"none\"><rect width=\"32\" height=\"32\" rx=\"6\" fill=\"#F3E8FF\"/><path d=\"M8 22l5-5 4 4 7-7\" stroke=\"#7C3AED\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"8\" cy=\"22\" r=\"2\" fill=\"#7C3AED\"/><circle cx=\"13\" cy=\"17\" r=\"2\" fill=\"#7C3AED\"/><circle cx=\"17\" cy=\"21\" r=\"2\" fill=\"#7C3AED\"/><circle cx=\"24\" cy=\"14\" r=\"2\" fill=\"#7C3AED\"/></svg>",
+      "download": "https://github.com/bluewave-labs/plugin-marketplace/releases/download/v1.0.0/audit-analytics.zip",
+      "checksum": "sha256:placeholder",
+      "compatibility": {
+        "minVersion": "1.0.0"
+      },
+      "permissions": ["database:read", "events:listen"]
+    }
+  ]
+}
