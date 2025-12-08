@@ -18,7 +18,7 @@ Official plugin registry for [VerifyWise](https://verifywise.ai) - the AI Govern
 
 ## Creating Your Own Plugin
 
-See the [`_templates`](./_templates) directory for a comprehensive sample plugin with:
+See the [`templates`](./templates) directory for a comprehensive sample plugin with:
 
 - Full documentation and inline comments
 - All lifecycle hooks demonstrated
@@ -34,7 +34,7 @@ See the [`_templates`](./_templates) directory for a comprehensive sample plugin
 git clone https://github.com/bluewave-labs/plugin-marketplace.git
 
 # Copy the sample plugin template
-cp -r _templates/sample-plugin plugins/my-plugin
+cp -r templates/sample-plugin plugins/my-plugin
 
 # Edit the manifest and code
 code plugins/my-plugin
@@ -52,7 +52,7 @@ plugin-marketplace/
 ├── plugins/               # Published plugins
 │   ├── plugin-name/       # Plugin source files
 │   └── plugin-name.zip    # Downloadable package
-└── _templates/            # Development templates (not in registry)
+└── templates/            # Development templates (not in registry)
     ├── README.md          # Plugin development guide
     └── sample-plugin/     # Comprehensive sample plugin
 ```
