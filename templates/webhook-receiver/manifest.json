@@ -1,0 +1,48 @@
+{
+  "id": "webhook-receiver",
+  "name": "Webhook Receiver Template",
+  "description": "Template for receiving webhooks from external services. Includes signature verification, payload parsing, and event triggering.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Your Name",
+    "url": "https://your-website.com"
+  },
+  "type": "integration",
+  "tags": ["webhook", "integration", "template"],
+  "permissions": [
+    "events:emit",
+    "database:read",
+    "database:write",
+    "config:read"
+  ],
+  "config": {
+    "webhookSecret": {
+      "type": "string",
+      "required": true,
+      "secret": true,
+      "label": "Webhook secret",
+      "description": "Secret key for verifying webhook signatures (HMAC-SHA256)"
+    },
+    "allowedIPs": {
+      "type": "string",
+      "required": false,
+      "label": "Allowed IPs",
+      "description": "Comma-separated list of allowed source IPs (leave empty to allow all)"
+    },
+    "retryOnFailure": {
+      "type": "boolean",
+      "default": true,
+      "label": "Queue failed webhooks",
+      "description": "Store failed webhooks for manual retry"
+    },
+    "logPayloads": {
+      "type": "boolean",
+      "default": false,
+      "label": "Log payloads",
+      "description": "Log incoming webhook payloads (disable in production for security)"
+    }
+  },
+  "compatibility": {
+    "minVersion": "1.6.0"
+  }
+}

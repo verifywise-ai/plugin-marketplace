@@ -1,0 +1,72 @@
+{
+  "id": "notification-sender",
+  "name": "Notification Sender Template",
+  "description": "Template for sending notifications to external services (Slack, Teams, Discord, etc.) when VerifyWise events occur.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Your Name",
+    "url": "https://your-website.com"
+  },
+  "type": "integration",
+  "tags": ["notifications", "integration", "alerts", "template"],
+  "permissions": [
+    "events:listen",
+    "config:read",
+    "http:outbound"
+  ],
+  "config": {
+    "webhookUrl": {
+      "type": "string",
+      "required": true,
+      "secret": true,
+      "label": "Webhook URL",
+      "description": "Incoming webhook URL for your notification service"
+    },
+    "notifyOnRisks": {
+      "type": "boolean",
+      "default": true,
+      "label": "Risk notifications",
+      "description": "Send notifications when risks are created or updated"
+    },
+    "notifyOnTasks": {
+      "type": "boolean",
+      "default": true,
+      "label": "Task notifications",
+      "description": "Send notifications for task events"
+    },
+    "notifyOnCompliance": {
+      "type": "boolean",
+      "default": true,
+      "label": "Compliance notifications",
+      "description": "Send notifications for compliance status changes"
+    },
+    "minSeverity": {
+      "type": "select",
+      "options": ["All", "Low", "Medium", "High", "Critical"],
+      "default": "All",
+      "label": "Minimum severity",
+      "description": "Only notify for risks at or above this severity"
+    },
+    "mentionOnCritical": {
+      "type": "boolean",
+      "default": false,
+      "label": "Mention on critical",
+      "description": "Add @channel mention for critical severity items"
+    },
+    "quietHoursStart": {
+      "type": "string",
+      "required": false,
+      "label": "Quiet hours start",
+      "description": "Start of quiet hours (HH:MM, 24h format, e.g., 22:00)"
+    },
+    "quietHoursEnd": {
+      "type": "string",
+      "required": false,
+      "label": "Quiet hours end",
+      "description": "End of quiet hours (HH:MM, 24h format, e.g., 08:00)"
+    }
+  },
+  "compatibility": {
+    "minVersion": "1.6.0"
+  }
+}

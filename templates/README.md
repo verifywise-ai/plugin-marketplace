@@ -4,6 +4,14 @@ This directory contains templates and documentation for developing VerifyWise pl
 
 > **Note**: This directory is excluded from the marketplace. Plugins here are templates only.
 
+## Available Templates
+
+| Template | Description | Use Case |
+|----------|-------------|----------|
+| [sample-plugin](./sample-plugin) | Comprehensive example with all features | Learning the plugin system |
+| [webhook-receiver](./webhook-receiver) | Receive webhooks from external services | GitHub, Stripe, CI/CD integrations |
+| [notification-sender](./notification-sender) | Send notifications to Slack/Teams/Discord | Alert and notification integrations |
+
 ## Quick Start
 
 ### 1. Copy the Sample Plugin
