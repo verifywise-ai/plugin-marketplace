@@ -1,0 +1,77 @@
+{
+  "id": "sample-iframe",
+  "name": "Sample iframe plugin",
+  "description": "Demonstrates how to embed external content in an iframe within VerifyWise. Use this as a template for integrating external dashboards, tools, or web applications.",
+  "detailedDescription": "This sample plugin shows how to create an iframe-based plugin page that embeds external web content directly within the VerifyWise interface.\n\n**Use Cases:**\n- Embed Grafana or Metabase dashboards\n- Integrate third-party compliance tools\n- Display external documentation or wikis\n- Show legacy web applications\n\n**Features:**\n- Configurable URL via plugin settings\n- Secure sandbox attributes\n- Responsive height adjustment\n- Open in new tab option",
+  "version": "1.0.0",
+  "author": "VerifyWise",
+  "authorUrl": "https://verifywise.ai",
+  "type": "feature",
+  "tags": ["iframe", "embed", "external", "dashboard", "sample"],
+  "permissions": ["config:read"],
+  "config": {
+    "selectedSource": {
+      "type": "string",
+      "label": "Content source",
+      "required": true,
+      "default": "test-page",
+      "enum": ["test-page", "wikipedia", "openstreetmap", "example"],
+      "description": "Select which external content to embed in the iframe"
+    },
+    "allowScripts": {
+      "type": "boolean",
+      "label": "Allow scripts",
+      "required": false,
+      "default": true,
+      "description": "Allow JavaScript execution in the iframe (required for interactive content)"
+    },
+    "allowForms": {
+      "type": "boolean",
+      "label": "Allow forms",
+      "required": false,
+      "default": true,
+      "description": "Allow form submissions in the iframe"
+    }
+  },
+  "ui": {
+    "page": {
+      "title": "Sample iframe plugin",
+      "description": "Demonstrates how to embed external content in an iframe. Select a source from the plugin settings to change the embedded content.",
+      "icon": "globe",
+      "type": "template",
+      "template": "empty-page",
+      "endpoint": "/page-content"
+    }
+  },
+  "faq": [
+    {
+      "question": "How do I change the embedded content?",
+      "answer": "Go to Settings > Plugins, find this plugin, click 'View details', then go to the Settings tab. Select a different source from the 'Content source' dropdown and click 'Save settings'. The page will display the new content."
+    },
+    {
+      "question": "Why is my content not loading?",
+      "answer": "Some websites block embedding via X-Frame-Options or Content-Security-Policy headers. Check if the target website allows iframe embedding. You may need to contact the service provider or use their embeddable version."
+    },
+    {
+      "question": "Can I pass authentication tokens to the iframe?",
+      "answer": "Yes, you can append query parameters to the URL (e.g., https://example.com?token=xxx). However, be cautious about exposing sensitive tokens in URLs. For better security, consider using the plugin's routes to proxy authenticated requests."
+    },
+    {
+      "question": "How do I communicate between VerifyWise and the iframe?",
+      "answer": "Use the browser's postMessage API. The iframe content can send messages to the parent window, and the parent can listen for these messages. See the plugin's index.ts for an example route that demonstrates this pattern."
+    }
+  ],
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "date": "2024-12-09",
+      "name": "Initial release",
+      "changes": [
+        "Basic iframe page embedding",
+        "Configurable URL via plugin settings",
+        "FAQ documentation for common questions",
+        "Example postMessage communication route"
+      ]
+    }
+  ]
+}
