@@ -46,7 +46,7 @@
         "@slack/web-api": "^6.9.0"
       },
       "ui": {
-        "bundleUrl": "/plugins/slack/ui/dist/index.esm.js",
+        "bundleUrl": "/api/plugins/slack/ui/dist/index.esm.js",
         "slots": [
           {
             "slotId": "page.plugin.config",
@@ -106,7 +106,7 @@
         "axios": "^1.6.0"
       },
       "ui": {
-        "bundleUrl": "/plugins/mlflow/ui/dist/index.esm.js",
+        "bundleUrl": "/api/plugins/mlflow/ui/dist/index.esm.js",
         "slots": [
           {
             "slotId": "page.models.tabs",
@@ -174,7 +174,7 @@
         "exceljs": "^4.4.0"
       },
       "ui": {
-        "bundleUrl": "/plugins/risk-import/ui/dist/index.esm.js",
+        "bundleUrl": "/api/plugins/risk-import/ui/dist/index.esm.js",
         "slots": [
           {
             "slotId": "page.risks.actions",

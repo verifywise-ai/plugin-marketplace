@@ -8,7 +8,11 @@ build/
 *.js
 *.js.map
 *.d.ts
+# Allow plugin backend JS files
 !plugins/**/*.js
+# Allow plugin UI dist bundles (these need to be served)
+!plugins/**/ui/dist/
+!plugins/**/ui/dist/**
 
 # TypeScript cache
 *.tsbuildinfo
