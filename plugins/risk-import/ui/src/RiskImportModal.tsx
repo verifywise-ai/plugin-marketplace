@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   Typography,
-  Paper,
   Alert,
   CircularProgress,
   Table,
@@ -13,16 +12,14 @@ import {
   TableHead,
   TableRow,
   Chip,
-  Card,
-  CardContent,
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
   IconButton,
 } from "@mui/material";
-import { Download, Upload, FileText, CheckCircle, XCircle, X } from "lucide-react";
+import { Download, Upload, CheckCircle, XCircle, X } from "lucide-react";
 import * as ExcelJS from "exceljs";
-import { colors, typography, borderRadius, buttonStyles, cardStyles, tableStyles, chipStyles, modalStyles } from "./theme";
 
 interface RiskImportModalProps {
   open: boolean;
@@ -77,12 +74,10 @@ export const RiskImportModal: React.FC<RiskImportModalProps> = ({
       setLoading(true);
       setError(null);
 
-      // Fetch the Excel file as a blob using apiServices
       const response = await api.get("plugins/risk-import/template", {
         responseType: "blob",
       });
 
-      // Create download link
       const blob = new Blob([response.data as BlobPart], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
@@ -96,8 +91,7 @@ export const RiskImportModal: React.FC<RiskImportModalProps> = ({
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
       console.error("Error downloading template:", err);
-      const errorMessage = err.message || "Failed to download template";
-      setError(`Failed to download template: ${errorMessage}`);
+      setError(`Failed to download template: ${err.message || "Unknown error"}`);
     } finally {
       setLoading(false);
     }
@@ -118,12 +112,10 @@ export const RiskImportModal: React.FC<RiskImportModalProps> = ({
     setImportResult(null);
 
     try {
-      // Parse Excel file
       const arrayBuffer = await file.arrayBuffer();
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(arrayBuffer);
 
-      // Get first worksheet
       const worksheet = workbook.getWorksheet(1);
       if (!worksheet) {
         setError("Excel file is empty or invalid");
@@ -131,26 +123,22 @@ export const RiskImportModal: React.FC<RiskImportModalProps> = ({
         return;
       }
 
-      // Parse data from worksheet
       const data: any[] = [];
       const headers: string[] = [];
 
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) {
-          // First row is headers
           row.eachCell({ includeEmpty: true }, (cell) => {
-            // Extract key from header (remove parentheses, asterisks, and convert to snake_case)
             const headerText = cell.value?.toString() || "";
             const key = headerText
-              .replace(/\s*\([^)]*\)/g, '') // Remove anything in parentheses
-              .replace(/\s*\*/g, '') // Remove asterisks
+              .replace(/\s*\([^)]*\)/g, '')
+              .replace(/\s*\*/g, '')
               .toLowerCase()
               .trim()
-              .replace(/\s+/g, "_"); // Replace spaces with underscores
+              .replace(/\s+/g, "_");
             headers.push(key);
           });
         } else {
-          // Data rows
           const rowData: any = {};
           row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
             const key = headers[colNumber - 1];
@@ -159,9 +147,7 @@ export const RiskImportModal: React.FC<RiskImportModalProps> = ({
             }
           });
 
-          // Only add row if it has meaningful data (at least one non-null value)
           const hasData = Object.values(rowData).some(val => val !== null && val !== undefined && val !== "");
-
           if (hasData) {
             data.push(rowData);
           }
@@ -189,13 +175,12 @@ export const RiskImportModal: React.FC<RiskImportModalProps> = ({
       setImportResult(null);
 
       const response = await api.post("/plugins/risk-import/import", {
-        csvData: excelData, // Backend still expects csvData param name
+        csvData: excelData,
       });
 
       if (response.data?.data) {
         setImportResult(response.data.data);
 
-        // If import was successful, call the callback
         if (response.data.data.success && onImportComplete) {
           setTimeout(() => {
             onImportComplete();
@@ -217,7 +202,6 @@ export const RiskImportModal: React.FC<RiskImportModalProps> = ({
     setExcelData([]);
     setImportResult(null);
     setError(null);
-    // Clear file input to allow re-uploading the same file
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -232,11 +216,11 @@ export const RiskImportModal: React.FC<RiskImportModalProps> = ({
     <Dialog
       open={open}
       onClose={handleClose}
-      maxWidth="lg"
+      maxWidth="md"
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: borderRadius.lg,
+          borderRadius: "4px",
           maxHeight: "90vh",
         },
       }}
@@ -244,57 +228,32 @@ export const RiskImportModal: React.FC<RiskImportModalProps> = ({
       <DialogTitle
         sx={{
           display: "flex",
-          alignItems: "center",
+          alignItems: "flex-start",
           justifyContent: "space-between",
-          borderBottom: `1px solid ${colors.borderLight}`,
-          py: 2,
-          px: 3,
+          pb: 1,
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <Box sx={{
-            width: 36,
-            height: 36,
-            borderRadius: borderRadius.md,
-            backgroundColor: colors.primaryLight,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-            <FileText size={20} color={colors.primary} />
-          </Box>
-          <Typography sx={{ fontWeight: 600, fontSize: "16px", color: colors.textPrimary }}>
-            Import Risks from Excel
+        <Box>
+          <Typography sx={{ fontWeight: 600, fontSize: "16px", color: "#101828" }}>
+            Import risks from Excel
+          </Typography>
+          <Typography sx={{ fontSize: "13px", color: "#667085", mt: 0.5 }}>
+            Download the template, fill it with your risk data, and upload to create risks in bulk
           </Typography>
         </Box>
         <IconButton
           onClick={handleClose}
           size="small"
-          sx={{
-            color: colors.textTertiary,
-            "&:hover": { backgroundColor: colors.backgroundHover },
-          }}
+          sx={{ color: "#98A2B3", mt: -0.5 }}
         >
-          <X size={18} />
+          <X size={20} />
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ p: 3 }}>
-        <Box sx={{
-          backgroundColor: colors.backgroundSecondary,
-          borderRadius: borderRadius.sm,
-          p: 2,
-          mb: 3,
-          border: `1px solid ${colors.borderLight}`,
-        }}>
-          <Typography sx={{ fontSize: "13px", color: colors.textSecondary, lineHeight: 1.6 }}>
-            Import multiple risks at once using an Excel file. Download the template, fill it with your risk data, and upload to create risks in bulk.
-          </Typography>
-        </Box>
-
+      <DialogContent sx={{ pt: 2 }}>
         {/* Error Alert */}
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
             {error}
           </Alert>
         )}
@@ -303,304 +262,214 @@ export const RiskImportModal: React.FC<RiskImportModalProps> = ({
         {importResult && (
           <Alert
             severity={importResult.success ? "success" : "warning"}
-            sx={{ mb: 3 }}
-            icon={importResult.success ? <CheckCircle /> : <XCircle />}
+            sx={{ mb: 2 }}
+            icon={importResult.success ? <CheckCircle size={20} /> : <XCircle size={20} />}
           >
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+            <Typography sx={{ fontWeight: 600, fontSize: "13px", mb: 0.5 }}>
               Import {importResult.success ? "Completed" : "Completed with Errors"}
             </Typography>
-            <Typography variant="body2">
+            <Typography sx={{ fontSize: "13px" }}>
               Successfully imported: {importResult.imported} risk(s)
               {importResult.failed > 0 && ` | Failed: ${importResult.failed} risk(s)`}
             </Typography>
 
-            {/* Error Details */}
             {importResult.errors && importResult.errors.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+              <Box sx={{ mt: 1.5 }}>
+                <Typography sx={{ fontWeight: 600, fontSize: "12px", mb: 1 }}>
                   Error Details:
                 </Typography>
-                <TableContainer component={Paper} sx={{ maxHeight: 200 }}>
+                <TableContainer sx={{ maxHeight: 150, border: "1px solid #e5e7eb", borderRadius: "4px" }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>Row</TableCell>
-                        <TableCell>Field</TableCell>
-                        <TableCell>Error</TableCell>
+                        <TableCell sx={{ fontSize: "11px", fontWeight: 600, py: 0.5 }}>Row</TableCell>
+                        <TableCell sx={{ fontSize: "11px", fontWeight: 600, py: 0.5 }}>Field</TableCell>
+                        <TableCell sx={{ fontSize: "11px", fontWeight: 600, py: 0.5 }}>Error</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {importResult.errors.slice(0, 10).map((err, idx) => (
+                      {importResult.errors.slice(0, 5).map((err, idx) => (
                         <TableRow key={idx}>
-                          <TableCell>{err.row}</TableCell>
-                          <TableCell>{err.field}</TableCell>
-                          <TableCell>{err.message}</TableCell>
+                          <TableCell sx={{ fontSize: "11px", py: 0.5 }}>{err.row}</TableCell>
+                          <TableCell sx={{ fontSize: "11px", py: 0.5 }}>{err.field}</TableCell>
+                          <TableCell sx={{ fontSize: "11px", py: 0.5 }}>{err.message}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 </TableContainer>
-                {importResult.errors.length > 10 && (
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                    Showing first 10 of {importResult.errors.length} errors
-                  </Typography>
-                )}
               </Box>
             )}
           </Alert>
         )}
 
         {/* Step 1: Download Template */}
-        <Card sx={{ mb: 3, border: `1px solid ${colors.borderLight}`, boxShadow: "none" }}>
-          <CardContent sx={{ p: 2.5 }}>
-            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-              <Box sx={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                backgroundColor: colors.primaryLight,
-                color: colors.primary,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "13px",
-                fontWeight: 600,
-                flexShrink: 0,
-              }}>
-                1
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Typography sx={{ mb: 1, fontSize: "14px", fontWeight: 600, color: colors.textPrimary }}>
-                  Download Excel Template
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 2, color: colors.textTertiary, fontSize: "13px" }}>
-                  Download the template with dropdown menus for enum fields and sample data.
-                </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<Download size={14} />}
-                  onClick={handleDownloadTemplate}
-                  disabled={loading}
-                  sx={{
-                    textTransform: "none",
-                    fontSize: "13px",
-                    borderColor: colors.border,
-                    color: colors.textSecondary,
-                    "&:hover": {
-                      borderColor: colors.primary,
-                      backgroundColor: colors.primaryLight,
-                      color: colors.primary,
-                    },
-                  }}
-                >
-                  Download Template
-                </Button>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
+        <Box sx={{ mb: 3 }}>
+          <Typography sx={{ fontWeight: 600, fontSize: "13px", color: "#344054", mb: 0.5 }}>
+            Step 1: Download Excel Template
+          </Typography>
+          <Typography sx={{ fontSize: "13px", color: "#667085", mb: 1.5 }}>
+            Download the template with dropdown menus for enum fields and sample data.
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Download size={14} />}
+            onClick={handleDownloadTemplate}
+            disabled={loading}
+            sx={{
+              textTransform: "none",
+              fontSize: "13px",
+              borderColor: "#d0d5dd",
+              color: "#344054",
+              "&:hover": {
+                borderColor: "#98A2B3",
+                backgroundColor: "#f9fafb",
+              },
+            }}
+          >
+            Download Template
+          </Button>
+        </Box>
 
         {/* Step 2: Upload Excel */}
-        <Card sx={{ mb: 3, border: `1px solid ${colors.borderLight}`, boxShadow: "none" }}>
-          <CardContent sx={{ p: 2.5 }}>
-            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-              <Box sx={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                backgroundColor: colors.primaryLight,
-                color: colors.primary,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+        <Box sx={{ mb: 2 }}>
+          <Typography sx={{ fontWeight: 600, fontSize: "13px", color: "#344054", mb: 0.5 }}>
+            Step 2: Upload Filled Excel File
+          </Typography>
+          <Typography sx={{ fontSize: "13px", color: "#667085", mb: 1.5 }}>
+            Upload your Excel file with risk data.
+          </Typography>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              component="label"
+              startIcon={<Upload size={14} />}
+              sx={{
+                textTransform: "none",
                 fontSize: "13px",
-                fontWeight: 600,
-                flexShrink: 0,
-              }}>
-                2
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Typography sx={{ mb: 1, fontSize: "14px", fontWeight: 600, color: colors.textPrimary }}>
-                  Upload Filled Excel File
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 2, color: colors.textTertiary, fontSize: "13px" }}>
-                  Upload your Excel file with risk data.
-                </Typography>
+                borderColor: "#d0d5dd",
+                color: "#344054",
+                "&:hover": {
+                  borderColor: "#98A2B3",
+                  backgroundColor: "#f9fafb",
+                },
+              }}
+            >
+              Choose File
+              <input
+                type="file"
+                hidden
+                accept=".xlsx"
+                onChange={handleFileUpload}
+                ref={fileInputRef}
+              />
+            </Button>
 
-                {/* Upload area */}
-                <Box
-                  sx={{
-                    border: `1px dashed ${uploadedFile ? colors.primary : colors.border}`,
-                    borderRadius: borderRadius.md,
-                    p: 2,
-                    backgroundColor: uploadedFile ? colors.primaryLight : colors.backgroundSecondary,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 2,
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    component="label"
-                    startIcon={<Upload size={14} />}
-                    sx={{
-                      textTransform: "none",
-                      fontSize: "13px",
-                      borderColor: colors.border,
-                      color: colors.textSecondary,
-                      "&:hover": {
-                        borderColor: colors.primary,
-                        backgroundColor: colors.background,
-                      },
-                    }}
-                  >
-                    Choose File
-                    <input
-                      type="file"
-                      hidden
-                      accept=".xlsx"
-                      onChange={handleFileUpload}
-                      ref={fileInputRef}
-                    />
-                  </Button>
+            {uploadedFile ? (
+              <Chip
+                label={uploadedFile.name}
+                onDelete={handleReset}
+                size="small"
+                sx={{
+                  fontSize: "12px",
+                  backgroundColor: "#f0fdf4",
+                  color: "#15803d",
+                  border: "1px solid #bbf7d0",
+                  "& .MuiChip-deleteIcon": {
+                    color: "#15803d",
+                    fontSize: "16px",
+                  },
+                }}
+              />
+            ) : (
+              <Typography sx={{ fontSize: "13px", color: "#98A2B3" }}>
+                or drag and drop .xlsx file here
+              </Typography>
+            )}
+          </Box>
+        </Box>
 
-                  {uploadedFile ? (
-                    <Chip
-                      label={uploadedFile.name}
-                      onDelete={handleReset}
-                      size="small"
-                      sx={{
-                        backgroundColor: colors.background,
-                        border: `1px solid ${colors.primary}`,
-                        color: colors.primary,
-                        "& .MuiChip-deleteIcon": {
-                          color: colors.primary,
-                          "&:hover": { color: colors.primaryHover },
-                        },
-                      }}
-                    />
-                  ) : (
-                    <Typography variant="body2" sx={{ color: colors.textTertiary, fontSize: "13px" }}>
-                      or drag and drop .xlsx file here
-                    </Typography>
-                  )}
-                </Box>
-
-                {/* Preview */}
-                {excelData.length > 0 && (
-                  <Box sx={{ mt: 2.5 }}>
-                    <Typography sx={{ mb: 1.5, fontWeight: 600, fontSize: "13px", color: colors.textSecondary }}>
-                      Preview ({excelData.length} risk(s) found):
-                    </Typography>
-                    <TableContainer sx={{ border: `1px solid ${colors.borderLight}`, borderRadius: borderRadius.sm, maxHeight: 240 }}>
-                      <Table size="small" stickyHeader>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell sx={{ backgroundColor: colors.backgroundSecondary, fontWeight: 600, fontSize: "11px", color: colors.textTertiary, textTransform: "uppercase", py: 1 }}>#</TableCell>
-                            <TableCell sx={{ backgroundColor: colors.backgroundSecondary, fontWeight: 600, fontSize: "11px", color: colors.textTertiary, textTransform: "uppercase", py: 1 }}>Risk Name</TableCell>
-                            <TableCell sx={{ backgroundColor: colors.backgroundSecondary, fontWeight: 600, fontSize: "11px", color: colors.textTertiary, textTransform: "uppercase", py: 1 }}>Owner</TableCell>
-                            <TableCell sx={{ backgroundColor: colors.backgroundSecondary, fontWeight: 600, fontSize: "11px", color: colors.textTertiary, textTransform: "uppercase", py: 1 }}>Description</TableCell>
-                            <TableCell sx={{ backgroundColor: colors.backgroundSecondary, fontWeight: 600, fontSize: "11px", color: colors.textTertiary, textTransform: "uppercase", py: 1 }}>Phase</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {excelData.slice(0, 5).map((row, idx) => (
-                            <TableRow key={idx} sx={{ "&:hover": { backgroundColor: colors.backgroundHover } }}>
-                              <TableCell sx={{ fontSize: "12px", color: colors.textSecondary, py: 1 }}>{idx + 1}</TableCell>
-                              <TableCell sx={{ fontSize: "12px", color: colors.textSecondary, py: 1 }}>{row.risk_name || "-"}</TableCell>
-                              <TableCell sx={{ fontSize: "12px", color: colors.textSecondary, py: 1 }}>{row.risk_owner || "-"}</TableCell>
-                              <TableCell sx={{ fontSize: "12px", color: colors.textSecondary, py: 1, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {row.risk_description || "-"}
-                              </TableCell>
-                              <TableCell sx={{ fontSize: "12px", color: colors.textSecondary, py: 1 }}>{row.ai_lifecycle_phase || "-"}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                    {excelData.length > 5 && (
-                      <Typography sx={{ mt: 1, fontSize: "11px", color: colors.textTertiary }}>
-                        Showing first 5 of {excelData.length} risks
-                      </Typography>
-                    )}
-                  </Box>
-                )}
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-
-        {/* Step 3: Import */}
+        {/* Preview Table */}
         {excelData.length > 0 && (
-          <Card sx={{ border: `1px solid ${colors.borderLight}`, boxShadow: "none", backgroundColor: colors.backgroundSecondary }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                <Box sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  backgroundColor: colors.primary,
-                  color: colors.white,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  flexShrink: 0,
-                }}>
-                  3
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography sx={{ mb: 1, fontSize: "14px", fontWeight: 600, color: colors.textPrimary }}>
-                    Import Risks
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 2, color: colors.textTertiary, fontSize: "13px" }}>
-                    Review the preview above and click Import to create the risks.
-                  </Typography>
-
-                  <Box sx={{ display: "flex", gap: 1.5 }}>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={handleImport}
-                      disabled={loading}
-                      startIcon={loading ? <CircularProgress size={14} color="inherit" /> : <CheckCircle size={14} />}
-                      sx={{
-                        textTransform: "none",
-                        fontSize: "13px",
-                        backgroundColor: colors.primary,
-                        "&:hover": {
-                          backgroundColor: colors.primaryHover,
-                        },
-                      }}
-                    >
-                      {loading ? "Importing..." : `Import ${excelData.length} Risk(s)`}
-                    </Button>
-
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={handleReset}
-                      disabled={loading}
-                      sx={{
-                        textTransform: "none",
-                        fontSize: "13px",
-                        borderColor: colors.border,
-                        color: colors.textSecondary,
-                      }}
-                    >
-                      Reset
-                    </Button>
-                  </Box>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
+          <Box sx={{ mb: 2 }}>
+            <Typography sx={{ fontWeight: 600, fontSize: "13px", color: "#344054", mb: 1 }}>
+              Preview ({excelData.length} risk{excelData.length > 1 ? "s" : ""} found)
+            </Typography>
+            <TableContainer sx={{ border: "1px solid #e5e7eb", borderRadius: "4px", maxHeight: 280 }}>
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ backgroundColor: "#f9fafb", fontWeight: 600, fontSize: "11px", color: "#667085", textTransform: "uppercase", py: 1.5 }}>ID</TableCell>
+                    <TableCell sx={{ backgroundColor: "#f9fafb", fontWeight: 600, fontSize: "11px", color: "#667085", textTransform: "uppercase", py: 1.5 }}>Risk Name</TableCell>
+                    <TableCell sx={{ backgroundColor: "#f9fafb", fontWeight: 600, fontSize: "11px", color: "#667085", textTransform: "uppercase", py: 1.5 }}>Description</TableCell>
+                    <TableCell sx={{ backgroundColor: "#f9fafb", fontWeight: 600, fontSize: "11px", color: "#667085", textTransform: "uppercase", py: 1.5 }}>Owner</TableCell>
+                    <TableCell sx={{ backgroundColor: "#f9fafb", fontWeight: 600, fontSize: "11px", color: "#667085", textTransform: "uppercase", py: 1.5 }}>Phase</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {excelData.slice(0, 10).map((row, idx) => (
+                    <TableRow key={idx} sx={{ "&:hover": { backgroundColor: "#f9fafb" } }}>
+                      <TableCell sx={{ fontSize: "13px", color: "#344054", py: 1.5 }}>{idx + 1}</TableCell>
+                      <TableCell sx={{ fontSize: "13px", color: "#344054", py: 1.5 }}>{row.risk_name || "-"}</TableCell>
+                      <TableCell sx={{ fontSize: "13px", color: "#667085", py: 1.5, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {row.risk_description || "-"}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: "13px", color: "#344054", py: 1.5 }}>{row.risk_owner || "-"}</TableCell>
+                      <TableCell sx={{ fontSize: "13px", color: "#344054", py: 1.5 }}>{row.ai_lifecycle_phase || "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {excelData.length > 10 && (
+              <Typography sx={{ mt: 1, fontSize: "12px", color: "#98A2B3" }}>
+                Showing first 10 of {excelData.length} risks
+              </Typography>
+            )}
+          </Box>
         )}
       </DialogContent>
+
+      <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid #e5e7eb" }}>
+        <Button
+          onClick={handleClose}
+          sx={{
+            textTransform: "none",
+            fontSize: "13px",
+            color: "#344054",
+            border: "1px solid #d0d5dd",
+            "&:hover": {
+              backgroundColor: "#f9fafb",
+              borderColor: "#98A2B3",
+            },
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleImport}
+          disabled={loading || excelData.length === 0}
+          startIcon={loading ? <CircularProgress size={14} color="inherit" /> : null}
+          sx={{
+            textTransform: "none",
+            fontSize: "13px",
+            backgroundColor: "#13715B",
+            "&:hover": {
+              backgroundColor: "#0f5a47",
+            },
+            "&:disabled": {
+              backgroundColor: "#e5e7eb",
+              color: "#98A2B3",
+            },
+          }}
+        >
+          {loading ? "Importing..." : `Import ${excelData.length || 0} risk${excelData.length !== 1 ? "s" : ""}`}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };
