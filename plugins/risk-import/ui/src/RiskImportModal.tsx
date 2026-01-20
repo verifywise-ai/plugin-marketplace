@@ -289,7 +289,7 @@ export const RiskImportModal: React.FC<RiskImportModalProps> = ({
             </Typography>
 
             {/* Error Details */}
-            {importResult.errors.length > 0 && (
+            {importResult.errors && importResult.errors.length > 0 && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
                   Error Details:
