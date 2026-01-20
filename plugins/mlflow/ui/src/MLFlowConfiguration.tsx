@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -35,6 +35,23 @@ export const MLFlowConfiguration: React.FC<MLFlowConfigurationProps> = ({
     timeout: "30",
     ...configData,
   });
+
+  // Send default values to parent on mount
+  useEffect(() => {
+    if (onConfigChange) {
+      const defaults: Record<string, string> = {
+        auth_method: "none",
+        verify_ssl: "true",
+        timeout: "30",
+      };
+      // Only send defaults that aren't already in configData
+      Object.entries(defaults).forEach(([key, value]) => {
+        if (!configData[key]) {
+          onConfigChange(key, value);
+        }
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (key: string, value: string) => {
     setLocalConfig((prev) => ({ ...prev, [key]: value }));

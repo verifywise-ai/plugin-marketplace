@@ -238,19 +238,17 @@ export function validateConfig(config: MLflowConfig): ValidationResult {
     errors.push("Tracking server URL is required");
   }
 
-  // Required: Authentication method
-  if (!config.auth_method) {
-    errors.push("Authentication method is required");
-  }
+  // Default auth_method to "none" if not provided
+  const authMethod = config.auth_method || "none";
 
   // Validate auth credentials based on method
-  if (config.auth_method === "basic") {
+  if (authMethod === "basic") {
     if (!config.username || !config.password) {
       errors.push("Username and password required for basic authentication");
     }
   }
 
-  if (config.auth_method === "token") {
+  if (authMethod === "token") {
     if (!config.api_token) {
       errors.push("API token required for token authentication");
     }
