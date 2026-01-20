@@ -41,21 +41,25 @@ export const RiskImportMenuItem: React.FC<RiskImportMenuItemProps> = ({
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       sx={{
+        background: "linear-gradient(135deg, rgba(252, 252, 252, 1) 0%, rgba(248, 248, 248, 1) 100%)",
+        borderRadius: "4px",
+        padding: "20px 16px",
+        cursor: "pointer",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
-        p: 2,
-        cursor: "pointer",
-        borderRadius: "8px",
-        border: "1px solid #d0d5dd",
-        backgroundColor: "white",
-        transition: "all 0.2s ease",
-        minHeight: "180px",
+        justifyContent: "flex-start",
+        gap: 1.5,
+        border: "1px solid rgba(0, 0, 0, 0.04)",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        minHeight: "140px",
         "&:hover": {
-          backgroundColor: "rgba(19, 113, 91, 0.04)",
-          borderColor: "#13715B",
+          boxShadow: "0 2px 6px rgba(0, 0, 0, 0.06)",
+          border: "1px solid rgba(0, 0, 0, 0.08)",
+          background: "linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(250, 250, 250, 1) 100%)",
+        },
+        "&:active": {
+          transform: "scale(0.98)",
         },
         "&:focus": {
           outline: "2px solid #13715B",
@@ -63,34 +67,24 @@ export const RiskImportMenuItem: React.FC<RiskImportMenuItemProps> = ({
         },
       }}
     >
-      <Box
-        sx={{
-          width: 48,
-          height: 48,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "rgba(16, 185, 129, 0.1)",
-          borderRadius: "8px",
-          mb: 1.5,
-        }}
-      >
-        <FileSpreadsheet size={28} color="#10b981" />
-      </Box>
+      <FileSpreadsheet size={24} color="#10b981" />
       <Typography
+        variant="body2"
         sx={{
           fontWeight: 600,
           fontSize: "13px",
-          color: "#344054",
-          mb: 0.5,
+          color: "rgba(0, 0, 0, 0.85)",
+          textAlign: "center",
         }}
       >
         Import from Excel
       </Typography>
       <Typography
+        variant="caption"
         sx={{
-          fontSize: "12px",
-          color: "#667085",
+          fontSize: "11px",
+          color: "rgba(0, 0, 0, 0.6)",
+          textAlign: "center",
           lineHeight: 1.4,
         }}
       >
