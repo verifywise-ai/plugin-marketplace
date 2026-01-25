@@ -128,6 +128,74 @@
       }
     },
     {
+      "key": "azure-ai-foundry",
+      "name": "Azure AI Foundry",
+      "displayName": "Azure AI Foundry",
+      "description": "Import and manage AI model deployments from Microsoft Azure AI Foundry.",
+      "longDescription": "Azure AI Foundry integration enables automatic synchronization of AI model deployments from your Azure subscription. Track deployed models including GPT-4, GPT-3.5, embeddings, and other Azure OpenAI or custom models. Monitor deployment status, SKU capacity, rate limits, and maintain a comprehensive inventory of all AI models for compliance and governance purposes.",
+      "version": "1.0.0",
+      "author": "VerifyWise",
+      "category": "ml_ops",
+      "iconUrl": "/assets/azure_ai_logo.svg",
+      "documentationUrl": "https://docs.verifywise.com/integrations/azure-ai-foundry",
+      "supportUrl": "https://support.verifywise.com",
+      "isOfficial": true,
+      "isPublished": true,
+      "requiresConfiguration": true,
+      "installationType": "tenant_scoped",
+      "features": [
+        {
+          "name": "Model Import",
+          "description": "Automatically sync AI model deployments from Azure AI Foundry",
+          "displayOrder": 1
+        },
+        {
+          "name": "Deployment Tracking",
+          "description": "Track deployment status, SKU, and capacity",
+          "displayOrder": 2
+        },
+        {
+          "name": "Rate Limit Monitoring",
+          "description": "Monitor API rate limits and quotas",
+          "displayOrder": 3
+        },
+        {
+          "name": "Multi-Model Support",
+          "description": "Support for GPT-4, GPT-3.5, embeddings, DeepSeek, and more",
+          "displayOrder": 4
+        },
+        {
+          "name": "Manual Sync",
+          "description": "On-demand synchronization of model deployments",
+          "displayOrder": 5
+        }
+      ],
+      "tags": ["azure", "ai-foundry", "openai", "model-registry", "cloud"],
+      "pluginPath": "plugins/azure-ai-foundry",
+      "entryPoint": "index.ts",
+      "dependencies": {},
+      "ui": {
+        "bundleUrl": "/api/plugins/azure-ai-foundry/ui/dist/index.esm.js",
+        "globalName": "PluginAzureAIFoundry",
+        "slots": [
+          {
+            "slotId": "page.models.tabs",
+            "componentName": "AzureAIFoundryTab",
+            "renderType": "tab",
+            "props": {
+              "label": "Azure AI Foundry",
+              "icon": "Cloud"
+            }
+          },
+          {
+            "slotId": "page.plugin.config",
+            "componentName": "AzureAIFoundryConfiguration",
+            "renderType": "card"
+          }
+        ]
+      }
+    },
+    {
       "key": "risk-import",
       "name": "Risk Import",
       "displayName": "Risk Import",
