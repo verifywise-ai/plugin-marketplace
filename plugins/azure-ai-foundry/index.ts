@@ -327,6 +327,42 @@ export async function testConnection(
 }
 
 /**
+ * Get models from the local database
+ * Called via the generic execute endpoint
+ */
+export async function getModels(
+  tenantId: string,
+  _config: AzureAIFoundryConfig,
+  context: PluginContext
+): Promise<{ configured: boolean; models: any[] }> {
+  try {
+    const { sequelize } = context;
+
+    // Query azure_ai_model_records table
+    const models = await sequelize.query(
+      `SELECT * FROM "${tenantId}".azure_ai_model_records ORDER BY created_at DESC`,
+      {
+        type: "SELECT",
+      }
+    );
+
+    return {
+      configured: true,
+      models: models || [],
+    };
+  } catch (error: any) {
+    // If table doesn't exist, plugin is not configured
+    if (error.message?.includes("does not exist")) {
+      return {
+        configured: false,
+        models: [],
+      };
+    }
+    throw error;
+  }
+}
+
+/**
  * Sync models from Azure AI Foundry
  * Uses the Project Deployments API
  */

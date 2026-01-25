@@ -142,7 +142,7 @@ export const AzureAIFoundryTab: React.FC<AzureAIFoundryTabProps> = ({
     setWarning(null);
 
     try {
-      const response = await api.get("/plugins/azure-ai-foundry/models");
+      const response = await api.post("/plugins/azure-ai-foundry/execute/getModels");
 
       const responseData = response.data as {
         data?: {
@@ -193,7 +193,7 @@ export const AzureAIFoundryTab: React.FC<AzureAIFoundryTabProps> = ({
     setWarning(null);
 
     try {
-      await api.post("/plugins/azure-ai-foundry/sync");
+      await api.post("/plugins/azure-ai-foundry/execute/syncModels");
     } catch (error: unknown) {
       console.error("Error syncing Azure AI Foundry data:", error);
       const err = error as { response?: { data?: { message?: string } } };
