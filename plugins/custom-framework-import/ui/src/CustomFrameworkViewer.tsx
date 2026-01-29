@@ -25,7 +25,14 @@ import {
   Link as LinkIcon,
   RefreshCw,
 } from "lucide-react";
-import { theme, StatusType } from "./theme";
+import {
+  colors,
+  textColors,
+  borderColors,
+  statusColors,
+  StatusType,
+  theme,
+} from "./theme";
 
 interface CustomFrameworkViewerProps {
   frameworkId: number;
@@ -188,12 +195,12 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
   }, [loadFrameworkData, onRefresh]);
 
   const getStatusColor = (status: string): string => {
-    const statusConfig = theme.status[status as StatusType];
+    const statusConfig = statusColors[status as StatusType];
     return statusConfig?.color || "#94a3b8";
   };
 
   const getStatusBg = (status: string): string => {
-    const statusConfig = theme.status[status as StatusType];
+    const statusConfig = statusColors[status as StatusType];
     return statusConfig?.bg || "#f1f5f9";
   };
 
@@ -272,7 +279,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
                       value={progress.overall.percentage}
                       size={80}
                       thickness={4}
-                      sx={{ color: theme.colors.primary.main }}
+                      sx={{ color: colors.primary }}
                     />
                     <Box
                       sx={{
@@ -302,7 +309,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
                   <Typography variant="caption" color="text.secondary" display="block">
                     {data.level_2_name}s
                   </Typography>
-                  <Typography variant="h4" fontWeight={600} sx={{ my: 1, color: theme.colors.primary.main }}>
+                  <Typography variant="h4" fontWeight={600} sx={{ my: 1, color: colors.primary }}>
                     {progress.level2.completed}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -316,7 +323,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
                   <Typography variant="caption" color="text.secondary" display="block">
                     Assigned
                   </Typography>
-                  <Typography variant="h4" fontWeight={600} sx={{ my: 1, color: theme.colors.info.main }}>
+                  <Typography variant="h4" fontWeight={600} sx={{ my: 1, color: colors.info }}>
                     {progress.overall.assigned}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -368,7 +375,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
                         borderRadius: 4,
                         bgcolor: "#e2e8f0",
                         "& .MuiLinearProgress-bar": {
-                          bgcolor: level1Progress === 100 ? theme.colors.success.main : theme.colors.primary.main,
+                          bgcolor: level1Progress === 100 ? colors.success : colors.primary,
                         },
                       }}
                     />
@@ -377,8 +384,8 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
                     label={`${level1Progress}%`}
                     size="small"
                     sx={{
-                      bgcolor: level1Progress === 100 ? theme.colors.success.bg : "#e2e8f0",
-                      color: level1Progress === 100 ? theme.colors.success.main : theme.colors.text.secondary,
+                      bgcolor: level1Progress === 100 ? statusColors["Implemented"].bg : "#e2e8f0",
+                      color: level1Progress === 100 ? colors.success : textColors.secondary,
                       fontWeight: 500,
                     }}
                   />
@@ -413,7 +420,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
                           "&:hover": onItemClick
                             ? {
                                 bgcolor: "#f8fafc",
-                                borderColor: theme.colors.primary.light,
+                                borderColor: colors.primary,
                               }
                             : {},
                         }}
@@ -444,7 +451,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
                             <Box sx={{ display: "flex", gap: 2, mt: 1.5, flexWrap: "wrap" }}>
                               {formatUserName(level2) && (
                                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                  <User size={14} color={theme.colors.text.secondary} />
+                                  <User size={14} color={textColors.secondary} />
                                   <Typography variant="caption" color="text.secondary">
                                     {formatUserName(level2)}
                                   </Typography>
@@ -453,7 +460,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
 
                               {level2.due_date && (
                                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                  <Clock size={14} color={theme.colors.text.secondary} />
+                                  <Clock size={14} color={textColors.secondary} />
                                   <Typography variant="caption" color="text.secondary">
                                     {new Date(level2.due_date).toLocaleDateString()}
                                   </Typography>
@@ -462,7 +469,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
 
                               {level2.evidence_links && level2.evidence_links.length > 0 && (
                                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                  <FileText size={14} color={theme.colors.text.secondary} />
+                                  <FileText size={14} color={textColors.secondary} />
                                   <Typography variant="caption" color="text.secondary">
                                     {level2.evidence_links.length} evidence
                                   </Typography>
@@ -471,7 +478,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
 
                               {level2.linked_risks && level2.linked_risks.length > 0 && (
                                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                  <LinkIcon size={14} color={theme.colors.warning.main} />
+                                  <LinkIcon size={14} color={colors.warning} />
                                   <Typography variant="caption" color="text.secondary">
                                     {level2.linked_risks.length} risks
                                   </Typography>

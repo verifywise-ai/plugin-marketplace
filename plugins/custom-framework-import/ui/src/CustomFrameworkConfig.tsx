@@ -2,7 +2,8 @@
  * Custom Framework Config
  *
  * Main configuration/management panel for the Custom Framework Import plugin.
- * Accessible from Settings > Plugins > Custom Framework Import
+ * Accessible from Settings > Custom Frameworks
+ * Uses VerifyWise design system for consistency
  */
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -10,8 +11,6 @@ import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
   Table,
   TableBody,
   TableCell,
@@ -32,6 +31,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Stack,
 } from "@mui/material";
 import {
   Plus,
@@ -43,7 +43,17 @@ import {
   Layers,
   Link as LinkIcon,
 } from "lucide-react";
-import { theme } from "./theme";
+import {
+  colors,
+  textColors,
+  fontSizes,
+  buttonStyles,
+  tableStyles,
+  cardStyles,
+  emptyStateStyles,
+  borderColors,
+  bgColors,
+} from "./theme";
 import { FrameworkImportModal } from "./FrameworkImportModal";
 import { FrameworkDetailDrawer } from "./FrameworkDetailDrawer";
 
@@ -90,11 +100,14 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addToProjectDialogOpen, setAddToProjectDialogOpen] = useState(false);
-  const [selectedFramework, setSelectedFramework] = useState<CustomFramework | null>(null);
+  const [selectedFramework, setSelectedFramework] =
+    useState<CustomFramework | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<number | "">("");
   const [actionLoading, setActionLoading] = useState(false);
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
-  const [detailFrameworkId, setDetailFrameworkId] = useState<number | null>(null);
+  const [detailFrameworkId, setDetailFrameworkId] = useState<number | null>(
+    null
+  );
 
   const api = apiServices || {
     get: async (url: string) => {
@@ -119,7 +132,9 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get("/plugins/custom-framework-import/frameworks");
+      const response = await api.get(
+        "/plugins/custom-framework-import/frameworks"
+      );
       const data = response.data.data || response.data;
       setFrameworks(Array.isArray(data) ? data : []);
     } catch (err: any) {
@@ -149,11 +164,15 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
 
     try {
       setActionLoading(true);
-      const deleteMethod = api.delete || (async (url: string) => {
-        const response = await fetch(`/api${url}`, { method: "DELETE" });
-        return { data: await response.json() };
-      });
-      await deleteMethod(`/plugins/custom-framework-import/frameworks/${selectedFramework.framework_id}`);
+      const deleteMethod =
+        api.delete ||
+        (async (url: string) => {
+          const response = await fetch(`/api${url}`, { method: "DELETE" });
+          return { data: await response.json() };
+        });
+      await deleteMethod(
+        `/plugins/custom-framework-import/frameworks/${selectedFramework.framework_id}`
+      );
       setSuccess(`Framework "${selectedFramework.name}" deleted successfully`);
       setDeleteDialogOpen(false);
       setSelectedFramework(null);
@@ -174,7 +193,9 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
         frameworkId: selectedFramework.framework_id,
         projectId: selectedProjectId,
       });
-      setSuccess(`Framework "${selectedFramework.name}" added to project successfully`);
+      setSuccess(
+        `Framework "${selectedFramework.name}" added to project successfully`
+      );
       setAddToProjectDialogOpen(false);
       setSelectedFramework(null);
       setSelectedProjectId("");
@@ -199,143 +220,225 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
 
   if (!pluginEnabled) {
     return (
-      <Card>
-        <CardContent>
-          <Alert severity="info">
-            Custom Framework Import plugin is not enabled. Enable it to import and manage custom compliance frameworks.
-          </Alert>
-        </CardContent>
-      </Card>
+      <Box sx={cardStyles.default}>
+        <Alert severity="info" sx={{ border: "none" }}>
+          Custom Framework Import plugin is not enabled. Enable it to import
+          and manage custom compliance frameworks.
+        </Alert>
+      </Box>
     );
   }
 
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <Box>
-          <Typography variant="h6" fontWeight={600}>
+          <Typography
+            sx={{
+              fontSize: fontSizes.large,
+              fontWeight: 600,
+              color: textColors.primary,
+            }}
+          >
             Custom Frameworks
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            sx={{
+              fontSize: fontSizes.medium,
+              color: textColors.muted,
+              mt: 0.5,
+            }}
+          >
             Import and manage custom compliance frameworks
           </Typography>
         </Box>
-        <Box sx={{ display: "flex", gap: 1 }}>
+        <Stack direction="row" spacing={1}>
           <Tooltip title="Refresh">
-            <IconButton onClick={loadFrameworks} disabled={loading}>
-              <RefreshCw size={18} />
+            <IconButton
+              onClick={loadFrameworks}
+              disabled={loading}
+              sx={{
+                border: `1px solid ${borderColors.default}`,
+                borderRadius: "4px",
+                width: 32,
+                height: 32,
+                "&:hover": { backgroundColor: bgColors.hover },
+              }}
+            >
+              <RefreshCw size={16} color={textColors.muted} />
             </IconButton>
           </Tooltip>
           <Button
             variant="contained"
-            startIcon={<Plus size={18} />}
+            startIcon={<Plus size={16} />}
             onClick={() => setImportModalOpen(true)}
-            sx={{ bgcolor: theme.colors.primary.main }}
+            sx={buttonStyles.primary.contained}
           >
             Import Framework
           </Button>
-        </Box>
+        </Stack>
       </Box>
 
       {/* Messages */}
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={clearMessages}>
+        <Alert
+          severity="error"
+          sx={{ mb: 2, fontSize: fontSizes.medium }}
+          onClose={clearMessages}
+        >
           {error}
         </Alert>
       )}
       {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={clearMessages}>
+        <Alert
+          severity="success"
+          sx={{ mb: 2, fontSize: fontSizes.medium }}
+          onClose={clearMessages}
+        >
           {success}
         </Alert>
       )}
 
       {/* Frameworks Table */}
       {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-          <CircularProgress />
+        <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+          <CircularProgress size={24} sx={{ color: colors.primary }} />
         </Box>
       ) : frameworks.length === 0 ? (
-        <Card>
-          <CardContent sx={{ textAlign: "center", py: 6 }}>
-            <FileJson size={48} color={theme.colors.text.secondary} style={{ marginBottom: 16 }} />
-            <Typography variant="h6" gutterBottom>
-              No Custom Frameworks
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Import your first custom compliance framework to get started
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Plus size={18} />}
-              onClick={() => setImportModalOpen(true)}
-              sx={{ bgcolor: theme.colors.primary.main }}
-            >
-              Import Framework
-            </Button>
-          </CardContent>
-        </Card>
+        <Box sx={{ ...cardStyles.gradient, ...emptyStateStyles.container }}>
+          <FileJson
+            size={48}
+            color={textColors.muted}
+            style={{ marginBottom: 16 }}
+          />
+          <Typography sx={emptyStateStyles.title}>
+            No Custom Frameworks
+          </Typography>
+          <Typography sx={emptyStateStyles.description}>
+            Import your first custom compliance framework to get started
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Plus size={16} />}
+            onClick={() => setImportModalOpen(true)}
+            sx={buttonStyles.primary.contained}
+          >
+            Import Framework
+          </Button>
+        </Box>
       ) : (
-        <TableContainer component={Paper}>
+        <TableContainer component={Paper} sx={tableStyles.frame}>
           <Table>
             <TableHead>
-              <TableRow sx={{ bgcolor: "#f8fafc" }}>
-                <TableCell sx={{ fontWeight: 600 }}>Framework</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Hierarchy</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Structure</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Created</TableCell>
-                <TableCell sx={{ fontWeight: 600 }} align="right">
+              <TableRow sx={tableStyles.header.row}>
+                <TableCell sx={tableStyles.header.cell}>Framework</TableCell>
+                <TableCell sx={tableStyles.header.cell}>Type</TableCell>
+                <TableCell sx={tableStyles.header.cell}>Hierarchy</TableCell>
+                <TableCell sx={tableStyles.header.cell}>Structure</TableCell>
+                <TableCell sx={tableStyles.header.cell}>Created</TableCell>
+                <TableCell sx={{ ...tableStyles.header.cell, textAlign: "right" }}>
                   Actions
                 </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {frameworks.map((fw) => (
-                <TableRow key={fw.id} hover>
-                  <TableCell>
+                <TableRow key={fw.id} sx={tableStyles.body.row}>
+                  <TableCell sx={tableStyles.body.cell}>
                     <Box>
-                      <Typography variant="subtitle2" fontWeight={500}>
+                      <Typography
+                        sx={{
+                          fontSize: fontSizes.medium,
+                          fontWeight: 500,
+                          color: textColors.primary,
+                        }}
+                      >
                         {fw.name}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography
+                        sx={{
+                          fontSize: fontSizes.small,
+                          color: textColors.muted,
+                          mt: 0.25,
+                        }}
+                      >
                         {fw.description?.substring(0, 60)}
-                        {fw.description && fw.description.length > 60 ? "..." : ""}
+                        {fw.description && fw.description.length > 60
+                          ? "..."
+                          : ""}
                       </Typography>
                     </Box>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={tableStyles.body.cell}>
                     <Chip
-                      icon={<Building2 size={14} />}
+                      icon={<Building2 size={12} />}
                       label={fw.is_organizational ? "Organizational" : "Project"}
                       size="small"
-                      color={fw.is_organizational ? "primary" : "default"}
-                      variant="outlined"
+                      sx={{
+                        fontSize: fontSizes.small,
+                        fontWeight: 500,
+                        height: 24,
+                        backgroundColor: fw.is_organizational
+                          ? `${colors.primary}12`
+                          : "#f3f4f6",
+                        color: fw.is_organizational
+                          ? colors.primary
+                          : textColors.secondary,
+                        border: fw.is_organizational
+                          ? `1px solid ${colors.primary}30`
+                          : "1px solid #e5e7eb",
+                        "& .MuiChip-icon": {
+                          color: fw.is_organizational
+                            ? colors.primary
+                            : textColors.muted,
+                        },
+                      }}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={tableStyles.body.cell}>
                     <Chip
-                      icon={<Layers size={14} />}
-                      label={fw.hierarchy_type === "three_level" ? "3 Levels" : "2 Levels"}
+                      icon={<Layers size={12} />}
+                      label={
+                        fw.hierarchy_type === "three_level"
+                          ? "3 Levels"
+                          : "2 Levels"
+                      }
                       size="small"
-                      variant="outlined"
+                      sx={{
+                        fontSize: fontSizes.small,
+                        fontWeight: 500,
+                        height: 24,
+                        backgroundColor: "#f3f4f6",
+                        color: textColors.secondary,
+                        border: "1px solid #e5e7eb",
+                        "& .MuiChip-icon": { color: textColors.muted },
+                      }}
                     />
                   </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {fw.level1_count || 0} {fw.level_1_name}s, {fw.level2_count || 0} {fw.level_2_name}s
+                  <TableCell sx={tableStyles.body.cell}>
+                    <Typography sx={{ fontSize: fontSizes.medium }}>
+                      {fw.level1_count || 0} {fw.level_1_name}s,{" "}
+                      {fw.level2_count || 0} {fw.level_2_name}s
                       {fw.hierarchy_type === "three_level" && fw.level3_count
                         ? `, ${fw.level3_count} ${fw.level_3_name}s`
                         : ""}
                     </Typography>
                   </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
+                  <TableCell sx={tableStyles.body.cell}>
+                    <Typography sx={{ fontSize: fontSizes.medium }}>
                       {new Date(fw.created_at).toLocaleDateString()}
                     </Typography>
                   </TableCell>
-                  <TableCell align="right">
-                    <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
+                  <TableCell sx={{ ...tableStyles.body.cell, textAlign: "right" }}>
+                    <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                       <Tooltip title="Add to Project">
                         <IconButton
                           size="small"
@@ -343,8 +446,13 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
                             setSelectedFramework(fw);
                             setAddToProjectDialogOpen(true);
                           }}
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            "&:hover": { backgroundColor: bgColors.hover },
+                          }}
                         >
-                          <LinkIcon size={16} />
+                          <LinkIcon size={14} color={textColors.muted} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="View Details">
@@ -354,23 +462,35 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
                             setDetailFrameworkId(fw.id);
                             setDetailDrawerOpen(true);
                           }}
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            "&:hover": { backgroundColor: bgColors.hover },
+                          }}
                         >
-                          <Eye size={16} />
+                          <Eye size={14} color={textColors.muted} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
                         <IconButton
                           size="small"
-                          color="error"
                           onClick={() => {
                             setSelectedFramework(fw);
                             setDeleteDialogOpen(true);
                           }}
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            "&:hover": {
+                              backgroundColor: "#fef2f2",
+                              "& svg": { color: colors.error },
+                            },
+                          }}
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} color={textColors.muted} />
                         </IconButton>
                       </Tooltip>
-                    </Box>
+                    </Stack>
                   </TableCell>
                 </TableRow>
               ))}
@@ -391,21 +511,53 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
       />
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Framework</DialogTitle>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: "8px",
+            maxWidth: 400,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontSize: "15px",
+            fontWeight: 600,
+            color: textColors.primary,
+            pb: 1,
+          }}
+        >
+          Delete Framework
+        </DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to delete "{selectedFramework?.name}"? This will remove the
-            framework structure but will not affect projects that have already implemented it.
+          <Typography sx={{ fontSize: fontSizes.medium, color: textColors.secondary }}>
+            Are you sure you want to delete "{selectedFramework?.name}"? This
+            will remove the framework structure but will not affect projects
+            that have already implemented it.
           </Typography>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+        <DialogActions sx={{ p: 2, pt: 1 }}>
           <Button
-            color="error"
+            onClick={() => setDeleteDialogOpen(false)}
+            sx={{
+              ...buttonStyles.primary.outlined,
+              color: textColors.secondary,
+              borderColor: borderColors.default,
+              "&:hover": {
+                borderColor: textColors.secondary,
+                backgroundColor: bgColors.hover,
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
             variant="contained"
             onClick={handleDeleteFramework}
             disabled={actionLoading}
+            sx={buttonStyles.error.contained}
           >
             {actionLoading ? "Deleting..." : "Delete"}
           </Button>
@@ -418,29 +570,57 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
         onClose={() => setAddToProjectDialogOpen(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "8px",
+          },
+        }}
       >
-        <DialogTitle>Add Framework to Project</DialogTitle>
+        <DialogTitle
+          sx={{
+            fontSize: "15px",
+            fontWeight: 600,
+            color: textColors.primary,
+            pb: 1,
+          }}
+        >
+          Add Framework to Project
+        </DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Select a project to add "{selectedFramework?.name}" to. This will create implementation
-            records for tracking compliance.
+          <Typography
+            sx={{
+              fontSize: fontSizes.medium,
+              color: textColors.muted,
+              mb: 2,
+            }}
+          >
+            Select a project to add "{selectedFramework?.name}" to. This will
+            create implementation records for tracking compliance.
           </Typography>
 
           {selectedFramework?.is_organizational && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              This is an organizational framework and can only be added to organizational projects.
+            <Alert severity="info" sx={{ mb: 2, fontSize: fontSizes.medium }}>
+              This is an organizational framework and can only be added to
+              organizational projects.
             </Alert>
           )}
 
           <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel>Select Project</InputLabel>
+            <InputLabel sx={{ fontSize: fontSizes.medium }}>
+              Select Project
+            </InputLabel>
             <Select
               value={selectedProjectId}
               label="Select Project"
               onChange={(e) => setSelectedProjectId(e.target.value as number)}
+              sx={{ fontSize: fontSizes.medium }}
             >
               {getCompatibleProjects().map((project) => (
-                <MenuItem key={project.id} value={project.id}>
+                <MenuItem
+                  key={project.id}
+                  value={project.id}
+                  sx={{ fontSize: fontSizes.medium }}
+                >
                   {project.project_title}
                 </MenuItem>
               ))}
@@ -448,19 +628,33 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
           </FormControl>
 
           {getCompatibleProjects().length === 0 && (
-            <Alert severity="warning" sx={{ mt: 2 }}>
+            <Alert severity="warning" sx={{ mt: 2, fontSize: fontSizes.medium }}>
               No compatible projects found. Create a{" "}
-              {selectedFramework?.is_organizational ? "organizational" : "regular"} project first.
+              {selectedFramework?.is_organizational ? "organizational" : "regular"}{" "}
+              project first.
             </Alert>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddToProjectDialogOpen(false)}>Cancel</Button>
+        <DialogActions sx={{ p: 2, pt: 1 }}>
+          <Button
+            onClick={() => setAddToProjectDialogOpen(false)}
+            sx={{
+              ...buttonStyles.primary.outlined,
+              color: textColors.secondary,
+              borderColor: borderColors.default,
+              "&:hover": {
+                borderColor: textColors.secondary,
+                backgroundColor: bgColors.hover,
+              },
+            }}
+          >
+            Cancel
+          </Button>
           <Button
             variant="contained"
             onClick={handleAddToProject}
             disabled={actionLoading || !selectedProjectId}
-            sx={{ bgcolor: theme.colors.primary.main }}
+            sx={buttonStyles.primary.contained}
           >
             {actionLoading ? "Adding..." : "Add to Project"}
           </Button>

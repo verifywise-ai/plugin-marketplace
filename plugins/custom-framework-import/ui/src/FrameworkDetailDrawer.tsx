@@ -40,7 +40,13 @@ import {
   FileText,
   ExternalLink,
 } from "lucide-react";
-import { theme } from "./theme";
+import {
+  colors,
+  textColors,
+  fontSizes,
+  bgColors,
+  borderColors,
+} from "./theme";
 
 interface FrameworkDetailDrawerProps {
   open: boolean;
@@ -175,10 +181,10 @@ export const FrameworkDetailDrawer: React.FC<FrameworkDetailDrawerProps> = ({
   };
 
   const getProgressColor = (percentage: number): string => {
-    if (percentage >= 100) return theme.colors.success.main;
-    if (percentage >= 50) return theme.colors.primary.main;
-    if (percentage >= 25) return theme.colors.warning.main;
-    return theme.colors.text.secondary;
+    if (percentage >= 100) return colors.success;
+    if (percentage >= 50) return colors.primary;
+    if (percentage >= 25) return colors.warning;
+    return textColors.secondary;
   };
 
   return (
@@ -196,16 +202,16 @@ export const FrameworkDetailDrawer: React.FC<FrameworkDetailDrawerProps> = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          p: 2,
-          borderBottom: "1px solid #e2e8f0",
-          bgcolor: "#f8fafc",
+          p: 2.5,
+          borderBottom: `1px solid ${borderColors.light}`,
+          background: bgColors.modalHeader,
         }}
       >
-        <Typography variant="h6" fontWeight={600}>
+        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: textColors.primary }}>
           Framework Details
         </Typography>
-        <IconButton onClick={handleClose} size="small">
-          <X size={20} />
+        <IconButton onClick={handleClose} size="small" sx={{ "&:hover": { bgcolor: bgColors.hover } }}>
+          <X size={20} color={textColors.muted} />
         </IconButton>
       </Box>
 
@@ -357,8 +363,8 @@ export const FrameworkDetailDrawer: React.FC<FrameworkDetailDrawerProps> = ({
                                   sx={{
                                     height: 20,
                                     fontSize: "0.7rem",
-                                    bgcolor: theme.colors.primary.bg,
-                                    color: theme.colors.primary.main,
+                                    bgcolor: `${colors.primary}15`,
+                                    color: colors.primary,
                                   }}
                                 />
                               )}
@@ -419,7 +425,7 @@ export const FrameworkDetailDrawer: React.FC<FrameworkDetailDrawerProps> = ({
                                 >
                                   <CheckCircle
                                     size={14}
-                                    color={theme.colors.success.main}
+                                    color={colors.success}
                                   />
                                   <Typography variant="caption">
                                     {project.progress.completed}/
@@ -435,7 +441,7 @@ export const FrameworkDetailDrawer: React.FC<FrameworkDetailDrawerProps> = ({
                                 >
                                   <Users
                                     size={14}
-                                    color={theme.colors.info.main}
+                                    color={colors.info}
                                   />
                                   <Typography variant="caption">
                                     {project.progress.assigned} assigned
@@ -450,7 +456,7 @@ export const FrameworkDetailDrawer: React.FC<FrameworkDetailDrawerProps> = ({
                                 >
                                   <Clock
                                     size={14}
-                                    color={theme.colors.text.secondary}
+                                    color={textColors.muted}
                                   />
                                   <Typography variant="caption">
                                     Added{" "}

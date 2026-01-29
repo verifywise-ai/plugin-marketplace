@@ -1,7 +1,14 @@
 import React, { useState } from "react";
 import { Button, Box, Typography, Card, CardContent, CardActions } from "@mui/material";
 import { Plus, FileJson, Database } from "lucide-react";
-import { theme } from "./theme";
+import {
+  colors,
+  textColors,
+  fontSizes,
+  borderColors,
+  bgColors,
+  buttonStyles,
+} from "./theme";
 import { FrameworkImportModal } from "./FrameworkImportModal";
 
 interface FrameworkImportButtonProps {
@@ -38,12 +45,13 @@ export const FrameworkImportButton: React.FC<FrameworkImportButtonProps> = ({
             height: "100%",
             display: "flex",
             flexDirection: "column",
-            border: "2px dashed #e2e8f0",
-            bgcolor: "#fafafa",
+            border: `2px dashed ${borderColors.default}`,
+            bgcolor: bgColors.subtle,
             transition: "all 0.2s",
             cursor: "pointer",
+            borderRadius: "8px",
             "&:hover": {
-              borderColor: theme.colors.primary.main,
+              borderColor: colors.primary,
               bgcolor: "#f0fdf4",
             },
           }}
@@ -55,32 +63,32 @@ export const FrameworkImportButton: React.FC<FrameworkImportButtonProps> = ({
                 width: 64,
                 height: 64,
                 borderRadius: "50%",
-                bgcolor: theme.colors.primary.main + "15",
+                bgcolor: `${colors.primary}15`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 mb: 2,
               }}
             >
-              <Plus size={32} color={theme.colors.primary.main} />
+              <Plus size={32} color={colors.primary} />
             </Box>
-            <Typography variant="h6" fontWeight={600} gutterBottom>
+            <Typography sx={{ fontSize: fontSizes.large, fontWeight: 600, color: textColors.primary, mb: 1 }}>
               Import Custom Framework
             </Typography>
-            <Typography variant="body2" color="text.secondary" textAlign="center">
+            <Typography sx={{ fontSize: fontSizes.medium, color: textColors.muted, textAlign: "center" }}>
               Add your own compliance framework from JSON or Excel
             </Typography>
           </CardContent>
           <CardActions sx={{ justifyContent: "center", pb: 3 }}>
             <Box sx={{ display: "flex", gap: 1 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "text.secondary" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: textColors.muted }}>
                 <FileJson size={14} />
-                <Typography variant="caption">JSON</Typography>
+                <Typography sx={{ fontSize: fontSizes.small }}>JSON</Typography>
               </Box>
-              <Typography variant="caption" color="text.secondary">or</Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "text.secondary" }}>
+              <Typography sx={{ fontSize: fontSizes.small, color: textColors.muted }}>or</Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: textColors.muted }}>
                 <Database size={14} />
-                <Typography variant="caption">Excel</Typography>
+                <Typography sx={{ fontSize: fontSizes.small }}>Excel</Typography>
               </Box>
             </Box>
           </CardActions>
@@ -102,10 +110,7 @@ export const FrameworkImportButton: React.FC<FrameworkImportButtonProps> = ({
         variant="contained"
         startIcon={<Plus size={18} />}
         onClick={handleOpenModal}
-        sx={{
-          bgcolor: theme.colors.primary.main,
-          "&:hover": { bgcolor: theme.colors.primary.dark },
-        }}
+        sx={buttonStyles.primary.contained}
       >
         Import Custom Framework
       </Button>

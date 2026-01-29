@@ -1,3 +1,11 @@
+/**
+ * Framework Import Modal
+ *
+ * Multi-step wizard for importing custom compliance frameworks.
+ * Supports JSON, Excel, and template library import methods.
+ * Uses VerifyWise design system for consistency.
+ */
+
 import React, { useState, useCallback, useRef } from "react";
 import {
   Box,
@@ -28,6 +36,7 @@ import {
   InputAdornment,
   Tabs,
   Tab,
+  Stack,
 } from "@mui/material";
 import {
   Download,
@@ -42,8 +51,20 @@ import {
   Search,
   Edit3,
 } from "lucide-react";
-import { theme } from "./theme";
-import { frameworkTemplates, templateCategories, FrameworkTemplate } from "./frameworkTemplates";
+import {
+  colors,
+  textColors,
+  fontSizes,
+  buttonStyles,
+  tableStyles,
+  borderColors,
+  bgColors,
+} from "./theme";
+import {
+  frameworkTemplates,
+  templateCategories,
+  FrameworkTemplate,
+} from "./frameworkTemplates";
 import * as ExcelJS from "exceljs";
 
 interface FrameworkImportModalProps {
@@ -72,6 +93,45 @@ interface ParsedFramework {
 
 const steps = ["Choose Method", "Configure Framework", "Preview & Import"];
 
+// Modal styling matching VerifyWise StandardModal
+const modalStyles = {
+  title: {
+    fontSize: "15px",
+    fontWeight: 600,
+    color: textColors.primary,
+  },
+  description: {
+    fontSize: fontSizes.medium,
+    color: textColors.muted,
+  },
+  header: {
+    background: bgColors.modalHeader,
+    borderBottom: `1px solid ${borderColors.light}`,
+    p: 2.5,
+  },
+  footer: {
+    background: bgColors.modalFooter,
+    borderTop: `1px solid ${borderColors.light}`,
+    px: 3,
+    py: 2,
+  },
+};
+
+// Card styling for method selection
+const methodCardStyle = (isSelected: boolean) => ({
+  height: "100%",
+  cursor: "pointer",
+  border: isSelected
+    ? `2px solid ${colors.primary}`
+    : `1px solid ${borderColors.default}`,
+  borderRadius: "8px",
+  transition: "all 0.2s",
+  "&:hover": {
+    borderColor: colors.primary,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+  },
+});
+
 export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
   open,
   onClose,
@@ -79,22 +139,29 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
   apiServices,
 }) => {
   const [activeStep, setActiveStep] = useState(0);
-  const [importMethod, setImportMethod] = useState<"json" | "excel" | "template">("json");
+  const [importMethod, setImportMethod] = useState<
+    "json" | "excel" | "template"
+  >("json");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<any>(null);
 
   // JSON import state
   const [jsonText, setJsonText] = useState("");
-  const [parsedFramework, setParsedFramework] = useState<ParsedFramework | null>(null);
+  const [parsedFramework, setParsedFramework] =
+    useState<ParsedFramework | null>(null);
 
   // Excel import state
   const [excelFile, setExcelFile] = useState<File | null>(null);
-  const [excelData, setExcelData] = useState<{ info: any; structure: any[] } | null>(null);
+  const [excelData, setExcelData] = useState<{
+    info: any;
+    structure: any[];
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Template selection state
-  const [selectedTemplate, setSelectedTemplate] = useState<FrameworkTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<FrameworkTemplate | null>(null);
   const [templateSearchQuery, setTemplateSearchQuery] = useState("");
   const [templateCategory, setTemplateCategory] = useState("all");
   const [customizingTemplate, setCustomizingTemplate] = useState(false);
@@ -149,9 +216,12 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get("/plugins/custom-framework-import/template", {
-        responseType: "blob",
-      });
+      const response = await api.get(
+        "/plugins/custom-framework-import/template",
+        {
+          responseType: "blob",
+        }
+      );
 
       const blob = new Blob([response.data], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -182,7 +252,9 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
     }
   }, [jsonText]);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -223,12 +295,13 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
       structureSheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) {
           row.eachCell((cell, colNumber) => {
-            headers[colNumber] = cell.value
-              ?.toString()
-              .toLowerCase()
-              .replace(/\s+/g, "_")
-              .replace(/[*()]/g, "")
-              .replace(/_+$/, "") || "";
+            headers[colNumber] =
+              cell.value
+                ?.toString()
+                .toLowerCase()
+                .replace(/\s+/g, "_")
+                .replace(/[*()]/g, "")
+                .replace(/_+$/, "") || "";
           });
         } else {
           const rowData: Record<string, any> = {};
@@ -265,7 +338,8 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
       version: info.version || "1.0.0",
       is_organizational: info.is_organizational === "true",
       hierarchy: {
-        type: (info.hierarchy_type as "two_level" | "three_level") || "two_level",
+        type:
+          (info.hierarchy_type as "two_level" | "three_level") || "two_level",
         level1_name: info.level1_name || "Category",
         level2_name: info.level2_name || "Control",
         level3_name: info.level3_name || undefined,
@@ -297,10 +371,14 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
           order_no: parseInt(row.order) || 1,
           summary: row.summary || undefined,
           questions: row.questions_comma_separated
-            ? row.questions_comma_separated.split(",").map((q: string) => q.trim())
+            ? row.questions_comma_separated
+                .split(",")
+                .map((q: string) => q.trim())
             : undefined,
           evidence_examples: row.evidence_examples_comma_separated
-            ? row.evidence_examples_comma_separated.split(",").map((e: string) => e.trim())
+            ? row.evidence_examples_comma_separated
+                .split(",")
+                .map((e: string) => e.trim())
             : undefined,
           items: [],
         };
@@ -359,9 +437,15 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
 
       let response;
       if (importMethod === "excel" && excelData) {
-        response = await api.post("/plugins/custom-framework-import/import-excel", excelData);
+        response = await api.post(
+          "/plugins/custom-framework-import/import-excel",
+          excelData
+        );
       } else {
-        response = await api.post("/plugins/custom-framework-import/import", parsedFramework);
+        response = await api.post(
+          "/plugins/custom-framework-import/import",
+          parsedFramework
+        );
       }
 
       const result = response.data.data || response.data;
@@ -389,7 +473,9 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
     }
   };
 
-  const countItems = (structure: any[]): { level1: number; level2: number; level3: number } => {
+  const countItems = (
+    structure: any[]
+  ): { level1: number; level2: number; level3: number } => {
     let level1 = 0;
     let level2 = 0;
     let level3 = 0;
@@ -407,42 +493,62 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
 
   const getFilteredTemplates = () => {
     return frameworkTemplates.filter((template) => {
-      const matchesCategory = templateCategory === "all" || template.category === templateCategory;
+      const matchesCategory =
+        templateCategory === "all" || template.category === templateCategory;
       const matchesSearch =
         !templateSearchQuery ||
-        template.name.toLowerCase().includes(templateSearchQuery.toLowerCase()) ||
-        template.description.toLowerCase().includes(templateSearchQuery.toLowerCase()) ||
-        template.tags.some((tag) => tag.toLowerCase().includes(templateSearchQuery.toLowerCase()));
+        template.name
+          .toLowerCase()
+          .includes(templateSearchQuery.toLowerCase()) ||
+        template.description
+          .toLowerCase()
+          .includes(templateSearchQuery.toLowerCase()) ||
+        template.tags.some((tag) =>
+          tag.toLowerCase().includes(templateSearchQuery.toLowerCase())
+        );
       return matchesCategory && matchesSearch;
     });
   };
 
   const renderMethodSelection = () => (
-    <Box sx={{ mt: 2 }}>
+    <Box sx={{ mt: 3 }}>
       <Grid container spacing={2}>
         <Grid item xs={12} md={4}>
           <Card
-            sx={{
-              height: "100%",
-              cursor: "pointer",
-              border: importMethod === "template" ? `2px solid ${theme.colors.primary.main}` : "1px solid #e2e8f0",
-              transition: "all 0.2s",
-              "&:hover": { borderColor: theme.colors.primary.main },
-            }}
+            sx={methodCardStyle(importMethod === "template")}
             onClick={() => setImportMethod("template")}
           >
             <CardContent sx={{ textAlign: "center", py: 4 }}>
-              <Library size={48} color={theme.colors.primary.main} style={{ marginBottom: 16 }} />
-              <Typography variant="h6" gutterBottom>
+              <Library
+                size={40}
+                color={colors.primary}
+                style={{ marginBottom: 16 }}
+              />
+              <Typography
+                sx={{
+                  fontSize: fontSizes.large,
+                  fontWeight: 600,
+                  color: textColors.primary,
+                  mb: 1,
+                }}
+              >
                 Template Library
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                sx={{ fontSize: fontSizes.medium, color: textColors.muted }}
+              >
                 Choose from pre-built compliance frameworks
               </Typography>
               <Chip
                 label="Recommended"
                 size="small"
-                sx={{ mt: 2, bgcolor: theme.colors.primary.bg, color: theme.colors.primary.main }}
+                sx={{
+                  mt: 2,
+                  backgroundColor: `${colors.primary}12`,
+                  color: colors.primary,
+                  fontWeight: 500,
+                  fontSize: fontSizes.small,
+                }}
               />
             </CardContent>
           </Card>
@@ -450,21 +556,28 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
 
         <Grid item xs={12} md={4}>
           <Card
-            sx={{
-              height: "100%",
-              cursor: "pointer",
-              border: importMethod === "json" ? `2px solid ${theme.colors.primary.main}` : "1px solid #e2e8f0",
-              transition: "all 0.2s",
-              "&:hover": { borderColor: theme.colors.primary.main },
-            }}
+            sx={methodCardStyle(importMethod === "json")}
             onClick={() => setImportMethod("json")}
           >
             <CardContent sx={{ textAlign: "center", py: 4 }}>
-              <FileJson size={48} color={theme.colors.info.main} style={{ marginBottom: 16 }} />
-              <Typography variant="h6" gutterBottom>
+              <FileJson
+                size={40}
+                color={colors.info}
+                style={{ marginBottom: 16 }}
+              />
+              <Typography
+                sx={{
+                  fontSize: fontSizes.large,
+                  fontWeight: 600,
+                  color: textColors.primary,
+                  mb: 1,
+                }}
+              >
                 JSON Import
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                sx={{ fontSize: fontSizes.medium, color: textColors.muted }}
+              >
                 Paste or upload a JSON file with your framework
               </Typography>
             </CardContent>
@@ -473,21 +586,28 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
 
         <Grid item xs={12} md={4}>
           <Card
-            sx={{
-              height: "100%",
-              cursor: "pointer",
-              border: importMethod === "excel" ? `2px solid ${theme.colors.primary.main}` : "1px solid #e2e8f0",
-              transition: "all 0.2s",
-              "&:hover": { borderColor: theme.colors.primary.main },
-            }}
+            sx={methodCardStyle(importMethod === "excel")}
             onClick={() => setImportMethod("excel")}
           >
             <CardContent sx={{ textAlign: "center", py: 4 }}>
-              <FileSpreadsheet size={48} color={theme.colors.success.main} style={{ marginBottom: 16 }} />
-              <Typography variant="h6" gutterBottom>
+              <FileSpreadsheet
+                size={40}
+                color={colors.success}
+                style={{ marginBottom: 16 }}
+              />
+              <Typography
+                sx={{
+                  fontSize: fontSizes.large,
+                  fontWeight: 600,
+                  color: textColors.primary,
+                  mb: 1,
+                }}
+              >
                 Excel Template
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                sx={{ fontSize: fontSizes.medium, color: textColors.muted }}
+              >
                 Download template, fill it out, and upload
               </Typography>
             </CardContent>
@@ -499,18 +619,23 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
 
   const renderTemplateSelection = () => (
     <Box sx={{ mt: 2 }}>
-      {/* Search and Filter */}
-      <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+      {/* Search */}
+      <Box sx={{ mb: 3 }}>
         <TextField
           size="small"
           placeholder="Search templates..."
           value={templateSearchQuery}
           onChange={(e) => setTemplateSearchQuery(e.target.value)}
-          sx={{ flex: 1 }}
+          fullWidth
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              fontSize: fontSizes.medium,
+            },
+          }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <Search size={18} />
+                <Search size={18} color={textColors.muted} />
               </InputAdornment>
             ),
           }}
@@ -521,7 +646,11 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
       <Tabs
         value={templateCategory}
         onChange={(_, value) => setTemplateCategory(value)}
-        sx={{ mb: 2, borderBottom: "1px solid #e2e8f0" }}
+        sx={{
+          mb: 2,
+          borderBottom: `1px solid ${borderColors.default}`,
+          "& .MuiTab-root": { fontSize: fontSizes.medium },
+        }}
       >
         {templateCategories.map((cat) => (
           <Tab key={cat.id} label={cat.name} value={cat.id} />
@@ -529,54 +658,89 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
       </Tabs>
 
       {/* Template Grid */}
-      <Box sx={{ maxHeight: 400, overflow: "auto" }}>
+      <Box sx={{ maxHeight: 350, overflow: "auto" }}>
         <Grid container spacing={2}>
           {getFilteredTemplates().map((template) => (
             <Grid item xs={12} md={6} key={template.id}>
               <Card
                 sx={{
                   cursor: "pointer",
-                  border: selectedTemplate?.id === template.id
-                    ? `2px solid ${theme.colors.primary.main}`
-                    : "1px solid #e2e8f0",
+                  border:
+                    selectedTemplate?.id === template.id
+                      ? `2px solid ${colors.primary}`
+                      : `1px solid ${borderColors.default}`,
+                  borderRadius: "8px",
                   transition: "all 0.2s",
-                  "&:hover": { borderColor: theme.colors.primary.main, boxShadow: theme.shadows.md },
+                  "&:hover": {
+                    borderColor: colors.primary,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                  },
                 }}
                 onClick={() => handleSelectTemplate(template)}
               >
-                <CardContent>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                    <Typography variant="subtitle1" fontWeight={600}>
+                <CardContent sx={{ p: 2 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: fontSizes.medium,
+                        fontWeight: 600,
+                        color: textColors.primary,
+                      }}
+                    >
                       {template.name}
                     </Typography>
                     {selectedTemplate?.id === template.id && (
-                      <CheckCircle size={20} color={theme.colors.primary.main} />
+                      <CheckCircle size={18} color={colors.primary} />
                     )}
                   </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
-                    {template.description.length > 100
-                      ? `${template.description.substring(0, 100)}...`
+                  <Typography
+                    sx={{
+                      fontSize: fontSizes.small,
+                      color: textColors.muted,
+                      mb: 1.5,
+                      minHeight: 36,
+                    }}
+                  >
+                    {template.description.length > 80
+                      ? `${template.description.substring(0, 80)}...`
                       : template.description}
                   </Typography>
-                  <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                  <Stack direction="row" spacing={0.5} flexWrap="wrap">
                     <Chip
                       label={template.category}
                       size="small"
-                      sx={{ bgcolor: "#f1f5f9", fontSize: "0.7rem" }}
+                      sx={{
+                        backgroundColor: "#f3f4f6",
+                        fontSize: "10px",
+                        height: 20,
+                      }}
                     />
                     <Chip
-                      label={template.framework.hierarchy.type === "three_level" ? "3 Levels" : "2 Levels"}
+                      label={
+                        template.framework.hierarchy.type === "three_level"
+                          ? "3 Levels"
+                          : "2 Levels"
+                      }
                       size="small"
                       variant="outlined"
-                      sx={{ fontSize: "0.7rem" }}
+                      sx={{ fontSize: "10px", height: 20 }}
                     />
                     <Chip
-                      label={template.framework.is_organizational ? "Org" : "Project"}
+                      label={
+                        template.framework.is_organizational ? "Org" : "Project"
+                      }
                       size="small"
                       variant="outlined"
-                      sx={{ fontSize: "0.7rem" }}
+                      sx={{ fontSize: "10px", height: 20 }}
                     />
-                  </Box>
+                  </Stack>
                 </CardContent>
               </Card>
             </Grid>
@@ -586,21 +750,40 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
 
       {/* Selected Template Actions */}
       {selectedTemplate && (
-        <Paper sx={{ p: 2, mt: 3, bgcolor: "#f8fafc" }}>
-          <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+        <Paper
+          sx={{
+            p: 2,
+            mt: 3,
+            backgroundColor: bgColors.subtle,
+            border: `1px solid ${borderColors.default}`,
+            borderRadius: "8px",
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: fontSizes.medium,
+              fontWeight: 600,
+              color: textColors.primary,
+              mb: 0.5,
+            }}
+          >
             Selected: {selectedTemplate.name}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {countItems(selectedTemplate.framework.structure).level1} {selectedTemplate.framework.hierarchy.level1_name}s,{" "}
-            {countItems(selectedTemplate.framework.structure).level2} {selectedTemplate.framework.hierarchy.level2_name}s
+          <Typography
+            sx={{ fontSize: fontSizes.small, color: textColors.muted, mb: 2 }}
+          >
+            {countItems(selectedTemplate.framework.structure).level1}{" "}
+            {selectedTemplate.framework.hierarchy.level1_name}s,{" "}
+            {countItems(selectedTemplate.framework.structure).level2}{" "}
+            {selectedTemplate.framework.hierarchy.level2_name}s
             {selectedTemplate.framework.hierarchy.type === "three_level" &&
               `, ${countItems(selectedTemplate.framework.structure).level3} ${selectedTemplate.framework.hierarchy.level3_name}s`}
           </Typography>
-          <Box sx={{ display: "flex", gap: 2 }}>
+          <Stack direction="row" spacing={2}>
             <Button
               variant="contained"
               onClick={() => handleUseTemplate(false)}
-              sx={{ bgcolor: theme.colors.primary.main }}
+              sx={buttonStyles.primary.contained}
             >
               Use as is
             </Button>
@@ -608,10 +791,11 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
               variant="outlined"
               startIcon={<Edit3 size={16} />}
               onClick={() => handleUseTemplate(true)}
+              sx={buttonStyles.primary.outlined}
             >
               Customize first
             </Button>
-          </Box>
+          </Stack>
         </Paper>
       )}
     </Box>
@@ -622,8 +806,9 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
     if (importMethod === "template" && customizingTemplate) {
       return (
         <Box sx={{ mt: 2 }}>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Customize the framework JSON below. You can modify the name, description, structure, and any other fields.
+          <Alert severity="info" sx={{ mb: 2, fontSize: fontSizes.medium }}>
+            Customize the framework JSON below. You can modify the name,
+            description, structure, and any other fields.
           </Alert>
           <TextField
             multiline
@@ -631,7 +816,12 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
             fullWidth
             value={customizedJson}
             onChange={(e) => setCustomizedJson(e.target.value)}
-            sx={{ fontFamily: "monospace", fontSize: "0.875rem" }}
+            sx={{
+              "& .MuiInputBase-root": {
+                fontFamily: "monospace",
+                fontSize: "12px",
+              },
+            }}
           />
         </Box>
       );
@@ -646,7 +836,14 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
     if (importMethod === "json") {
       return (
         <Box sx={{ mt: 2 }}>
-          <Typography variant="subtitle2" gutterBottom>
+          <Typography
+            sx={{
+              fontSize: fontSizes.medium,
+              fontWeight: 500,
+              color: textColors.secondary,
+              mb: 1,
+            }}
+          >
             Paste your framework JSON below:
           </Typography>
           <TextField
@@ -679,7 +876,12 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
 }`}
             value={jsonText}
             onChange={(e) => setJsonText(e.target.value)}
-            sx={{ fontFamily: "monospace", fontSize: "0.875rem" }}
+            sx={{
+              "& .MuiInputBase-root": {
+                fontFamily: "monospace",
+                fontSize: "12px",
+              },
+            }}
           />
         </Box>
       );
@@ -688,16 +890,18 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
     // Excel upload
     return (
       <Box sx={{ mt: 2 }}>
-        <Alert severity="info" sx={{ mb: 3 }}>
-          Download the Excel template, fill it out with your framework data, then upload it below.
+        <Alert severity="info" sx={{ mb: 3, fontSize: fontSizes.medium }}>
+          Download the Excel template, fill it out with your framework data,
+          then upload it below.
         </Alert>
 
-        <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+        <Box sx={{ mb: 3 }}>
           <Button
             variant="outlined"
             startIcon={<Download size={18} />}
             onClick={handleDownloadTemplate}
             disabled={loading}
+            sx={buttonStyles.primary.outlined}
           >
             Download Template
           </Button>
@@ -705,13 +909,16 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
 
         <Box
           sx={{
-            border: "2px dashed #e2e8f0",
-            borderRadius: 2,
+            border: `2px dashed ${borderColors.default}`,
+            borderRadius: "8px",
             p: 4,
             textAlign: "center",
             cursor: "pointer",
             transition: "all 0.2s",
-            "&:hover": { borderColor: theme.colors.primary.main, bgcolor: "#f8fafc" },
+            "&:hover": {
+              borderColor: colors.primary,
+              backgroundColor: bgColors.subtle,
+            },
           }}
           onClick={() => fileInputRef.current?.click()}
         >
@@ -722,11 +929,19 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
             style={{ display: "none" }}
             onChange={handleFileUpload}
           />
-          <Upload size={32} color={theme.colors.text.secondary} />
-          <Typography variant="body1" sx={{ mt: 2 }}>
+          <Upload size={32} color={textColors.muted} />
+          <Typography
+            sx={{
+              fontSize: fontSizes.medium,
+              color: textColors.secondary,
+              mt: 2,
+            }}
+          >
             {excelFile ? excelFile.name : "Click to upload or drag and drop"}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            sx={{ fontSize: fontSizes.small, color: textColors.muted }}
+          >
             .xlsx or .xls files only
           </Typography>
         </Box>
@@ -742,102 +957,226 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
     return (
       <Box sx={{ mt: 2 }}>
         {importResult ? (
-          <Alert severity="success" icon={<CheckCircle />} sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" fontWeight={600}>
+          <Alert
+            severity="success"
+            icon={<CheckCircle />}
+            sx={{ mb: 3, fontSize: fontSizes.medium }}
+          >
+            <Typography
+              sx={{ fontSize: fontSizes.medium, fontWeight: 600, mb: 0.5 }}
+            >
               Framework imported successfully!
             </Typography>
-            <Typography variant="body2">
-              Created {importResult.itemsCreated} items. Framework ID: {importResult.frameworkId}
+            <Typography sx={{ fontSize: fontSizes.small }}>
+              Created {importResult.itemsCreated} items. Framework ID:{" "}
+              {importResult.frameworkId}
             </Typography>
           </Alert>
         ) : (
           <>
-            <Card sx={{ mb: 3 }}>
+            <Card
+              sx={{
+                mb: 3,
+                border: `1px solid ${borderColors.default}`,
+                borderRadius: "8px",
+              }}
+            >
               <CardContent>
-                <Typography variant="h6" gutterBottom>
+                <Typography
+                  sx={{
+                    fontSize: fontSizes.large,
+                    fontWeight: 600,
+                    color: textColors.primary,
+                    mb: 1,
+                  }}
+                >
                   {parsedFramework.name}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" paragraph>
+                <Typography
+                  sx={{
+                    fontSize: fontSizes.medium,
+                    color: textColors.muted,
+                    mb: 2,
+                  }}
+                >
                   {parsedFramework.description}
                 </Typography>
 
-                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 2 }}>
+                <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
                   <Chip
                     label={`Version ${parsedFramework.version}`}
                     size="small"
                     variant="outlined"
+                    sx={{ fontSize: fontSizes.small }}
                   />
                   <Chip
-                    label={parsedFramework.is_organizational ? "Organizational" : "Project-level"}
+                    label={
+                      parsedFramework.is_organizational
+                        ? "Organizational"
+                        : "Project-level"
+                    }
                     size="small"
-                    color={parsedFramework.is_organizational ? "primary" : "default"}
+                    sx={{
+                      backgroundColor: parsedFramework.is_organizational
+                        ? `${colors.primary}12`
+                        : "#f3f4f6",
+                      color: parsedFramework.is_organizational
+                        ? colors.primary
+                        : textColors.secondary,
+                      fontSize: fontSizes.small,
+                    }}
                   />
                   <Chip
-                    label={parsedFramework.hierarchy.type === "three_level" ? "3 Levels" : "2 Levels"}
+                    label={
+                      parsedFramework.hierarchy.type === "three_level"
+                        ? "3 Levels"
+                        : "2 Levels"
+                    }
                     size="small"
                     variant="outlined"
+                    sx={{ fontSize: fontSizes.small }}
                   />
-                </Box>
+                </Stack>
 
-                <Box sx={{ display: "flex", gap: 3 }}>
+                <Stack direction="row" spacing={4}>
                   <Box>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography
+                      sx={{ fontSize: fontSizes.small, color: textColors.muted }}
+                    >
                       {parsedFramework.hierarchy.level1_name}s
                     </Typography>
-                    <Typography variant="h5">{counts.level1}</Typography>
+                    <Typography
+                      sx={{
+                        fontSize: "24px",
+                        fontWeight: 600,
+                        color: textColors.primary,
+                      }}
+                    >
+                      {counts.level1}
+                    </Typography>
                   </Box>
                   <Box>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography
+                      sx={{ fontSize: fontSizes.small, color: textColors.muted }}
+                    >
                       {parsedFramework.hierarchy.level2_name}s
                     </Typography>
-                    <Typography variant="h5">{counts.level2}</Typography>
+                    <Typography
+                      sx={{
+                        fontSize: "24px",
+                        fontWeight: 600,
+                        color: textColors.primary,
+                      }}
+                    >
+                      {counts.level2}
+                    </Typography>
                   </Box>
                   {parsedFramework.hierarchy.type === "three_level" && (
                     <Box>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography
+                        sx={{
+                          fontSize: fontSizes.small,
+                          color: textColors.muted,
+                        }}
+                      >
                         {parsedFramework.hierarchy.level3_name}s
                       </Typography>
-                      <Typography variant="h5">{counts.level3}</Typography>
+                      <Typography
+                        sx={{
+                          fontSize: "24px",
+                          fontWeight: 600,
+                          color: textColors.primary,
+                        }}
+                      >
+                        {counts.level3}
+                      </Typography>
                     </Box>
                   )}
-                </Box>
+                </Stack>
               </CardContent>
             </Card>
 
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography
+              sx={{
+                fontSize: fontSizes.medium,
+                fontWeight: 500,
+                color: textColors.secondary,
+                mb: 1,
+              }}
+            >
               Structure Preview (first 5 items)
             </Typography>
-            <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+            <TableContainer component={Paper} sx={{ ...tableStyles.frame, maxHeight: 280 }}>
               <Table size="small" stickyHeader>
                 <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Level</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Title</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                  <TableRow sx={tableStyles.header.row}>
+                    <TableCell sx={tableStyles.header.cell}>Level</TableCell>
+                    <TableCell sx={tableStyles.header.cell}>Title</TableCell>
+                    <TableCell sx={tableStyles.header.cell}>
+                      Description
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {parsedFramework.structure.slice(0, 5).map((l1, i) => (
                     <React.Fragment key={i}>
-                      <TableRow sx={{ bgcolor: "#f8fafc" }}>
-                        <TableCell>
-                          <Chip label="L1" size="small" color="primary" />
+                      <TableRow
+                        sx={{ ...tableStyles.body.row, backgroundColor: bgColors.subtle }}
+                      >
+                        <TableCell sx={tableStyles.body.cell}>
+                          <Chip
+                            label="L1"
+                            size="small"
+                            sx={{
+                              backgroundColor: `${colors.primary}12`,
+                              color: colors.primary,
+                              fontSize: "10px",
+                              height: 20,
+                            }}
+                          />
                         </TableCell>
-                        <TableCell sx={{ fontWeight: 500 }}>{l1.title}</TableCell>
-                        <TableCell>
-                          <Typography variant="body2" noWrap sx={{ maxWidth: 300 }}>
+                        <TableCell
+                          sx={{ ...tableStyles.body.cell, fontWeight: 500 }}
+                        >
+                          {l1.title}
+                        </TableCell>
+                        <TableCell sx={tableStyles.body.cell}>
+                          <Typography
+                            sx={{
+                              fontSize: fontSizes.small,
+                              maxWidth: 280,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
                             {l1.description || "-"}
                           </Typography>
                         </TableCell>
                       </TableRow>
                       {(l1.items || []).slice(0, 3).map((l2: any, j: number) => (
-                        <TableRow key={`${i}-${j}`}>
-                          <TableCell sx={{ pl: 3 }}>
-                            <Chip label="L2" size="small" variant="outlined" />
+                        <TableRow key={`${i}-${j}`} sx={tableStyles.body.row}>
+                          <TableCell sx={{ ...tableStyles.body.cell, pl: 3 }}>
+                            <Chip
+                              label="L2"
+                              size="small"
+                              variant="outlined"
+                              sx={{ fontSize: "10px", height: 20 }}
+                            />
                           </TableCell>
-                          <TableCell>{l2.title}</TableCell>
-                          <TableCell>
-                            <Typography variant="body2" noWrap sx={{ maxWidth: 300 }}>
+                          <TableCell sx={tableStyles.body.cell}>
+                            {l2.title}
+                          </TableCell>
+                          <TableCell sx={tableStyles.body.cell}>
+                            <Typography
+                              sx={{
+                                fontSize: fontSizes.small,
+                                maxWidth: 280,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
                               {l2.description || "-"}
                             </Typography>
                           </TableCell>
@@ -865,7 +1204,9 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
           }
           return selectedTemplate !== null;
         }
-        return importMethod === "json" ? jsonText.trim().length > 0 : excelData !== null;
+        return importMethod === "json"
+          ? jsonText.trim().length > 0
+          : excelData !== null;
       case 2:
         return parsedFramework !== null && !importResult;
       default:
@@ -896,28 +1237,54 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          borderBottom: "1px solid #e2e8f0",
-        }}
-      >
-        <Box>
-          <Typography variant="h6">Import Custom Framework</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Create a new compliance framework from templates, JSON, or Excel
-          </Typography>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: "16px",
+          overflow: "hidden",
+        },
+      }}
+    >
+      <DialogTitle sx={modalStyles.header}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+          }}
+        >
+          <Box>
+            <Typography sx={modalStyles.title}>
+              Import Custom Framework
+            </Typography>
+            <Typography sx={modalStyles.description}>
+              Create a new compliance framework from templates, JSON, or Excel
+            </Typography>
+          </Box>
+          <IconButton
+            onClick={handleClose}
+            size="small"
+            sx={{
+              "&:hover": { backgroundColor: bgColors.hover },
+            }}
+          >
+            <X size={20} color={textColors.muted} />
+          </IconButton>
         </Box>
-        <IconButton onClick={handleClose} size="small">
-          <X size={20} />
-        </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ py: 3 }}>
-        <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
+        <Stepper
+          activeStep={activeStep}
+          sx={{
+            mb: 2,
+            "& .MuiStepLabel-label": { fontSize: fontSizes.medium },
+          }}
+        >
           {steps.map((label) => (
             <Step key={label}>
               <StepLabel>{label}</StepLabel>
@@ -926,8 +1293,18 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
         </Stepper>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-            <pre style={{ margin: 0, whiteSpace: "pre-wrap", fontFamily: "inherit" }}>
+          <Alert
+            severity="error"
+            sx={{ mb: 2, fontSize: fontSizes.medium }}
+            onClose={() => setError(null)}
+          >
+            <pre
+              style={{
+                margin: 0,
+                whiteSpace: "pre-wrap",
+                fontFamily: "inherit",
+              }}
+            >
               {error}
             </pre>
           </Alert>
@@ -938,8 +1315,20 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
         {activeStep === 2 && renderPreviewStep()}
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid #e2e8f0" }}>
-        <Button onClick={handleReset} disabled={loading}>
+      <DialogActions sx={modalStyles.footer}>
+        <Button
+          onClick={handleReset}
+          disabled={loading}
+          sx={{
+            ...buttonStyles.primary.outlined,
+            color: textColors.secondary,
+            borderColor: borderColors.default,
+            "&:hover": {
+              borderColor: textColors.secondary,
+              backgroundColor: bgColors.hover,
+            },
+          }}
+        >
           Reset
         </Button>
         <Box sx={{ flex: 1 }} />
@@ -948,6 +1337,15 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
             onClick={handleBack}
             startIcon={<ChevronLeft size={18} />}
             disabled={loading}
+            sx={{
+              ...buttonStyles.primary.outlined,
+              color: textColors.secondary,
+              borderColor: borderColors.default,
+              "&:hover": {
+                borderColor: textColors.secondary,
+                backgroundColor: bgColors.hover,
+              },
+            }}
           >
             Back
           </Button>
@@ -958,7 +1356,7 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
             onClick={handleNext}
             endIcon={<ChevronRight size={18} />}
             disabled={!canProceed() || loading}
-            sx={{ bgcolor: theme.colors.primary.main }}
+            sx={buttonStyles.primary.contained}
           >
             Next
           </Button>
@@ -967,15 +1365,25 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
           <Button
             variant="contained"
             onClick={handleImport}
-            startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <Upload size={18} />}
+            startIcon={
+              loading ? (
+                <CircularProgress size={18} color="inherit" />
+              ) : (
+                <Upload size={18} />
+              )
+            }
             disabled={loading || !parsedFramework}
-            sx={{ bgcolor: theme.colors.primary.main }}
+            sx={buttonStyles.primary.contained}
           >
             {loading ? "Importing..." : "Import Framework"}
           </Button>
         )}
         {importResult && (
-          <Button variant="contained" onClick={handleClose} sx={{ bgcolor: theme.colors.primary.main }}>
+          <Button
+            variant="contained"
+            onClick={handleClose}
+            sx={buttonStyles.primary.contained}
+          >
             Done
           </Button>
         )}

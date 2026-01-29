@@ -32,7 +32,17 @@ import {
   HelpCircle,
   CheckSquare,
 } from "lucide-react";
-import { theme, statusOptions, StatusType } from "./theme";
+import {
+  colors,
+  textColors,
+  fontSizes,
+  borderColors,
+  bgColors,
+  buttonStyles,
+  statusColors,
+  statusOptions,
+  StatusType,
+} from "./theme";
 
 interface CustomFrameworkDrawerProps {
   open: boolean;
@@ -132,7 +142,7 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
   };
 
   const getStatusColor = (status: string): string => {
-    const statusConfig = theme.status[status as StatusType];
+    const statusConfig = statusColors[status as StatusType];
     return statusConfig?.color || "#94a3b8";
   };
 
@@ -155,21 +165,21 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          p: 2,
-          borderBottom: "1px solid #e2e8f0",
-          bgcolor: "#f8fafc",
+          p: 2.5,
+          borderBottom: `1px solid ${borderColors.light}`,
+          background: bgColors.modalHeader,
         }}
       >
         <Box>
-          <Typography variant="caption" color="text.secondary">
+          <Typography sx={{ fontSize: fontSizes.small, color: textColors.muted }}>
             {levelName} Details
           </Typography>
-          <Typography variant="h6" fontWeight={600} sx={{ pr: 4 }}>
+          <Typography sx={{ fontSize: "15px", fontWeight: 600, color: textColors.primary, pr: 4 }}>
             {item.title}
           </Typography>
         </Box>
-        <IconButton onClick={onClose} size="small">
-          <X size={20} />
+        <IconButton onClick={onClose} size="small" sx={{ "&:hover": { bgcolor: bgColors.hover } }}>
+          <X size={20} color={textColors.muted} />
         </IconButton>
       </Box>
 
@@ -334,7 +344,7 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
           <Accordion defaultExpanded sx={{ mb: 2 }}>
             <AccordionSummary expandIcon={<ChevronDown size={18} />}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <HelpCircle size={18} color={theme.colors.info.main} />
+                <HelpCircle size={18} color={colors.info} />
                 <Typography variant="subtitle2">Guiding Questions</Typography>
               </Box>
             </AccordionSummary>
@@ -343,7 +353,7 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
                 {item.questions.map((q: string, idx: number) => (
                   <ListItem key={idx} disablePadding sx={{ py: 0.5 }}>
                     <ListItemIcon sx={{ minWidth: 28 }}>
-                      <CheckSquare size={14} color={theme.colors.text.secondary} />
+                      <CheckSquare size={14} color={textColors.muted} />
                     </ListItemIcon>
                     <ListItemText
                       primary={q}
@@ -361,7 +371,7 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
           <Accordion sx={{ mb: 2 }}>
             <AccordionSummary expandIcon={<ChevronDown size={18} />}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <FileText size={18} color={theme.colors.success.main} />
+                <FileText size={18} color={colors.success} />
                 <Typography variant="subtitle2">Evidence Examples</Typography>
               </Box>
             </AccordionSummary>
@@ -386,7 +396,7 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
           <Accordion sx={{ mb: 2 }}>
             <AccordionSummary expandIcon={<ChevronDown size={18} />}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <AlertCircle size={18} color={theme.colors.warning.main} />
+                <AlertCircle size={18} color={colors.warning} />
                 <Typography variant="subtitle2">
                   Linked Risks ({item.linked_risks.length})
                 </Typography>
@@ -397,7 +407,7 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
                 {item.linked_risks.map((risk: any) => (
                   <ListItem key={risk.id} disablePadding sx={{ py: 0.5 }}>
                     <ListItemIcon sx={{ minWidth: 28 }}>
-                      <LinkIcon size={14} color={theme.colors.warning.main} />
+                      <LinkIcon size={14} color={colors.warning} />
                     </ListItemIcon>
                     <ListItemText
                       primary={risk.risk_name}
@@ -415,7 +425,7 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
           <Accordion sx={{ mb: 2 }}>
             <AccordionSummary expandIcon={<ChevronDown size={18} />}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <FileText size={18} color={theme.colors.primary.main} />
+                <FileText size={18} color={colors.primary} />
                 <Typography variant="subtitle2">
                   Uploaded Evidence ({item.evidence_links.length})
                 </Typography>
@@ -426,7 +436,7 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
                 {item.evidence_links.map((evidence: any, idx: number) => (
                   <ListItem key={idx} disablePadding sx={{ py: 0.5 }}>
                     <ListItemIcon sx={{ minWidth: 28 }}>
-                      <FileText size={14} color={theme.colors.primary.main} />
+                      <FileText size={14} color={colors.primary} />
                     </ListItemIcon>
                     <ListItemText
                       primary={evidence.fileName || `Evidence ${idx + 1}`}
@@ -443,14 +453,28 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
       {/* Footer */}
       <Box
         sx={{
-          p: 2,
-          borderTop: "1px solid #e2e8f0",
+          px: 3,
+          py: 2,
+          borderTop: `1px solid ${borderColors.light}`,
+          background: bgColors.modalFooter,
           display: "flex",
           justifyContent: "flex-end",
           gap: 2,
         }}
       >
-        <Button variant="outlined" onClick={onClose}>
+        <Button
+          variant="outlined"
+          onClick={onClose}
+          sx={{
+            ...buttonStyles.primary.outlined,
+            color: textColors.secondary,
+            borderColor: borderColors.default,
+            "&:hover": {
+              borderColor: textColors.secondary,
+              backgroundColor: bgColors.hover,
+            },
+          }}
+        >
           Cancel
         </Button>
         <Button
@@ -458,7 +482,7 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
           onClick={handleSave}
           disabled={loading || !item.impl_id}
           startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <Save size={18} />}
-          sx={{ bgcolor: theme.colors.primary.main }}
+          sx={buttonStyles.primary.contained}
         >
           {loading ? "Saving..." : "Save Changes"}
         </Button>

@@ -3,6 +3,7 @@
  *
  * Renders custom framework cards in the Add Framework modal.
  * This component is injected via PluginSlot into the core app's framework selection UI.
+ * Uses VerifyWise design system for consistency with the core app.
  */
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -13,9 +14,16 @@ import {
   CircularProgress,
   Divider,
   Chip,
+  Stack,
 } from "@mui/material";
 import { Check as CheckIcon, FileJson } from "lucide-react";
-import { theme } from "./theme";
+import {
+  colors,
+  textColors,
+  fontSizes,
+  buttonStyles,
+  borderColors,
+} from "./theme";
 
 interface CustomFramework {
   id: number;
@@ -59,27 +67,27 @@ interface CustomFrameworkCardsProps {
   };
 }
 
-// Card styles matching the core app
+// Card styles matching the core app's AddNewFramework exactly
 const frameworkCardStyle = {
-  border: "1px solid #E0E0E0",
-  borderRadius: "12px",
+  border: `1.5px solid ${colors.primary}`,
+  borderRadius: "8px",
+  background: "#e3f5e6",
   padding: "20px",
-  backgroundColor: "#FAFAFA",
-  transition: "box-shadow 0.2s",
-  "&:hover": {
-    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-  },
+  transition: "background 0.2s",
+  marginBottom: "24px",
 };
 
 const frameworkCardTitleStyle = {
-  fontWeight: 600,
-  fontSize: "16px",
-  color: "#1E293B",
+  fontWeight: 500,
+  color: "#232B3A",
+  fontSize: fontSizes.large,
 };
 
 const frameworkCardDescriptionStyle = {
+  color: "#6B7280",
   fontSize: "14px",
-  color: "#64748B",
+  textAlign: "left" as const,
+  marginBottom: "8px",
   lineHeight: 1.5,
 };
 
@@ -114,7 +122,9 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
   const loadFrameworks = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get("/plugins/custom-framework-import/frameworks");
+      const response = await api.get(
+        "/plugins/custom-framework-import/frameworks"
+      );
       const data = response.data.data || response.data;
       // Filter frameworks based on project type (organizational vs project-level)
       const filtered = (Array.isArray(data) ? data : []).filter(
@@ -133,8 +143,6 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
   }, [loadFrameworks]);
 
   const isFrameworkAdded = (fw: CustomFramework): boolean => {
-    // Custom frameworks have IDs >= 5 (or use framework_id from the custom framework)
-    // Check if the framework_id is in the project's framework list
     return (
       project.framework?.some(
         (pf) => Number(pf.framework_id) === fw.framework_id
@@ -147,10 +155,13 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
     if (setExternalLoading) setExternalLoading(true);
 
     try {
-      const response = await api.post("/plugins/custom-framework-import/add-to-project", {
-        frameworkId: fw.framework_id,
-        projectId: project.id,
-      });
+      const response = await api.post(
+        "/plugins/custom-framework-import/add-to-project",
+        {
+          frameworkId: fw.framework_id,
+          projectId: project.id,
+        }
+      );
 
       if (response.status === 200 || response.status === 201) {
         if (setAlert) {
@@ -193,10 +204,13 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
     if (setExternalLoading) setExternalLoading(true);
 
     try {
-      const response = await api.post("/plugins/custom-framework-import/remove-from-project", {
-        frameworkId: fw.framework_id,
-        projectId: project.id,
-      });
+      const response = await api.post(
+        "/plugins/custom-framework-import/remove-from-project",
+        {
+          frameworkId: fw.framework_id,
+          projectId: project.id,
+        }
+      );
 
       if (response.status === 200) {
         if (setAlert) {
@@ -236,8 +250,8 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
 
   if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-        <CircularProgress size={24} />
+      <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+        <CircularProgress size={24} sx={{ color: colors.primary }} />
       </Box>
     );
   }
@@ -249,21 +263,24 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
   const onlyOneFramework = project.framework?.length === 1;
 
   return (
-    <>
+    <Stack spacing={3}>
       {/* Divider with label */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, my: 2 }}>
-        <Divider sx={{ flex: 1 }} />
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <Divider sx={{ flex: 1, borderColor: borderColors.default }} />
         <Chip
           icon={<FileJson size={14} />}
           label="Custom Frameworks"
           size="small"
           sx={{
-            bgcolor: theme.colors.primary.bg,
-            color: theme.colors.primary.main,
+            backgroundColor: `${colors.primary}12`,
+            color: colors.primary,
             fontWeight: 500,
+            fontSize: fontSizes.small,
+            border: `1px solid ${colors.primary}30`,
+            "& .MuiChip-icon": { color: colors.primary },
           }}
         />
-        <Divider sx={{ flex: 1 }} />
+        <Divider sx={{ flex: 1, borderColor: borderColors.default }} />
       </Box>
 
       {/* Custom framework cards */}
@@ -287,9 +304,11 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
                   size="small"
                   sx={{
                     height: 20,
-                    fontSize: "0.7rem",
-                    bgcolor: theme.colors.info.bg,
-                    color: theme.colors.info.main,
+                    fontSize: fontSizes.small,
+                    fontWeight: 500,
+                    backgroundColor: "#eff6ff",
+                    color: colors.info,
+                    border: `1px solid ${colors.info}30`,
                   }}
                 />
               </Box>
@@ -303,9 +322,9 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
                     borderRadius: "12px",
                     px: 1.5,
                     py: 0.5,
-                    fontSize: 13,
+                    fontSize: fontSizes.medium,
                     fontWeight: 600,
-                    color: "#13715B",
+                    color: colors.primary,
                   }}
                 >
                   <CheckIcon size={16} />
@@ -317,8 +336,12 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
               {fw.description}
             </Typography>
             <Typography
-              variant="caption"
-              sx={{ color: theme.colors.text.secondary, display: "block", mt: 1 }}
+              sx={{
+                color: textColors.muted,
+                fontSize: fontSizes.small,
+                display: "block",
+                mb: 2,
+              }}
             >
               {fw.level1_count || 0} {fw.level_1_name}s, {fw.level2_count || 0}{" "}
               {fw.level_2_name}s
@@ -326,15 +349,17 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
                 ? `, ${fw.level3_count} ${fw.level_3_name}s`
                 : ""}
             </Typography>
-            <Box display="flex" justifyContent="flex-end" mt={2}>
+            <Box display="flex" justifyContent="flex-end">
               {isAdded ? (
                 <Button
                   variant="contained"
-                  color="error"
                   size="small"
                   disabled={externalLoading || isActionInProgress || cannotRemove}
                   onClick={() => handleRemoveFramework(fw)}
-                  sx={{ minWidth: 100, fontWeight: 600 }}
+                  sx={{
+                    ...buttonStyles.error.contained,
+                    minWidth: 100,
+                  }}
                 >
                   {isActionInProgress ? (
                     <CircularProgress size={16} color="inherit" />
@@ -345,16 +370,13 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
               ) : (
                 <Button
                   variant="contained"
-                  sx={{
-                    minWidth: 100,
-                    fontWeight: 600,
-                    backgroundColor: "#13715B",
-                    color: "#fff",
-                    "&:hover": { backgroundColor: "#0e5c47" },
-                  }}
                   size="small"
                   disabled={externalLoading || isActionInProgress}
                   onClick={() => handleAddFramework(fw)}
+                  sx={{
+                    ...buttonStyles.primary.contained,
+                    minWidth: 100,
+                  }}
                 >
                   {isActionInProgress ? (
                     <CircularProgress size={16} color="inherit" />
@@ -367,7 +389,7 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
           </Box>
         );
       })}
-    </>
+    </Stack>
   );
 };
 
