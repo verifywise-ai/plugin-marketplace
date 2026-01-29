@@ -486,7 +486,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
 
               <Grid container spacing={2}>
                 {level1.items?.map((level2) => (
-                  <Grid item xs={12} md={6} key={level2.id}>
+                  <Grid item xs={12} key={level2.id}>
                     <Box
                       onClick={() => handleItemClick(level2)}
                       sx={{
