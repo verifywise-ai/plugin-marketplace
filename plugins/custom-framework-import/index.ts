@@ -97,9 +97,9 @@ export const metadata = {
 // ========== PLUGIN LIFECYCLE ==========
 
 export async function install(
-  userId: number,
+  _userId: number,
   tenantId: string,
-  config: any,
+  _config: any,
   context: PluginContext
 ): Promise<{ success: boolean; message: string; installedAt: string }> {
   const { sequelize } = context;
@@ -277,9 +277,9 @@ export async function install(
 }
 
 export async function uninstall(
-  userId: number,
-  tenantId: string,
-  context: PluginContext
+  _userId: number,
+  _tenantId: string,
+  _context: PluginContext
 ): Promise<{ success: boolean; message: string; uninstalledAt: string }> {
   // Note: We don't drop tables to preserve data
   // Custom frameworks remain in the system even after plugin uninstall
@@ -293,7 +293,7 @@ export async function uninstall(
 
 // ========== VALIDATION ==========
 
-export function validateConfig(config: any): ValidationResult {
+export function validateConfig(_config: any): ValidationResult {
   // This plugin doesn't require configuration
   return { isValid: true, errors: [] };
 }
@@ -316,7 +316,7 @@ function validateFrameworkImport(data: any): ValidationResult {
   if (!data.hierarchy) {
     errors.push("Hierarchy configuration is required");
   } else {
-    if (!["two_level", "three_level"].includes(data.hierarchy.type)) {
+    if (data.hierarchy.type !== "two_level" && data.hierarchy.type !== "three_level") {
       errors.push('Hierarchy type must be "two_level" or "three_level"');
     }
     if (!data.hierarchy.level1_name) {
@@ -1279,7 +1279,7 @@ async function handleGetProgress(
 }
 
 async function handleGetExcelTemplate(
-  ctx: PluginRouteContext
+  _ctx: PluginRouteContext
 ): Promise<PluginRouteResponse> {
   try {
     const workbook = new ExcelJS.Workbook();
