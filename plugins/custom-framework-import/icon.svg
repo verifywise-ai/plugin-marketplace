@@ -1,0 +1,28 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#E6F4F0"/>
+
+  <!-- Document/Framework base -->
+  <rect x="32" y="24" width="48" height="64" rx="4" fill="#13715B"/>
+
+  <!-- Framework hierarchy lines (3 levels) -->
+  <rect x="40" y="36" width="32" height="6" rx="2" fill="#FFFFFF"/>
+  <rect x="44" y="48" width="24" height="5" rx="2" fill="#FFFFFF" opacity="0.8"/>
+  <rect x="48" y="58" width="16" height="4" rx="2" fill="#FFFFFF" opacity="0.6"/>
+
+  <rect x="40" y="68" width="32" height="6" rx="2" fill="#FFFFFF"/>
+  <rect x="44" y="80" width="24" height="5" rx="2" fill="#FFFFFF" opacity="0.8"/>
+
+  <!-- Import arrow -->
+  <g transform="translate(70, 50)">
+    <!-- Arrow body -->
+    <rect x="8" y="12" width="28" height="10" rx="2" fill="#4C7BF4"/>
+    <!-- Arrow head -->
+    <path d="M8 17L20 6L20 28L8 17Z" fill="#4C7BF4"/>
+  </g>
+
+  <!-- Plus sign for "custom/add" -->
+  <circle cx="96" cy="96" r="16" fill="#10B981"/>
+  <rect x="90" y="93" width="12" height="6" rx="1" fill="#FFFFFF"/>
+  <rect x="93" y="90" width="6" height="12" rx="1" fill="#FFFFFF"/>
+</svg>
