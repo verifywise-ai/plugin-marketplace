@@ -357,6 +357,11 @@
             "slotId": "page.framework-dashboard.custom",
             "componentName": "CustomFrameworkDashboard",
             "renderType": "raw"
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
+            "renderType": "raw"
           }
         ]
       }
