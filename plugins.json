@@ -279,7 +279,7 @@
       "supportUrl": "https://support.verifywise.com",
       "isOfficial": true,
       "isPublished": true,
-      "requiresConfiguration": false,
+      "requiresConfiguration": true,
       "installationType": "tenant_scoped",
       "features": [
         {
