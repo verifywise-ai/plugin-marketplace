@@ -558,11 +558,64 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
         l1.items = level2Items;
       }
 
+      // Fetch linked projects with progress
+      const [linkedProjectsRaw] = await sequelize.query(
+        `SELECT
+          cfp.id as project_framework_id,
+          cfp.project_id,
+          cfp.created_at as added_at,
+          p.project_title,
+          COALESCE(p.is_organizational, false) as is_organizational
+        FROM "${tenantId}".custom_framework_projects cfp
+        JOIN "${tenantId}".projects p ON cfp.project_id = p.id
+        WHERE cfp.framework_id = :frameworkId`,
+        { replacements: { frameworkId } }
+      );
+
+      // Calculate progress for each linked project
+      const linkedProjects = await Promise.all(
+        (linkedProjectsRaw as any[]).map(async (proj) => {
+          // Get total and completed controls for this project-framework
+          const controlsTable = meta[0].hierarchy_type === "three_level"
+            ? "custom_framework_level3"
+            : "custom_framework_level2";
+
+          const [progressData] = await sequelize.query(
+            `SELECT
+              COUNT(*) as total,
+              SUM(CASE WHEN status = 'Implemented' THEN 1 ELSE 0 END) as completed,
+              SUM(CASE WHEN owner IS NOT NULL THEN 1 ELSE 0 END) as assigned
+            FROM "${tenantId}".${controlsTable}_status
+            WHERE project_framework_id = :projectFrameworkId`,
+            { replacements: { projectFrameworkId: proj.project_framework_id } }
+          );
+
+          const total = parseInt(progressData[0]?.total || '0');
+          const completed = parseInt(progressData[0]?.completed || '0');
+          const assigned = parseInt(progressData[0]?.assigned || '0');
+
+          return {
+            project_framework_id: proj.project_framework_id,
+            project_id: proj.project_id,
+            project_title: proj.project_title,
+            is_organizational: proj.is_organizational,
+            added_at: proj.added_at,
+            progress: {
+              total,
+              completed,
+              assigned,
+              percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
+            },
+          };
+        })
+      );
+
       return {
         status: 200,
         data: {
           ...meta[0],
           structure: level1Items,
+          linkedProjects,
         },
       };
     } catch (error: any) {
