@@ -196,7 +196,7 @@ export const CustomFrameworkDashboard: React.FC<CustomFrameworkDashboardProps> =
 
       // Fetch custom frameworks for this project
       const response = await api.get(
-        `/plugins/${pluginKey}/projects/${project.id}/custom-frameworks`
+        `/plugins/${pluginKey}/projects/${project.id}/custom-frameworks?is_organizational=${project.is_organizational}`
       );
 
       let rawData = response.data;
