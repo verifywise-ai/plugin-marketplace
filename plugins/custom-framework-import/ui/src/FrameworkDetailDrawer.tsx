@@ -142,7 +142,7 @@ export const FrameworkDetailDrawer: React.FC<FrameworkDetailDrawerProps> = ({
       setLoading(true);
       setError(null);
       const response = await api.get(
-        `/plugins/${pluginKey}/frameworks/${frameworkId}/details`
+        `/plugins/${pluginKey}/frameworks/${frameworkId}`
       );
       const data = response.data.data || response.data;
       setDetails(data);
