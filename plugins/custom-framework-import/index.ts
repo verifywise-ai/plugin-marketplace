@@ -278,15 +278,33 @@ export async function install(
 
 export async function uninstall(
   _userId: number,
-  _tenantId: string,
-  _context: PluginContext
+  tenantId: string,
+  context: PluginContext
 ): Promise<{ success: boolean; message: string; uninstalledAt: string }> {
-  // Note: We don't drop tables to preserve data
-  // Custom frameworks remain in the system even after plugin uninstall
+  const { sequelize } = context;
+
+  // Delete project associations and implementation data, but preserve framework definitions
+  try {
+    // Delete implementation status/progress data
+    await sequelize.query(
+      `DELETE FROM "${tenantId}".custom_framework_controls`
+    );
+
+    // Delete project-framework associations
+    await sequelize.query(
+      `DELETE FROM "${tenantId}".custom_framework_projects`
+    );
+
+    // Framework definitions (custom_frameworks, custom_framework_level1/2/3) are preserved
+  } catch (error: any) {
+    console.error("[CustomFrameworkImport] Error cleaning up data:", error);
+    // Continue with uninstall even if cleanup fails
+  }
+
   return {
     success: true,
     message:
-      "Custom Framework Import plugin uninstalled. Framework data has been preserved.",
+      "Custom Framework Import plugin uninstalled. Framework definitions preserved, project associations removed.",
     uninstalledAt: new Date().toISOString(),
   };
 }
