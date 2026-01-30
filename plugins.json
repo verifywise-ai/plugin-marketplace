@@ -382,6 +382,22 @@
             "props": {
               "pluginKey": "soc2"
             }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "soc2"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "soc2"
+            }
           }
         ]
       }
@@ -476,6 +492,22 @@
           {
             "slotId": "page.framework-dashboard.custom",
             "componentName": "CustomFrameworkDashboard",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "gdpr"
+            }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "gdpr"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
             "renderType": "raw",
             "props": {
               "pluginKey": "gdpr"
@@ -578,6 +610,22 @@
             "props": {
               "pluginKey": "hipaa"
             }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "hipaa"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "hipaa"
+            }
           }
         ]
       }
@@ -672,6 +720,22 @@
           {
             "slotId": "page.framework-dashboard.custom",
             "componentName": "CustomFrameworkDashboard",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "pci-dss"
+            }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "pci-dss"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
             "renderType": "raw",
             "props": {
               "pluginKey": "pci-dss"
@@ -774,6 +838,22 @@
             "props": {
               "pluginKey": "ccpa"
             }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "ccpa"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "ccpa"
+            }
           }
         ]
       }
@@ -868,6 +948,22 @@
           {
             "slotId": "page.framework-dashboard.custom",
             "componentName": "CustomFrameworkDashboard",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "dora"
+            }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "dora"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
             "renderType": "raw",
             "props": {
               "pluginKey": "dora"
@@ -970,6 +1066,22 @@
             "props": {
               "pluginKey": "nist-csf"
             }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "nist-csf"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "nist-csf"
+            }
           }
         ]
       }
@@ -1064,6 +1176,22 @@
           {
             "slotId": "page.framework-dashboard.custom",
             "componentName": "CustomFrameworkDashboard",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "cis-controls"
+            }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "cis-controls"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
             "renderType": "raw",
             "props": {
               "pluginKey": "cis-controls"
@@ -1166,6 +1294,22 @@
             "props": {
               "pluginKey": "iso27001"
             }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "iso27001"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "iso27001"
+            }
           }
         ]
       }
@@ -1264,6 +1408,22 @@
             "props": {
               "pluginKey": "ai-ethics"
             }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "ai-ethics"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "ai-ethics"
+            }
           }
         ]
       }
@@ -1358,6 +1518,22 @@
           {
             "slotId": "page.framework-dashboard.custom",
             "componentName": "CustomFrameworkDashboard",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "data-governance"
+            }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "data-governance"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
             "renderType": "raw",
             "props": {
               "pluginKey": "data-governance"
