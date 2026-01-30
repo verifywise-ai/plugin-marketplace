@@ -148,8 +148,9 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
     try {
       setLoading(true);
       setError(null);
+      // Fetch ALL frameworks from all installed framework plugins
       const response = await api.get(
-        `/plugins/${pluginKey}/frameworks`
+        `/plugins/${pluginKey}/frameworks?all=true`
       );
       const data = response.data.data || response.data;
       setFrameworks(Array.isArray(data) ? data : []);

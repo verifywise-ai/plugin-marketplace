@@ -328,12 +328,15 @@ async function importFramework(frameworkData, tenantId, sequelize, pluginKey) {
 }
 function createRouteHandlers(pluginKey, config) {
   async function handleGetFrameworks(ctx) {
-    const { sequelize, tenantId } = ctx;
+    const { sequelize, tenantId, query } = ctx;
+    const showAll = query.all === "true";
     try {
+      const whereClause = showAll ? "1=1" : "cf.plugin_key = :pluginKey OR cf.plugin_key IS NULL";
       const [frameworks] = await sequelize.query(
         `
         SELECT
           cf.id,
+          cf.plugin_key,
           cf.name,
           cf.description,
           cf.version,
@@ -353,7 +356,7 @@ function createRouteHandlers(pluginKey, config) {
            JOIN "${tenantId}".custom_framework_level1 l1 ON l2.level1_id = l1.id
            WHERE l1.framework_id = cf.id) as level3_count
         FROM "${tenantId}".custom_frameworks cf
-        WHERE cf.plugin_key = :pluginKey OR cf.plugin_key IS NULL
+        WHERE ${whereClause}
         ORDER BY cf.created_at DESC
       `,
         { replacements: { pluginKey } }
