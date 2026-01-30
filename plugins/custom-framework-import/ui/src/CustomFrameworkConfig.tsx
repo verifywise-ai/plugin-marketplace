@@ -73,11 +73,14 @@ interface CustomFrameworkConfigProps {
     delete?: (url: string) => Promise<any>;
   };
   pluginEnabled?: boolean;
+  /** Plugin key for API routing (defaults to 'custom-framework-import') */
+  pluginKey?: string;
 }
 
 export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
   apiServices,
   pluginEnabled = true,
+  pluginKey = "custom-framework-import",
 }) => {
   const [frameworks, setFrameworks] = useState<CustomFramework[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -146,7 +149,7 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
       setLoading(true);
       setError(null);
       const response = await api.get(
-        "/plugins/custom-framework-import/frameworks"
+        `/plugins/${pluginKey}/frameworks`
       );
       const data = response.data.data || response.data;
       setFrameworks(Array.isArray(data) ? data : []);
@@ -195,7 +198,7 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
           return { data: await response.json(), status: response.status };
         });
       await deleteMethod(
-        `/plugins/custom-framework-import/frameworks/${selectedFramework.id}`
+        `/plugins/${pluginKey}/frameworks/${selectedFramework.id}`
       );
 
       // If we reach here, delete was successful (errors are thrown)
@@ -223,7 +226,7 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
 
     try {
       setActionLoading(true);
-      await api.post("/plugins/custom-framework-import/add-to-project", {
+      await api.post(`/plugins/${pluginKey}/add-to-project`, {
         frameworkId: selectedFramework.id,
         projectId: selectedProjectId,
       });
@@ -391,6 +394,7 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
           setSuccess("Framework imported successfully");
         }}
         apiServices={api}
+        pluginKey={pluginKey}
       />
 
       {/* Delete Confirmation Dialog - matching app's ConfirmationModal */}
@@ -558,6 +562,7 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
         }}
         frameworkId={detailFrameworkId}
         apiServices={api}
+        pluginKey={pluginKey}
       />
     </Box>
   );

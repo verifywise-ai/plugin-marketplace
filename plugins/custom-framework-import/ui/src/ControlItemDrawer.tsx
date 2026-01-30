@@ -77,6 +77,8 @@ interface ControlItemDrawerProps {
     patch: (url: string, data?: any) => Promise<any>;
   };
   isOrganizational?: boolean;
+  /** Plugin key for API routing (defaults to 'custom-framework-import') */
+  pluginKey?: string;
 }
 
 interface ProjectRisk {
@@ -156,6 +158,7 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
   onSave,
   apiServices,
   isOrganizational = false,
+  pluginKey = "custom-framework-import",
 }) => {
   const [activeTab, setActiveTab] = useState("details");
   const [formData, setFormData] = useState({
@@ -441,7 +444,7 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
 
       // 6. Save to API
       const response = await api.patch(
-        `/plugins/custom-framework-import/level2/${item.impl_id}`,
+        `/plugins/${pluginKey}/level2/${item.impl_id}`,
         payload
       );
 

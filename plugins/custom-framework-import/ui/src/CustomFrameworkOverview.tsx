@@ -46,6 +46,8 @@ interface CustomFrameworkOverviewProps {
   apiServices?: {
     get: (url: string, options?: any) => Promise<any>;
   };
+  /** Plugin key for API routing (defaults to 'custom-framework-import') */
+  pluginKey?: string;
 }
 
 // Styles matching GroupStatsCard
@@ -100,6 +102,7 @@ export const CustomFrameworkOverview: React.FC<CustomFrameworkOverviewProps> = (
   columnStyle,
   projectRiskSection,
   apiServices,
+  pluginKey = "custom-framework-import",
 }) => {
   const [frameworks, setFrameworks] = useState<CustomFramework[]>([]);
   const [progressData, setProgressData] = useState<FrameworkProgress[]>([]);
@@ -146,7 +149,7 @@ export const CustomFrameworkOverview: React.FC<CustomFrameworkOverviewProps> = (
 
       // Fetch custom frameworks for this project
       const response = await api.get(
-        `/plugins/custom-framework-import/projects/${project.id}/custom-frameworks`
+        `/plugins/${pluginKey}/projects/${project.id}/custom-frameworks`
       );
 
       let rawData = response.data;
@@ -164,7 +167,7 @@ export const CustomFrameworkOverview: React.FC<CustomFrameworkOverviewProps> = (
       const progressPromises = frameworksArray.map(async (fw: CustomFramework) => {
         try {
           const progressRes = await api.get(
-            `/plugins/custom-framework-import/projects/${project.id}/frameworks/${fw.framework_id}/progress`
+            `/plugins/${pluginKey}/projects/${project.id}/frameworks/${fw.framework_id}/progress`
           );
           // Handle nested response: { data: { overall: { total, completed }, level2: {...} } }
           const progressData = progressRes.data?.data || progressRes.data || {};
@@ -196,7 +199,7 @@ export const CustomFrameworkOverview: React.FC<CustomFrameworkOverviewProps> = (
     } finally {
       setLoading(false);
     }
-  }, [project?.id, api]);
+  }, [project?.id, api, pluginKey]);
 
   useEffect(() => {
     loadData();

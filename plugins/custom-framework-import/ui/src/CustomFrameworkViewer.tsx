@@ -36,6 +36,8 @@ interface CustomFrameworkViewerProps {
     patch: (url: string, data?: any) => Promise<any>;
   };
   onRefresh?: () => void;
+  /** Plugin key for API routing (defaults to 'custom-framework-import') */
+  pluginKey?: string;
 }
 
 interface FrameworkData {
@@ -157,6 +159,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
   frameworkName,
   apiServices,
   onRefresh,
+  pluginKey = "custom-framework-import",
 }) => {
   const [data, setData] = useState<FrameworkData | null>(null);
   const [progress, setProgress] = useState<ProgressData | null>(null);
@@ -242,8 +245,8 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
       setError(null);
 
       const [dataResponse, progressResponse] = await Promise.all([
-        api.get(`/plugins/custom-framework-import/projects/${projectId}/frameworks/${frameworkId}`),
-        api.get(`/plugins/custom-framework-import/projects/${projectId}/frameworks/${frameworkId}/progress`),
+        api.get(`/plugins/${pluginKey}/projects/${projectId}/frameworks/${frameworkId}`),
+        api.get(`/plugins/${pluginKey}/projects/${projectId}/frameworks/${frameworkId}/progress`),
       ]);
 
       const frameworkData = dataResponse.data.data || dataResponse.data;
@@ -268,7 +271,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [frameworkId, projectId]);
+  }, [frameworkId, projectId, pluginKey]);
 
   useEffect(() => {
     loadFrameworkData();
@@ -615,6 +618,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
         onSave={() => handleItemSave(selectedItem?.id)}
         apiServices={api}
         isOrganizational={data?.is_organizational || false}
+        pluginKey={pluginKey}
       />
     </Box>
   );

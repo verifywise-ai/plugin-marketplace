@@ -58,6 +58,8 @@ interface CustomFrameworkDrawerProps {
     patch: (url: string, data?: any) => Promise<any>;
   };
   onSave?: () => void;
+  /** Plugin key for API routing (defaults to 'custom-framework-import') */
+  pluginKey?: string;
 }
 
 export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
@@ -69,6 +71,7 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
   users = [],
   apiServices,
   onSave,
+  pluginKey = "custom-framework-import",
 }) => {
   const [formData, setFormData] = useState<any>({});
   const [loading, setSaving] = useState(false);
@@ -139,8 +142,8 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
 
       const endpoint =
         level === 2
-          ? `/plugins/custom-framework-import/level2/${item.impl_id}`
-          : `/plugins/custom-framework-import/level3/${item.impl_id}`;
+          ? `/plugins/${pluginKey}/level2/${item.impl_id}`
+          : `/plugins/${pluginKey}/level3/${item.impl_id}`;
 
       const payload: any = { ...formData };
 

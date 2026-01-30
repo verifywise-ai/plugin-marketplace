@@ -1,0 +1,11 @@
+{
+  "name": "@verifywise/plugin-hipaa",
+  "version": "1.0.0",
+  "description": "HIPAA Security Rule compliance framework plugin",
+  "main": "index.ts",
+  "author": "VerifyWise",
+  "license": "MIT",
+  "dependencies": {
+    "@verifywise/custom-framework-base": "file:../../packages/custom-framework-base"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@verifywise/plugin-iso27001",
+  "version": "1.0.0",
+  "description": "ISO 27001 Starter compliance framework plugin",
+  "main": "index.ts",
+  "author": "VerifyWise",
+  "license": "MIT",
+  "dependencies": {
+    "@verifywise/custom-framework-base": "file:../../packages/custom-framework-base"
+  }
+}

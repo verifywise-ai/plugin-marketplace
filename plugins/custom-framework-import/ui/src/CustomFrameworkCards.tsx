@@ -63,6 +63,8 @@ interface CustomFrameworkCardsProps {
     get: (url: string, options?: any) => Promise<any>;
     post: (url: string, data?: any) => Promise<any>;
   };
+  /** Plugin key for API routing (defaults to 'custom-framework-import') */
+  pluginKey?: string;
 }
 
 // Card styles matching the core app's FrameworkSettings exactly
@@ -96,6 +98,7 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
   setAlert,
   setIsLoading: setExternalLoading,
   apiServices,
+  pluginKey = "custom-framework-import",
 }) => {
   const [frameworks, setFrameworks] = useState<CustomFramework[]>([]);
   const [addedFrameworkIds, setAddedFrameworkIds] = useState<Set<number>>(new Set());
@@ -147,7 +150,7 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
       setLoading(true);
       // Fetch all custom frameworks
       const response = await api.get(
-        "/plugins/custom-framework-import/frameworks"
+        `/plugins/${pluginKey}/frameworks`
       );
 
       // Handle various response structures
@@ -178,7 +181,7 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
       // Fetch which custom frameworks are added to this project
       try {
         const addedResponse = await api.get(
-          `/plugins/custom-framework-import/projects/${project.id}/custom-frameworks`
+          `/plugins/${pluginKey}/projects/${project.id}/custom-frameworks`
         );
         let addedRaw = addedResponse.data;
         if (addedRaw && typeof addedRaw === 'object' && 'data' in addedRaw) {
@@ -202,7 +205,7 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [project.is_organizational, project.id]);
+  }, [project.is_organizational, project.id, pluginKey]);
 
   useEffect(() => {
     loadFrameworks();
@@ -243,7 +246,7 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
 
     try {
       const response = await api.post(
-        "/plugins/custom-framework-import/add-to-project",
+        `/plugins/${pluginKey}/add-to-project`,
         {
           frameworkId: fw.id,
           projectId: project.id,
@@ -305,7 +308,7 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
 
     try {
       const response = await api.post(
-        "/plugins/custom-framework-import/remove-from-project",
+        `/plugins/${pluginKey}/remove-from-project`,
         {
           frameworkId: frameworkToRemove.id,
           projectId: project.id,

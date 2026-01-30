@@ -1,0 +1,224 @@
+{
+  "id": "iso27001-starter",
+  "name": "ISO 27001 Starter Framework",
+  "description": "A simplified starter framework based on ISO 27001 information security management system covering key control domains.",
+  "category": "Security",
+  "tags": ["ISO 27001", "ISMS", "Security", "International"],
+  "framework": {
+    "name": "ISO 27001 Starter Framework",
+    "description": "Starter framework for implementing ISO 27001 Information Security Management System",
+    "version": "1.0.0",
+    "is_organizational": true,
+    "hierarchy": {
+      "type": "two_level",
+      "level1_name": "Control Domain",
+      "level2_name": "Control"
+    },
+    "structure": [
+      {
+        "title": "A.5 Information Security Policies",
+        "description": "Management direction for information security",
+        "order_no": 1,
+        "items": [
+          {
+            "title": "A.5.1.1 Policies for information security",
+            "description": "A set of policies for information security shall be defined, approved, published and communicated",
+            "order_no": 1,
+            "summary": "Define and communicate security policies",
+            "questions": [
+              "Are information security policies documented?",
+              "Are policies approved by management?",
+              "How are policies communicated to staff?"
+            ],
+            "evidence_examples": [
+              "Information security policy",
+              "Policy approval records",
+              "Communication records"
+            ]
+          },
+          {
+            "title": "A.5.1.2 Review of policies",
+            "description": "Policies shall be reviewed at planned intervals or when significant changes occur",
+            "order_no": 2,
+            "summary": "Regularly review security policies",
+            "questions": [
+              "How often are policies reviewed?",
+              "Are reviews documented?",
+              "Who is responsible for reviews?"
+            ],
+            "evidence_examples": [
+              "Policy review schedule",
+              "Review meeting minutes",
+              "Policy version history"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "A.6 Organization of Information Security",
+        "description": "Internal organization and mobile devices/teleworking",
+        "order_no": 2,
+        "items": [
+          {
+            "title": "A.6.1.1 Information security roles and responsibilities",
+            "description": "All information security responsibilities shall be defined and allocated",
+            "order_no": 1,
+            "summary": "Define security roles and responsibilities",
+            "questions": [
+              "Are security responsibilities documented?",
+              "Is there a CISO or equivalent role?",
+              "Do employees know their security responsibilities?"
+            ],
+            "evidence_examples": [
+              "RACI matrix",
+              "Job descriptions",
+              "Security organization chart"
+            ]
+          },
+          {
+            "title": "A.6.2.1 Mobile device policy",
+            "description": "A policy and supporting security measures shall be adopted for mobile devices",
+            "order_no": 2,
+            "summary": "Secure mobile device usage",
+            "questions": [
+              "Is there a mobile device policy?",
+              "Are mobile devices encrypted?",
+              "Can devices be remotely wiped?"
+            ],
+            "evidence_examples": [
+              "Mobile device policy",
+              "MDM configuration",
+              "Device inventory"
+            ]
+          },
+          {
+            "title": "A.6.2.2 Teleworking",
+            "description": "A policy and supporting security measures shall be implemented for teleworking",
+            "order_no": 3,
+            "summary": "Secure remote work arrangements",
+            "questions": [
+              "Is there a teleworking policy?",
+              "Is VPN required for remote access?",
+              "How is home network security addressed?"
+            ],
+            "evidence_examples": [
+              "Teleworking policy",
+              "VPN configuration",
+              "Remote access guidelines"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "A.9 Access Control",
+        "description": "Business requirements and user access management",
+        "order_no": 3,
+        "items": [
+          {
+            "title": "A.9.1.1 Access control policy",
+            "description": "An access control policy shall be established and documented",
+            "order_no": 1,
+            "summary": "Define access control requirements",
+            "questions": [
+              "Is there an access control policy?",
+              "Is least privilege principle applied?",
+              "How are access requirements determined?"
+            ],
+            "evidence_examples": [
+              "Access control policy",
+              "Access requirements matrix",
+              "Least privilege documentation"
+            ]
+          },
+          {
+            "title": "A.9.2.1 User registration and de-registration",
+            "description": "A formal process shall be implemented for user registration and de-registration",
+            "order_no": 2,
+            "summary": "Manage user account lifecycle",
+            "questions": [
+              "Is there a user registration process?",
+              "How quickly are accounts deactivated?",
+              "Are orphaned accounts identified?"
+            ],
+            "evidence_examples": [
+              "User registration procedure",
+              "Termination checklist",
+              "Account audit reports"
+            ]
+          },
+          {
+            "title": "A.9.4.1 Information access restriction",
+            "description": "Access to information and application functions shall be restricted",
+            "order_no": 3,
+            "summary": "Restrict access based on need",
+            "questions": [
+              "Is access restricted by role?",
+              "Are sensitive functions protected?",
+              "Is there separation of duties?"
+            ],
+            "evidence_examples": [
+              "Role definitions",
+              "Access control lists",
+              "Separation of duties matrix"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "A.12 Operations Security",
+        "description": "Operational procedures and responsibilities",
+        "order_no": 4,
+        "items": [
+          {
+            "title": "A.12.1.1 Documented operating procedures",
+            "description": "Operating procedures shall be documented and made available",
+            "order_no": 1,
+            "summary": "Document operational procedures",
+            "questions": [
+              "Are operational procedures documented?",
+              "Are procedures kept up to date?",
+              "Are procedures accessible to relevant staff?"
+            ],
+            "evidence_examples": [
+              "Operations manual",
+              "Runbooks",
+              "Procedure update logs"
+            ]
+          },
+          {
+            "title": "A.12.2.1 Controls against malware",
+            "description": "Detection, prevention and recovery controls against malware shall be implemented",
+            "order_no": 2,
+            "summary": "Protect against malware",
+            "questions": [
+              "Is anti-malware software deployed?",
+              "Are definitions kept current?",
+              "How are malware incidents handled?"
+            ],
+            "evidence_examples": [
+              "Anti-malware configuration",
+              "Update logs",
+              "Incident records"
+            ]
+          },
+          {
+            "title": "A.12.3.1 Information backup",
+            "description": "Backup copies of information and software shall be taken and tested regularly",
+            "order_no": 3,
+            "summary": "Maintain reliable backups",
+            "questions": [
+              "Are backups performed regularly?",
+              "Are backups tested for restoration?",
+              "Are backups stored securely?"
+            ],
+            "evidence_examples": [
+              "Backup schedule",
+              "Restoration test results",
+              "Backup storage documentation"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

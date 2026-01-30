@@ -39,6 +39,8 @@ interface FrameworkDetailDrawerProps {
     get: (url: string, options?: any) => Promise<any>;
   };
   onNavigateToProject?: (projectId: number, frameworkId: number) => void;
+  /** Plugin key for API routing (defaults to 'custom-framework-import') */
+  pluginKey?: string;
 }
 
 interface FrameworkDetails {
@@ -99,6 +101,7 @@ export const FrameworkDetailDrawer: React.FC<FrameworkDetailDrawerProps> = ({
   frameworkId,
   apiServices,
   onNavigateToProject: _onNavigateToProject,
+  pluginKey = "custom-framework-import",
 }) => {
   const [details, setDetails] = useState<FrameworkDetails | null>(null);
   const [loading, setLoading] = useState(false);
@@ -139,7 +142,7 @@ export const FrameworkDetailDrawer: React.FC<FrameworkDetailDrawerProps> = ({
       setLoading(true);
       setError(null);
       const response = await api.get(
-        `/plugins/custom-framework-import/frameworks/${frameworkId}/details`
+        `/plugins/${pluginKey}/frameworks/${frameworkId}/details`
       );
       const data = response.data.data || response.data;
       setDetails(data);
@@ -148,7 +151,7 @@ export const FrameworkDetailDrawer: React.FC<FrameworkDetailDrawerProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [frameworkId]);
+  }, [frameworkId, pluginKey]);
 
   useEffect(() => {
     if (open && frameworkId) {

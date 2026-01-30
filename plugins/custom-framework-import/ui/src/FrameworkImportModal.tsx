@@ -56,6 +56,8 @@ interface FrameworkImportModalProps {
     get: (url: string, options?: any) => Promise<any>;
     post: (url: string, data?: any) => Promise<any>;
   };
+  /** Plugin key for API routing (defaults to 'custom-framework-import') */
+  pluginKey?: string;
 }
 
 interface ParsedFramework {
@@ -79,6 +81,7 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
   onClose,
   onImportComplete,
   apiServices,
+  pluginKey = "custom-framework-import",
 }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [importMethod, setImportMethod] = useState<
@@ -182,7 +185,7 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
       setLoading(true);
       setError(null);
       const response = await api.get(
-        "/plugins/custom-framework-import/template",
+        `/plugins/${pluginKey}/template`,
         {
           responseType: "blob",
         }
@@ -403,12 +406,12 @@ export const FrameworkImportModal: React.FC<FrameworkImportModalProps> = ({
       let response;
       if (importMethod === "excel" && excelData) {
         response = await api.post(
-          "/plugins/custom-framework-import/import-excel",
+          `/plugins/${pluginKey}/import-excel`,
           excelData
         );
       } else {
         response = await api.post(
-          "/plugins/custom-framework-import/import",
+          `/plugins/${pluginKey}/import`,
           parsedFramework
         );
       }

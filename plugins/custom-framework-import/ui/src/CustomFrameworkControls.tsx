@@ -53,6 +53,8 @@ interface CustomFrameworkControlsProps {
     post: (url: string, data?: any) => Promise<any>;
     patch: (url: string, data?: any) => Promise<any>;
   };
+  /** Plugin key for API routing (defaults to 'custom-framework-import') */
+  pluginKey?: string;
 }
 
 // Styles matching the app's ButtonToggle exactly
@@ -115,6 +117,7 @@ export const CustomFrameworkControls: React.FC<CustomFrameworkControlsProps> = (
   onRefresh,
   children: _children,
   apiServices,
+  pluginKey = "custom-framework-import",
 }) => {
   const [customFrameworks, setCustomFrameworks] = useState<CustomFramework[]>([]);
   const [selectedCustomFramework, setSelectedCustomFramework] = useState<number | null>(null);
@@ -205,7 +208,7 @@ export const CustomFrameworkControls: React.FC<CustomFrameworkControlsProps> = (
       }
 
       const response = await api.get(
-        `/plugins/custom-framework-import/projects/${project.id}/custom-frameworks`
+        `/plugins/${pluginKey}/projects/${project.id}/custom-frameworks`
       );
 
       let rawData = response.data;
@@ -241,7 +244,7 @@ export const CustomFrameworkControls: React.FC<CustomFrameworkControlsProps> = (
     } finally {
       setLoading(false);
     }
-  }, [project?.id, api]);
+  }, [project?.id, api, pluginKey]);
 
   useEffect(() => {
     loadFrameworks();
@@ -462,6 +465,7 @@ export const CustomFrameworkControls: React.FC<CustomFrameworkControlsProps> = (
             loadFrameworks();
             onRefresh?.();
           }}
+          pluginKey={pluginKey}
         />
       ) : (
         renderBuiltInContent()

@@ -82,6 +82,8 @@ interface CustomFrameworkDashboardProps {
   showTabContent?: boolean;
   frameworkId?: number;
   frameworkName?: string;
+  /** Plugin key for API routing (defaults to 'custom-framework-import') */
+  pluginKey?: string;
 }
 
 // Card styles matching the organizational frameworks dashboard
@@ -148,6 +150,7 @@ export const CustomFrameworkDashboard: React.FC<CustomFrameworkDashboardProps> =
   showTabContent,
   frameworkId: propFrameworkId,
   frameworkName: _propFrameworkName,
+  pluginKey = "custom-framework-import",
 }) => {
   const [loading, setLoading] = useState(true);
   const [frameworks, setFrameworks] = useState<CustomFramework[]>([]);
@@ -193,7 +196,7 @@ export const CustomFrameworkDashboard: React.FC<CustomFrameworkDashboardProps> =
 
       // Fetch custom frameworks for this project
       const response = await api.get(
-        `/plugins/custom-framework-import/projects/${project.id}/custom-frameworks`
+        `/plugins/${pluginKey}/projects/${project.id}/custom-frameworks`
       );
 
       let rawData = response.data;
@@ -211,7 +214,7 @@ export const CustomFrameworkDashboard: React.FC<CustomFrameworkDashboardProps> =
       const progressPromises = frameworksArray.map(async (fw: CustomFramework) => {
         try {
           const progressRes = await api.get(
-            `/plugins/custom-framework-import/projects/${project.id}/frameworks/${fw.framework_id}/progress`
+            `/plugins/${pluginKey}/projects/${project.id}/frameworks/${fw.framework_id}/progress`
           );
 
           // Debug: log the raw response
@@ -260,7 +263,7 @@ export const CustomFrameworkDashboard: React.FC<CustomFrameworkDashboardProps> =
       for (const fw of frameworksArray) {
         try {
           const detailsRes = await api.get(
-            `/plugins/custom-framework-import/projects/${project.id}/frameworks/${fw.framework_id}`
+            `/plugins/${pluginKey}/projects/${project.id}/frameworks/${fw.framework_id}`
           );
 
           console.log(`[CustomFrameworkDashboard] Details response for ${fw.name}:`, detailsRes.data);
@@ -345,7 +348,7 @@ export const CustomFrameworkDashboard: React.FC<CustomFrameworkDashboardProps> =
     } finally {
       setLoading(false);
     }
-  }, [project?.id, api]);
+  }, [project?.id, api, pluginKey]);
 
   useEffect(() => {
     loadData();

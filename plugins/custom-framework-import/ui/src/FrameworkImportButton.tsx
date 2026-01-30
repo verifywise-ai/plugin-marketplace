@@ -15,12 +15,15 @@ interface FrameworkImportButtonProps {
   onImportComplete?: () => void;
   apiServices?: any;
   variant?: "button" | "card";
+  /** Plugin key for API routing (defaults to 'custom-framework-import') */
+  pluginKey?: string;
 }
 
 export const FrameworkImportButton: React.FC<FrameworkImportButtonProps> = ({
   onImportComplete,
   apiServices,
   variant = "button",
+  pluginKey = "custom-framework-import",
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -99,6 +102,7 @@ export const FrameworkImportButton: React.FC<FrameworkImportButtonProps> = ({
           onClose={handleCloseModal}
           onImportComplete={handleImportComplete}
           apiServices={apiServices}
+          pluginKey={pluginKey}
         />
       </>
     );
@@ -120,6 +124,7 @@ export const FrameworkImportButton: React.FC<FrameworkImportButtonProps> = ({
         onClose={handleCloseModal}
         onImportComplete={handleImportComplete}
         apiServices={apiServices}
+        pluginKey={pluginKey}
       />
     </>
   );
