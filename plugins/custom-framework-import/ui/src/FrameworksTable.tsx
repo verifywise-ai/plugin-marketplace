@@ -89,7 +89,7 @@ const tableStyles = {
 
 interface CustomFramework {
   id: number;
-  framework_id: number;
+  framework_id?: number; // Only present in project-framework associations
   name: string;
   description: string;
   hierarchy_type: string;

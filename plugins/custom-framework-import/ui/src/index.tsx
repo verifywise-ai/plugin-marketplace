@@ -14,6 +14,7 @@ export { FrameworkDetailDrawer } from "./FrameworkDetailDrawer";
 export { CustomFrameworkCards } from "./CustomFrameworkCards";
 export { CustomFrameworkControls } from "./CustomFrameworkControls";
 export { CustomFrameworkDashboard } from "./CustomFrameworkDashboard";
+export { CustomFrameworkOverview } from "./CustomFrameworkOverview";
 export { ControlItemDrawer } from "./ControlItemDrawer";
 export { FrameworksTable } from "./FrameworksTable";
 

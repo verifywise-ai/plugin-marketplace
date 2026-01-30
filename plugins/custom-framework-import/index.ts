@@ -699,9 +699,13 @@ async function handleDeleteFramework(
       return { status: 404, data: { message: "Framework not found" } };
     }
 
-    // Check if framework is in use by any projects
+    // Check if framework is in use by any existing projects
+    // (only count associations where the project still exists)
     const [usage] = await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".custom_framework_projects WHERE framework_id = :frameworkId`,
+      `SELECT COUNT(*) as count
+       FROM "${tenantId}".custom_framework_projects
+       WHERE framework_id = :frameworkId
+       AND project_id IN (SELECT id FROM "${tenantId}".projects)`,
       { replacements: { frameworkId } }
     );
 
@@ -714,6 +718,14 @@ async function handleDeleteFramework(
         },
       };
     }
+
+    // Clean up any orphaned project associations (where project was deleted)
+    await sequelize.query(
+      `DELETE FROM "${tenantId}".custom_framework_projects
+       WHERE framework_id = :frameworkId
+       AND project_id NOT IN (SELECT id FROM "${tenantId}".projects)`,
+      { replacements: { frameworkId } }
+    );
 
     // Delete framework (cascades to level1, level2, level3)
     await sequelize.query(

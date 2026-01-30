@@ -46,7 +46,7 @@ import { FrameworksTable } from "./FrameworksTable";
 
 interface CustomFramework {
   id: number;
-  framework_id: number;
+  framework_id?: number; // Only present in project-framework associations
   name: string;
   description: string;
   hierarchy_type: string;
@@ -181,17 +181,27 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
         api.delete ||
         (async (url: string) => {
           const response = await fetch(`/api${url}`, { method: "DELETE" });
-          return { data: await response.json() };
+          return { data: await response.json(), status: response.status };
         });
       await deleteMethod(
-        `/plugins/custom-framework-import/frameworks/${selectedFramework.framework_id}`
+        `/plugins/custom-framework-import/frameworks/${selectedFramework.id}`
       );
+
+      // If we reach here, delete was successful (errors are thrown)
       setSuccess(`Framework "${selectedFramework.name}" deleted successfully`);
       setDeleteDialogOpen(false);
       setSelectedFramework(null);
       loadFrameworks();
     } catch (err: any) {
-      setError(err.message || "Failed to delete framework");
+      // CustomException from apiServices has: err.message, err.status, err.response
+      // err.response = { message: "Bad Request", data: { message: "detailed error" } }
+      const errorMessage = err.response?.data?.message ||
+                           err.response?.message ||
+                           (err.message !== "Bad Request" ? err.message : null) ||
+                           "Failed to delete framework";
+      setError(errorMessage);
+      setDeleteDialogOpen(false);
+      setSelectedFramework(null);
     } finally {
       setActionLoading(false);
     }
@@ -203,7 +213,7 @@ export const CustomFrameworkConfig: React.FC<CustomFrameworkConfigProps> = ({
     try {
       setActionLoading(true);
       await api.post("/plugins/custom-framework-import/add-to-project", {
-        frameworkId: selectedFramework.framework_id,
+        frameworkId: selectedFramework.id,
         projectId: selectedProjectId,
       });
       setSuccess(
