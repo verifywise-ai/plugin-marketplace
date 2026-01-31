@@ -256,12 +256,8 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
           });
           setTimeout(() => setAlert(null), 3000);
         }
-        // Emit custom event to notify other plugin components (e.g., CustomFrameworkControls)
-        window.dispatchEvent(
-          new CustomEvent("customFrameworkChanged", {
-            detail: { projectId: project.id, action: "add", frameworkId: fw.id },
-          })
-        );
+        // Notify other plugin components to refresh their data
+        window.dispatchEvent(new CustomEvent("customFrameworkChanged", { detail: { projectId: project.id } }));
         if (onFrameworkAdded) onFrameworkAdded();
       } else {
         if (setAlert) {
@@ -322,12 +318,8 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
           });
           setTimeout(() => setAlert(null), 3000);
         }
-        // Emit custom event to notify other plugin components (e.g., CustomFrameworkControls)
-        window.dispatchEvent(
-          new CustomEvent("customFrameworkChanged", {
-            detail: { projectId: project.id, action: "remove", frameworkId: frameworkToRemove.id },
-          })
-        );
+        // Notify other plugin components to refresh their data
+        window.dispatchEvent(new CustomEvent("customFrameworkChanged", { detail: { projectId: project.id } }));
         if (onFrameworkRemoved) onFrameworkRemoved(frameworkToRemove.id);
       } else {
         if (setAlert) {
@@ -378,23 +370,42 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
 
   return (
     <Stack spacing={3}>
-      {/* Divider with label */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-        <Divider sx={{ flex: 1, borderColor: borderColors.default }} />
-        <Chip
-          icon={<FileJson size={14} />}
-          label="Custom Frameworks"
-          size="small"
+      {/* Section header for custom frameworks */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          pt: 2,
+          pb: 1,
+        }}
+      >
+        <Box
           sx={{
-            backgroundColor: `${colors.primary}12`,
-            color: colors.primary,
-            fontWeight: 500,
-            fontSize: fontSizes.small,
-            border: `1px solid ${colors.primary}30`,
-            "& .MuiChip-icon": { color: colors.primary },
+            width: 3,
+            height: 16,
+            backgroundColor: colors.primary,
+            borderRadius: 1,
           }}
         />
-        <Divider sx={{ flex: 1, borderColor: borderColors.default }} />
+        <FileJson size={16} color="#667085" />
+        <Typography
+          sx={{
+            fontSize: 13,
+            fontWeight: 600,
+            color: "#344054",
+          }}
+        >
+          Custom Frameworks
+        </Typography>
+        <Typography
+          sx={{
+            fontSize: 12,
+            color: "#667085",
+          }}
+        >
+          Imported compliance frameworks
+        </Typography>
       </Box>
 
       {/* Custom framework cards - 3 column grid matching system frameworks */}

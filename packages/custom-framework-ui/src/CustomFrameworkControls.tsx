@@ -260,16 +260,9 @@ export const CustomFrameworkControls: React.FC<CustomFrameworkControlsProps> = (
       }
     };
 
-    window.addEventListener(
-      "customFrameworkChanged" as any,
-      handleCustomFrameworkChange as EventListener
-    );
-
+    window.addEventListener("customFrameworkChanged" as any, handleCustomFrameworkChange as EventListener);
     return () => {
-      window.removeEventListener(
-        "customFrameworkChanged" as any,
-        handleCustomFrameworkChange as EventListener
-      );
+      window.removeEventListener("customFrameworkChanged" as any, handleCustomFrameworkChange as EventListener);
     };
   }, [loadFrameworks, project?.id]);
 

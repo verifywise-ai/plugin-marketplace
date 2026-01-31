@@ -274,7 +274,7 @@ export const CustomFrameworkOverview: React.FC<CustomFrameworkOverviewProps> = (
     loadData();
   }, [loadData]);
 
-  // Listen for custom framework changes
+  // Listen for custom framework changes from CustomFrameworkCards
   useEffect(() => {
     const handleCustomFrameworkChange = (event: CustomEvent) => {
       if (event.detail?.projectId === project?.id) {
@@ -286,16 +286,9 @@ export const CustomFrameworkOverview: React.FC<CustomFrameworkOverviewProps> = (
       }
     };
 
-    window.addEventListener(
-      "customFrameworkChanged" as any,
-      handleCustomFrameworkChange as EventListener
-    );
-
+    window.addEventListener("customFrameworkChanged" as any, handleCustomFrameworkChange as EventListener);
     return () => {
-      window.removeEventListener(
-        "customFrameworkChanged" as any,
-        handleCustomFrameworkChange as EventListener
-      );
+      window.removeEventListener("customFrameworkChanged" as any, handleCustomFrameworkChange as EventListener);
     };
   }, [loadData, project?.id]);
 
