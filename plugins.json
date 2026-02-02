@@ -2153,6 +2153,124 @@
         ]
       },
       "frameworkType": "organizational"
+    },
+    {
+      "key": "texas-ai-act",
+      "name": "Texas Responsible AI Governance Act",
+      "displayName": "Texas AI Act",
+      "description": "Texas TRAIGA compliance framework for high-risk AI systems deployment and governance.",
+      "region": "United States",
+      "longDescription": "Texas Responsible AI Governance Act (TRAIGA) framework plugin provides comprehensive coverage of Texas AI governance requirements for organizations deploying high-risk AI systems. Includes algorithmic impact assessments, bias testing, consumer disclosure requirements, human oversight obligations, appeal rights, risk management, and documentation requirements. Applicable to AI systems making consequential decisions in employment, education, financial services, healthcare, housing, and essential services.",
+      "version": "1.0.0",
+      "author": "VerifyWise",
+      "category": "compliance",
+      "iconUrl": "plugins/texas-ai-act/icon.svg",
+      "documentationUrl": "https://docs.verifywise.com/frameworks/texas-ai-act",
+      "supportUrl": "https://support.verifywise.com",
+      "isOfficial": true,
+      "isPublished": true,
+      "requiresConfiguration": false,
+      "installationType": "tenant_scoped",
+      "features": [
+        {
+          "name": "Impact Assessments",
+          "description": "Algorithmic impact assessments and bias testing",
+          "displayOrder": 1
+        },
+        {
+          "name": "Consumer Rights",
+          "description": "Disclosure, appeal, and opt-out requirements",
+          "displayOrder": 2
+        },
+        {
+          "name": "Human Oversight",
+          "description": "Human review and override requirements",
+          "displayOrder": 3
+        },
+        {
+          "name": "Auto-Import",
+          "description": "Framework automatically imported on plugin installation",
+          "displayOrder": 4
+        }
+      ],
+      "tags": [
+        "texas",
+        "ai-act",
+        "traiga",
+        "ai-governance",
+        "high-risk-ai",
+        "compliance",
+        "united-states"
+      ],
+      "pluginPath": "plugins/texas-ai-act",
+      "entryPoint": "dist/index.js",
+      "dependencies": {},
+      "ui": {
+        "bundleUrl": "/api/plugins/texas-ai-act/ui/dist/index.esm.js",
+        "globalName": "PluginCustomFrameworkImport",
+        "slots": [
+          {
+            "slotId": "page.settings.tabs",
+            "componentName": "CustomFrameworkConfig",
+            "renderType": "tab",
+            "props": {
+              "label": "Custom Frameworks",
+              "icon": "FileJson",
+              "value": "custom-frameworks",
+              "pluginKey": "texas-ai-act"
+            }
+          },
+          {
+            "slotId": "modal.framework.selection",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "texas-ai-act"
+            }
+          },
+          {
+            "slotId": "page.controls.custom-framework",
+            "componentName": "CustomFrameworkControls",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "texas-ai-act"
+            }
+          },
+          {
+            "slotId": "page.project-controls.custom-framework",
+            "componentName": "CustomFrameworkControls",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "texas-ai-act"
+            }
+          },
+          {
+            "slotId": "page.framework-dashboard.custom",
+            "componentName": "CustomFrameworkDashboard",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "texas-ai-act"
+            }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "texas-ai-act"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "texas-ai-act"
+            }
+          }
+        ]
+      },
+      "frameworkType": "project"
     }
   ],
   "categories": [
