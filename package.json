@@ -3,7 +3,7 @@
   "scripts": {
     "build:mlflow": "cd plugins/mlflow/ui && npm install && npm run build",
     "build:risk-import": "cd plugins/risk-import/ui && npm install && npm run build",
-    "build:custom-framework-ui": "cd plugins/custom-framework-import/ui && npm install && npm run build",
+    "build:custom-framework-ui": "cd packages/custom-framework-ui && npm install && npm run build",
     "build:framework-plugins": "node scripts/build-framework-plugins.js",
     "build:all": "npm run build:mlflow && npm run build:risk-import && npm run build:custom-framework-ui && npm run build:framework-plugins",
     "add:framework": "node scripts/add-framework.js"
