@@ -1,407 +1,219 @@
 {
-  "id": "nyc-local-law-144",
-  "name": "NYC Local Law 144",
+  "name": "NYC Local Law 144 - Automated Employment Decision Tools",
   "description": "New York City Local Law 144 compliance framework for automated employment decision tools (AEDTs) requiring bias audits and candidate notifications.",
-  "category": "AI Governance",
-  "tags": ["NYC", "Local Law 144", "AEDT", "Hiring AI", "Bias Audit", "Employment", "United States"],
-  "framework": {
-    "name": "NYC Local Law 144 - Automated Employment Decision Tools",
-    "description": "NYC Local Law 144, effective July 5, 2023, regulates the use of automated employment decision tools (AEDTs) in hiring and promotion decisions. It requires employers and employment agencies to conduct annual bias audits, publicly disclose audit results, and notify candidates when AEDTs are used. This framework helps organizations comply with these requirements.",
-    "version": "1.0.0",
-    "is_organizational": false,
-    "hierarchy": {
-      "type": "two_level",
-      "level1_name": "Requirement Area",
-      "level2_name": "Compliance Item"
+  "version": "1.0.0",
+  "is_organizational": false,
+  "hierarchy": {
+    "type": "two_level",
+    "level1_name": "Compliance Area",
+    "level2_name": "Requirement"
+  },
+  "structure": [
+    {
+      "title": "AEDT Classification & Scope",
+      "description": "Requirements for determining AEDT applicability under NYC Local Law 144",
+      "order_no": 1,
+      "items": [
+        {
+          "title": "AEDT Applicability Determination",
+          "order_no": 1,
+          "summary": "The organization must determine whether any tool used in hiring or promotion qualifies as an Automated Employment Decision Tool (AEDT) under NYC Local Law 144.",
+          "questions": [
+            "Is the tool a computational process derived from machine learning, statistical modeling, data analytics, or AI?",
+            "Does the tool issue a simplified output (score, classification, or recommendation)?",
+            "Is the output used to substantially assist or replace discretionary decision making in hiring or promotion?"
+          ],
+          "evidence_examples": [
+            "Internal AEDT classification register",
+            "Tool assessment documentation",
+            "Vendor capability statements"
+          ]
+        }
+      ]
     },
-    "structure": [
-      {
-        "title": "1. AEDT Identification and Scope",
-        "description": "Identify automated employment decision tools subject to Local Law 144 and determine applicability.",
-        "order_no": 1,
-        "items": [
-          {
-            "title": "1.1 AEDT Definition Compliance",
-            "description": "Determine if tools meet the legal definition of an automated employment decision tool.",
-            "order_no": 1,
-            "summary": "Identify tools that qualify as AEDTs",
-            "questions": [
-              "Does the tool use machine learning, statistical modeling, data analytics, or AI?",
-              "Does the tool substantially assist or replace discretionary decision-making in employment?",
-              "Is the tool used for screening candidates for employment?",
-              "Is the tool used for screening employees for promotion?"
-            ],
-            "evidence_examples": ["Tool inventory", "Technology assessment", "Decision-making analysis", "Use case documentation"]
-          },
-          {
-            "title": "1.2 Covered Employment Decisions",
-            "description": "Identify employment decisions where AEDTs are used.",
-            "order_no": 2,
-            "summary": "Document AEDT use in employment decisions",
-            "questions": [
-              "Is the AEDT used in hiring decisions for positions in NYC?",
-              "Is the AEDT used in promotion decisions for employees in NYC?",
-              "Are all covered positions and roles identified?",
-              "Is the scope of AEDT use documented?"
-            ],
-            "evidence_examples": ["Position inventory", "AEDT use mapping", "Role documentation", "Geographic scope analysis"]
-          },
-          {
-            "title": "1.3 Employer/Agency Determination",
-            "description": "Determine responsibilities as employer or employment agency.",
-            "order_no": 3,
-            "summary": "Clarify compliance responsibilities",
-            "questions": [
-              "Is the organization an employer using AEDTs for NYC positions?",
-              "Is the organization an employment agency using AEDTs?",
-              "Are third-party AEDT providers identified?",
-              "Are compliance responsibilities clearly assigned?"
-            ],
-            "evidence_examples": ["Entity classification", "Provider contracts", "Responsibility matrix", "Compliance ownership documentation"]
-          }
-        ]
-      },
-      {
-        "title": "2. Bias Audit Requirements",
-        "description": "Conduct required annual bias audits of AEDTs by independent auditors.",
-        "order_no": 2,
-        "items": [
-          {
-            "title": "2.1 Independent Auditor Selection",
-            "description": "Select an independent auditor to conduct the bias audit.",
-            "order_no": 1,
-            "summary": "Engage qualified independent auditor",
-            "questions": [
-              "Is the auditor independent from the organization and AEDT developer?",
-              "Does the auditor have no material interest in the audit outcome?",
-              "Are the auditor's qualifications documented?",
-              "Is there a signed engagement agreement?"
-            ],
-            "evidence_examples": ["Independence certification", "Auditor qualifications", "Engagement letter", "Conflict of interest disclosure"]
-          },
-          {
-            "title": "2.2 Bias Audit Timing",
-            "description": "Ensure bias audits are conducted within required timeframes.",
-            "order_no": 2,
-            "summary": "Maintain audit timing compliance",
-            "questions": [
-              "Was a bias audit completed within one year before AEDT use?",
-              "Is there a schedule for annual bias audits?",
-              "Are audit completion dates documented?",
-              "Is there a process to track audit currency?"
-            ],
-            "evidence_examples": ["Audit schedule", "Completion certificates", "Tracking system", "Compliance calendar"]
-          },
-          {
-            "title": "2.3 Impact Ratio Calculation",
-            "description": "Calculate required impact ratios for sex and race/ethnicity categories.",
-            "order_no": 3,
-            "summary": "Compute disparate impact metrics",
-            "questions": [
-              "Are impact ratios calculated for selection/scoring by sex category?",
-              "Are impact ratios calculated for selection/scoring by race/ethnicity category?",
-              "Are impact ratios calculated for intersectional categories (sex and race/ethnicity)?",
-              "Is the calculation methodology documented and compliant?"
-            ],
-            "evidence_examples": ["Impact ratio calculations", "Methodology documentation", "Category breakdowns", "Statistical analysis"]
-          },
-          {
-            "title": "2.4 Historical Data Analysis",
-            "description": "Use appropriate historical data for bias audit calculations.",
-            "order_no": 4,
-            "summary": "Analyze historical AEDT data",
-            "questions": [
-              "Is historical data from the employer's own use of the AEDT available?",
-              "If not, is data provided by the AEDT developer used appropriately?",
-              "Is the data set sufficiently large for statistical validity?",
-              "Are data limitations documented?"
-            ],
-            "evidence_examples": ["Data source documentation", "Sample size analysis", "Data quality assessment", "Limitation disclosures"]
-          },
-          {
-            "title": "2.5 Audit Report Requirements",
-            "description": "Ensure bias audit reports contain all required elements.",
-            "order_no": 5,
-            "summary": "Complete all audit report elements",
-            "questions": [
-              "Does the report include the date of the audit?",
-              "Does the report include the source and explanation of data used?",
-              "Does the report include the number of individuals assessed?",
-              "Does the report include all required impact ratios?"
-            ],
-            "evidence_examples": ["Audit report", "Data source explanation", "Sample documentation", "Impact ratio tables"]
-          }
-        ]
-      },
-      {
-        "title": "3. Public Disclosure Requirements",
-        "description": "Publish required bias audit information on the organization's website.",
-        "order_no": 3,
-        "items": [
-          {
-            "title": "3.1 Summary of Results Publication",
-            "description": "Publish a summary of the most recent bias audit results.",
-            "order_no": 1,
-            "summary": "Post audit summary publicly",
-            "questions": [
-              "Is a summary of bias audit results published on the website?",
-              "Does the summary include the distribution date of the AEDT?",
-              "Does the summary include the source and explanation of data?",
-              "Does the summary include the number of individuals assessed?"
-            ],
-            "evidence_examples": ["Published summary", "Website screenshot", "Summary content checklist", "Publication date record"]
-          },
-          {
-            "title": "3.2 Impact Ratio Disclosure",
-            "description": "Disclose all calculated impact ratios publicly.",
-            "order_no": 2,
-            "summary": "Publish impact ratio results",
-            "questions": [
-              "Are impact ratios for sex categories published?",
-              "Are impact ratios for race/ethnicity categories published?",
-              "Are intersectional impact ratios published?",
-              "Are the ratios presented clearly and accessibly?"
-            ],
-            "evidence_examples": ["Published impact ratios", "Presentation format", "Accessibility review", "Completeness checklist"]
-          },
-          {
-            "title": "3.3 Website Accessibility",
-            "description": "Ensure disclosed information is accessible on the careers or jobs section.",
-            "order_no": 3,
-            "summary": "Make disclosures easily accessible",
-            "questions": [
-              "Is the information posted on the careers or jobs section of the website?",
-              "Is the information easy to find for candidates?",
-              "Is the information available for at least 6 months after AEDT use?",
-              "Can the information be accessed without barriers?"
-            ],
-            "evidence_examples": ["Website location documentation", "User accessibility test", "Retention policy", "Access verification"]
-          }
-        ]
-      },
-      {
-        "title": "4. Candidate Notice Requirements",
-        "description": "Provide required notices to candidates and employees about AEDT use.",
-        "order_no": 4,
-        "items": [
-          {
-            "title": "4.1 Notice Timing",
-            "description": "Provide notice at least 10 business days before AEDT use.",
-            "order_no": 1,
-            "summary": "Deliver timely AEDT notices",
-            "questions": [
-              "Is notice provided at least 10 business days before AEDT use?",
-              "Is there a system to track notice delivery timing?",
-              "Are timing requirements met for all candidates?",
-              "Is proof of notice timing maintained?"
-            ],
-            "evidence_examples": ["Notice delivery system", "Timing records", "Compliance tracking", "Delivery confirmation"]
-          },
-          {
-            "title": "4.2 Notice Content - AEDT Use",
-            "description": "Notify candidates that an AEDT will be used.",
-            "order_no": 2,
-            "summary": "Inform candidates about AEDT use",
-            "questions": [
-              "Does the notice state that an AEDT will be used?",
-              "Does the notice describe the job qualifications assessed by the AEDT?",
-              "Does the notice describe the characteristics the AEDT evaluates?",
-              "Is the notice clear and understandable?"
-            ],
-            "evidence_examples": ["Notice template", "Content review", "Qualification description", "Clarity assessment"]
-          },
-          {
-            "title": "4.3 Notice Content - Data Collection",
-            "description": "Disclose data collection and retention practices.",
-            "order_no": 3,
-            "summary": "Explain data practices to candidates",
-            "questions": [
-              "Does the notice explain what data will be collected?",
-              "Does the notice explain what data will be analyzed?",
-              "Does the notice describe data sources?",
-              "Does the notice explain data retention practices?"
-            ],
-            "evidence_examples": ["Data disclosure statement", "Collection explanation", "Source documentation", "Retention policy disclosure"]
-          },
-          {
-            "title": "4.4 Alternative Process Information",
-            "description": "Inform candidates of alternative selection processes.",
-            "order_no": 4,
-            "summary": "Offer alternatives to AEDT evaluation",
-            "questions": [
-              "Are candidates informed of available alternative processes?",
-              "Is a reasonable alternative to AEDT evaluation offered?",
-              "Are instructions for requesting alternatives provided?",
-              "Is the alternative process genuinely available?"
-            ],
-            "evidence_examples": ["Alternative process documentation", "Request instructions", "Availability confirmation", "Process description"]
-          },
-          {
-            "title": "4.5 Notice Delivery Methods",
-            "description": "Use appropriate methods to deliver required notices.",
-            "order_no": 5,
-            "summary": "Deliver notices through proper channels",
-            "questions": [
-              "Is notice provided in the job posting (for external candidates)?",
-              "Is written notice provided to internal candidates?",
-              "Is notice provided by mail or email when required?",
-              "Are delivery methods documented?"
-            ],
-            "evidence_examples": ["Job posting with notice", "Written notice copies", "Delivery records", "Method documentation"]
-          }
-        ]
-      },
-      {
-        "title": "5. Data Privacy and Retention",
-        "description": "Manage candidate data collected and processed by AEDTs appropriately.",
-        "order_no": 5,
-        "items": [
-          {
-            "title": "5.1 Data Collection Minimization",
-            "description": "Collect only data necessary for AEDT assessment.",
-            "order_no": 1,
-            "summary": "Limit data collection to necessary information",
-            "questions": [
-              "Is data collection limited to what is necessary for assessment?",
-              "Are unnecessary data fields identified and eliminated?",
-              "Is the purpose of each data element documented?",
-              "Is there a process to review data necessity?"
-            ],
-            "evidence_examples": ["Data inventory", "Necessity justification", "Field review documentation", "Minimization policy"]
-          },
-          {
-            "title": "5.2 Demographic Data Handling",
-            "description": "Handle demographic data appropriately for bias audits.",
-            "order_no": 2,
-            "summary": "Manage demographic data responsibly",
-            "questions": [
-              "Is demographic data collected only for bias audit purposes?",
-              "Is demographic data protected from use in employment decisions?",
-              "Are appropriate safeguards in place for sensitive data?",
-              "Is demographic data handled in compliance with privacy laws?"
-            ],
-            "evidence_examples": ["Purpose limitation documentation", "Access controls", "Safeguard documentation", "Privacy compliance review"]
-          },
-          {
-            "title": "5.3 Data Retention",
-            "description": "Retain AEDT-related data for required periods.",
-            "order_no": 3,
-            "summary": "Maintain appropriate data retention",
-            "questions": [
-              "Is bias audit data retained appropriately?",
-              "Are notice delivery records maintained?",
-              "Is there a data retention schedule for AEDT data?",
-              "Is data disposed of securely when no longer needed?"
-            ],
-            "evidence_examples": ["Retention schedule", "Notice records", "Disposal procedures", "Retention compliance review"]
-          }
-        ]
-      },
-      {
-        "title": "6. Vendor and Third-Party Management",
-        "description": "Manage AEDT vendors and ensure their compliance.",
-        "order_no": 6,
-        "items": [
-          {
-            "title": "6.1 Vendor Compliance Requirements",
-            "description": "Ensure AEDT vendors support compliance requirements.",
-            "order_no": 1,
-            "summary": "Require vendor compliance support",
-            "questions": [
-              "Do vendor contracts include bias audit support provisions?",
-              "Can vendors provide data needed for bias audits?",
-              "Do vendors provide documentation of AEDT functionality?",
-              "Are vendor compliance obligations clearly defined?"
-            ],
-            "evidence_examples": ["Contract provisions", "Data provision capability", "Functionality documentation", "Compliance terms"]
-          },
-          {
-            "title": "6.2 Vendor Due Diligence",
-            "description": "Conduct due diligence on AEDT vendors.",
-            "order_no": 2,
-            "summary": "Evaluate vendor compliance capability",
-            "questions": [
-              "Is vendor due diligence conducted before AEDT adoption?",
-              "Are vendor bias audit capabilities assessed?",
-              "Is vendor data handling reviewed?",
-              "Are vendor compliance certifications obtained?"
-            ],
-            "evidence_examples": ["Due diligence report", "Capability assessment", "Data handling review", "Certifications"]
-          },
-          {
-            "title": "6.3 Ongoing Vendor Monitoring",
-            "description": "Monitor vendor compliance on an ongoing basis.",
-            "order_no": 3,
-            "summary": "Continuously monitor vendor compliance",
-            "questions": [
-              "Is vendor compliance monitored regularly?",
-              "Are vendor changes to AEDTs communicated and assessed?",
-              "Is there a process to address vendor compliance issues?",
-              "Are vendor audits or assessments conducted periodically?"
-            ],
-            "evidence_examples": ["Monitoring schedule", "Change notification process", "Issue resolution records", "Vendor assessment reports"]
-          }
-        ]
-      },
-      {
-        "title": "7. Governance and Documentation",
-        "description": "Establish governance structures and maintain documentation for compliance.",
-        "order_no": 7,
-        "items": [
-          {
-            "title": "7.1 Compliance Ownership",
-            "description": "Assign clear ownership for Local Law 144 compliance.",
-            "order_no": 1,
-            "summary": "Define compliance responsibilities",
-            "questions": [
-              "Is there a designated owner for Local Law 144 compliance?",
-              "Are roles and responsibilities clearly defined?",
-              "Is compliance integrated into HR and hiring processes?",
-              "Is there executive oversight of compliance?"
-            ],
-            "evidence_examples": ["Ownership assignment", "Role definitions", "Process integration documentation", "Oversight records"]
-          },
-          {
-            "title": "7.2 Policy and Procedures",
-            "description": "Establish policies and procedures for AEDT compliance.",
-            "order_no": 2,
-            "summary": "Document compliance policies",
-            "questions": [
-              "Is there a policy governing AEDT use and compliance?",
-              "Are procedures documented for all compliance requirements?",
-              "Are policies reviewed and updated regularly?",
-              "Are employees trained on policies and procedures?"
-            ],
-            "evidence_examples": ["AEDT policy", "Procedure documentation", "Review records", "Training materials"]
-          },
-          {
-            "title": "7.3 Record Keeping",
-            "description": "Maintain records to demonstrate compliance.",
-            "order_no": 3,
-            "summary": "Keep comprehensive compliance records",
-            "questions": [
-              "Are bias audit reports and supporting data retained?",
-              "Are notice delivery records maintained?",
-              "Is there an audit trail for compliance activities?",
-              "Are records organized and easily retrievable?"
-            ],
-            "evidence_examples": ["Record retention system", "Audit documentation", "Activity logs", "Retrieval procedures"]
-          },
-          {
-            "title": "7.4 Compliance Monitoring",
-            "description": "Monitor and assess ongoing compliance.",
-            "order_no": 4,
-            "summary": "Track compliance continuously",
-            "questions": [
-              "Is there ongoing monitoring of compliance status?",
-              "Are compliance gaps identified and addressed?",
-              "Is there a process for handling complaints or inquiries?",
-              "Are compliance metrics tracked and reported?"
-            ],
-            "evidence_examples": ["Monitoring dashboard", "Gap analysis", "Complaint handling process", "Compliance reports"]
-          }
-        ]
-      }
-    ]
-  }
+    {
+      "title": "Bias Audit Requirements",
+      "description": "Independent bias audit requirements for AEDTs",
+      "order_no": 2,
+      "items": [
+        {
+          "title": "Independent Annual Bias Audit",
+          "order_no": 1,
+          "summary": "Each AEDT must undergo an independent bias audit before use and at least once annually.",
+          "questions": [
+            "Is the audit conducted by an independent third party?",
+            "Is the auditor uninvolved in developing or distributing the tool?",
+            "Does the audit evaluate disparate impact across legally protected categories?",
+            "Does the audit calculate selection rates and impact ratios?",
+            "Does the audit use historical or test data consistent with DCWP rules?"
+          ],
+          "evidence_examples": [
+            "Signed bias audit report",
+            "Auditor independence declaration",
+            "Audit methodology documentation"
+          ]
+        },
+        {
+          "title": "Bias Audit Publication",
+          "order_no": 2,
+          "summary": "A summary of the most recent bias audit must be publicly available prior to AEDT use.",
+          "questions": [
+            "Is the summary posted on the employer or vendor website?",
+            "Does the summary include the audit date?",
+            "Does the summary include the distribution date of the AEDT?",
+            "Does the summary include selection rates and impact ratios?",
+            "Will the summary remain publicly accessible for at least 6 months?"
+          ],
+          "evidence_examples": [
+            "Public audit summary URL",
+            "Website archive snapshot",
+            "Publication timestamp records"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Candidate Notice & Transparency",
+      "description": "Requirements for notifying candidates about AEDT use",
+      "order_no": 3,
+      "items": [
+        {
+          "title": "Advance Candidate Notice",
+          "order_no": 1,
+          "summary": "Candidates and employees must receive notice at least 10 business days before AEDT use.",
+          "questions": [
+            "Does the notice inform that an AEDT will be used?",
+            "Does the notice describe job qualifications assessed?",
+            "Does the notice describe characteristics evaluated?",
+            "Does the notice provide instructions for requesting an alternative process or accommodation?"
+          ],
+          "evidence_examples": [
+            "Notice templates",
+            "Candidate notification logs",
+            "HR communication records"
+          ]
+        },
+        {
+          "title": "Data Use Disclosure",
+          "order_no": 2,
+          "summary": "The organization must disclose the type of data collected and the source of that data.",
+          "questions": [
+            "Does the disclosure describe input data categories?",
+            "Does the disclosure identify data sources?",
+            "Is the disclosure accessible to candidates upon request?",
+            "Is the disclosure available publicly if not provided individually?"
+          ],
+          "evidence_examples": [
+            "Data transparency policy",
+            "Candidate disclosure documents",
+            "Public privacy statement"
+          ]
+        },
+        {
+          "title": "Data Retention Disclosure",
+          "order_no": 3,
+          "summary": "The organization must disclose its AEDT data retention policy.",
+          "questions": [
+            "Is the retention duration stated?",
+            "Are deletion practices described?",
+            "Is the retention policy available to candidates?"
+          ],
+          "evidence_examples": [
+            "Data retention policy",
+            "Internal retention schedules",
+            "Privacy governance documentation"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Alternative Selection & Accommodations",
+      "description": "Requirements for providing alternative evaluation processes",
+      "order_no": 4,
+      "items": [
+        {
+          "title": "Alternative Selection Process",
+          "order_no": 1,
+          "summary": "Candidates must be allowed to request an alternative evaluation process or reasonable accommodation.",
+          "questions": [
+            "Are clear instructions provided for requesting alternatives?",
+            "Are requests processed in a timely manner?",
+            "Is there protection against retaliation or disadvantage for requesting alternatives?"
+          ],
+          "evidence_examples": [
+            "Accommodation request workflow",
+            "Case handling logs",
+            "HR escalation procedures"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Documentation & Record Keeping",
+      "description": "Record retention requirements for compliance demonstration",
+      "order_no": 5,
+      "items": [
+        {
+          "title": "Record Retention",
+          "order_no": 1,
+          "summary": "The organization must retain documentation demonstrating compliance.",
+          "questions": [
+            "Are bias audits retained?",
+            "Are notice records retained?",
+            "Is disclosure evidence retained?",
+            "Does retention support regulatory inspection?"
+          ],
+          "evidence_examples": [
+            "Compliance archive repository",
+            "Audit document storage",
+            "Retention logs"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Vendor Management",
+      "description": "Requirements for vendor-supplied AEDTs",
+      "order_no": 6,
+      "items": [
+        {
+          "title": "Vendor Responsibility Allocation",
+          "order_no": 1,
+          "summary": "Responsibility for compliance must be defined when AEDTs are vendor supplied.",
+          "questions": [
+            "Do contracts allocate audit responsibility?",
+            "Is audit publication responsibility assigned?",
+            "Does the employer retain responsibility for candidate notice?"
+          ],
+          "evidence_examples": [
+            "Vendor contracts",
+            "Service level agreements",
+            "Compliance responsibility matrix"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Pre-Deployment Compliance",
+      "description": "Verification requirements before AEDT deployment",
+      "order_no": 7,
+      "items": [
+        {
+          "title": "Pre-Use Compliance Verification",
+          "order_no": 1,
+          "summary": "No AEDT may be used unless all Local Law 144 obligations are satisfied.",
+          "questions": [
+            "Is the bias audit completed?",
+            "Is the audit summary published?",
+            "Is the candidate notice process operational?"
+          ],
+          "evidence_examples": [
+            "Compliance checklist",
+            "Deployment approval records",
+            "Legal sign-off"
+          ]
+        }
+      ]
+    }
+  ]
 }
