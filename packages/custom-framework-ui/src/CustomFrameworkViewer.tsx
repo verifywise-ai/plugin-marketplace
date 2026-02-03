@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Box,
   Typography,
@@ -175,6 +175,9 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Level2Item | null>(null);
 
+  // Refs for accordion elements (for auto-scroll)
+  const accordionRefs = useRef<(HTMLDivElement | null)[]>([]);
+
   // Helper to get auth token from localStorage (redux-persist)
   const getAuthToken = (): string | null => {
     try {
@@ -292,6 +295,13 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
         const categoryIndex = data.structure.findIndex((level1) => level1.id === categoryId);
         if (categoryIndex !== -1) {
           setExpandedLevel1(categoryIndex);
+          // Scroll to the expanded accordion after a short delay (to allow expansion animation)
+          setTimeout(() => {
+            const accordionElement = accordionRefs.current[categoryIndex];
+            if (accordionElement) {
+              accordionElement.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          }, 100);
         }
         // Clear the localStorage after reading
         localStorage.removeItem(CUSTOM_FRAMEWORK_EXPANDED_CATEGORY_KEY);
@@ -470,6 +480,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
         return (
           <Accordion
             key={level1.id}
+            ref={(el: HTMLDivElement | null) => { accordionRefs.current[idx] = el; }}
             expanded={isExpanded}
             onChange={() => setExpandedLevel1(isExpanded ? null : idx)}
             sx={{
