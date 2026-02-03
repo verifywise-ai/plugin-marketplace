@@ -147,8 +147,9 @@ const getStatusColor = (status: string): string => {
   return "#9CA3AF"; // Not started / default
 };
 
-// localStorage key for custom framework navigation
+// localStorage keys for custom framework navigation
 const CUSTOM_FRAMEWORK_SELECTED_KEY = "verifywise_custom_framework_selected";
+const CUSTOM_FRAMEWORK_EXPANDED_CATEGORY_KEY = "verifywise_custom_framework_expanded_category";
 
 export const CustomFrameworkDashboard: React.FC<CustomFrameworkDashboardProps> = ({
   project,
@@ -452,19 +453,23 @@ export const CustomFrameworkDashboard: React.FC<CustomFrameworkDashboardProps> =
   };
 
   // Handle navigation from dashboard cards to controls page
-  const handleNavigateToControls = useCallback((fwId: number, fwName: string) => {
+  const handleNavigateToControls = useCallback((fwId: number, fwName: string, categoryId?: number) => {
     // Store the selected custom framework in localStorage
     localStorage.setItem(CUSTOM_FRAMEWORK_SELECTED_KEY, JSON.stringify({
       frameworkId: fwId,
       frameworkName: fwName,
     }));
 
-    // If parent provided onNavigate, use it
+    // Store the category to expand (if provided)
+    if (categoryId !== undefined) {
+      localStorage.setItem(CUSTOM_FRAMEWORK_EXPANDED_CATEGORY_KEY, categoryId.toString());
+    } else {
+      localStorage.removeItem(CUSTOM_FRAMEWORK_EXPANDED_CATEGORY_KEY);
+    }
+
+    // Use parent's navigate function for SPA navigation (no page refresh)
     if (onNavigate) {
       onNavigate(fwId, fwName);
-    } else {
-      // Default navigation to controls page
-      window.location.href = "/framework/controls";
     }
   }, [onNavigate]);
 
@@ -493,9 +498,9 @@ export const CustomFrameworkDashboard: React.FC<CustomFrameworkDashboardProps> =
 
     const level1Name = fw?.level_1_name || "Categories";
 
-    const handleCardClick = () => {
+    const handleCardClick = (categoryId: number) => {
       if (fw) {
-        handleNavigateToControls(fw.framework_id, fw.name);
+        handleNavigateToControls(fw.framework_id, fw.name, categoryId);
       }
     };
 
@@ -567,7 +572,7 @@ export const CustomFrameworkDashboard: React.FC<CustomFrameworkDashboardProps> =
                     </Typography>
                   </Box>
                   <Box
-                    onClick={handleCardClick}
+                    onClick={() => handleCardClick(category.id)}
                     sx={{
                       cursor: "pointer",
                       display: "flex",

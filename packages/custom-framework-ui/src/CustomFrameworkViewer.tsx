@@ -120,6 +120,9 @@ interface ProgressData {
   };
 }
 
+// localStorage key for expanded category (set by CustomFrameworkDashboard)
+const CUSTOM_FRAMEWORK_EXPANDED_CATEGORY_KEY = "verifywise_custom_framework_expanded_category";
+
 // Styles matching the app's ControlsTable
 const tableStyles = {
   tableHead: {
@@ -276,6 +279,27 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
   useEffect(() => {
     loadFrameworkData();
   }, [loadFrameworkData]);
+
+  // Check localStorage for category to auto-expand (from dashboard navigation)
+  useEffect(() => {
+    if (!data?.structure) return;
+
+    try {
+      const storedCategoryId = localStorage.getItem(CUSTOM_FRAMEWORK_EXPANDED_CATEGORY_KEY);
+      if (storedCategoryId) {
+        const categoryId = parseInt(storedCategoryId, 10);
+        // Find the index of the category in the structure
+        const categoryIndex = data.structure.findIndex((level1) => level1.id === categoryId);
+        if (categoryIndex !== -1) {
+          setExpandedLevel1(categoryIndex);
+        }
+        // Clear the localStorage after reading
+        localStorage.removeItem(CUSTOM_FRAMEWORK_EXPANDED_CATEGORY_KEY);
+      }
+    } catch (err) {
+      console.log("[CustomFrameworkViewer] Error reading stored category:", err);
+    }
+  }, [data?.structure]);
 
   const handleRefresh = useCallback(() => {
     loadFrameworkData();
