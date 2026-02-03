@@ -106,6 +106,7 @@ The framework type is configured in two places:
 | NIST CSF | `nist-csf` | 🏢 Org | Cybersecurity framework |
 | Texas AI Act | `texas-ai-act` | 📁 Project | Texas Responsible AI Governance Act (TRAIGA) |
 | Colorado AI Act | `colorado-ai-act` | 📁 Project | Colorado AI Act for algorithmic discrimination prevention |
+| FTC AI Guidelines | `ftc-ai-guidelines` | 📁 Project | Federal Trade Commission AI guidance for consumer protection |
 
 ### Canada 🇨🇦
 
@@ -119,6 +120,7 @@ The framework type is configured in two places:
 |-----------|-----|------|-------------|
 | GDPR | `gdpr` | 🏢 Org | General Data Protection Regulation |
 | DORA | `dora` | 🏢 Org | Digital Operational Resilience Act |
+| ALTAI | `altai` | 📁 Project | Assessment List for Trustworthy AI (EU Commission) |
 
 ### United Arab Emirates 🇦🇪
 

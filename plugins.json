@@ -985,6 +985,124 @@
       "frameworkType": "organizational"
     },
     {
+      "key": "altai",
+      "name": "ALTAI - Assessment List for Trustworthy AI",
+      "displayName": "ALTAI",
+      "description": "EU Commission's Assessment List for Trustworthy Artificial Intelligence based on the Ethics Guidelines for Trustworthy AI.",
+      "region": "European Union",
+      "longDescription": "ALTAI (Assessment List for Trustworthy AI) is a practical tool developed by the High-Level Expert Group on AI for the European Commission. It helps organizations self-assess their AI systems against the seven key requirements for Trustworthy AI: Human Agency and Oversight, Technical Robustness and Safety, Privacy and Data Governance, Transparency, Diversity and Non-discrimination, Societal Well-being, and Accountability.",
+      "version": "1.0.0",
+      "author": "VerifyWise",
+      "category": "compliance",
+      "iconUrl": "plugins/altai/icon.svg",
+      "documentationUrl": "https://docs.verifywise.com/frameworks/altai",
+      "supportUrl": "https://support.verifywise.com",
+      "isOfficial": true,
+      "isPublished": true,
+      "requiresConfiguration": false,
+      "installationType": "tenant_scoped",
+      "features": [
+        {
+          "name": "7 Key Requirements",
+          "description": "Complete coverage of all Trustworthy AI requirements",
+          "displayOrder": 1
+        },
+        {
+          "name": "Self-Assessment",
+          "description": "Practical assessment questions for each requirement",
+          "displayOrder": 2
+        },
+        {
+          "name": "Auto-Import",
+          "description": "Framework automatically imported on plugin installation",
+          "displayOrder": 3
+        },
+        {
+          "name": "Evidence Tracking",
+          "description": "Track evidence and documentation for compliance",
+          "displayOrder": 4
+        }
+      ],
+      "tags": [
+        "altai",
+        "eu",
+        "ai-ethics",
+        "trustworthy-ai",
+        "ai-governance",
+        "european-commission",
+        "compliance"
+      ],
+      "pluginPath": "plugins/altai",
+      "entryPoint": "dist/index.js",
+      "dependencies": {},
+      "ui": {
+        "bundleUrl": "/api/plugins/altai/ui/dist/index.esm.js",
+        "globalName": "PluginCustomFrameworkImport",
+        "slots": [
+          {
+            "slotId": "page.settings.tabs",
+            "componentName": "CustomFrameworkConfig",
+            "renderType": "tab",
+            "props": {
+              "label": "Custom Frameworks",
+              "icon": "FileJson",
+              "value": "custom-frameworks",
+              "pluginKey": "altai"
+            }
+          },
+          {
+            "slotId": "modal.framework.selection",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "altai"
+            }
+          },
+          {
+            "slotId": "page.controls.custom-framework",
+            "componentName": "CustomFrameworkControls",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "altai"
+            }
+          },
+          {
+            "slotId": "page.project-controls.custom-framework",
+            "componentName": "CustomFrameworkControls",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "altai"
+            }
+          },
+          {
+            "slotId": "page.framework-dashboard.custom",
+            "componentName": "CustomFrameworkDashboard",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "altai"
+            }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "altai"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "altai"
+            }
+          }
+        ]
+      },
+      "frameworkType": "project"
+    },
+    {
       "key": "nist-csf",
       "name": "NIST Cybersecurity Framework",
       "displayName": "NIST CSF",
@@ -1099,6 +1217,124 @@
         ]
       },
       "frameworkType": "organizational"
+    },
+    {
+      "key": "ftc-ai-guidelines",
+      "name": "FTC AI Guidelines",
+      "displayName": "FTC AI Guidelines",
+      "description": "US Federal Trade Commission guidelines for responsible AI use, covering truth in advertising, fairness, transparency, and consumer protection.",
+      "region": "United States",
+      "longDescription": "The FTC AI Guidelines framework helps organizations comply with Federal Trade Commission requirements for artificial intelligence. It covers truth in AI advertising, algorithmic fairness and non-discrimination, data privacy, transparency, accountability, consumer rights, and AI in marketing practices. Based on FTC enforcement priorities and guidance documents.",
+      "version": "1.0.0",
+      "author": "VerifyWise",
+      "category": "compliance",
+      "iconUrl": "plugins/ftc-ai-guidelines/icon.svg",
+      "documentationUrl": "https://docs.verifywise.com/frameworks/ftc-ai-guidelines",
+      "supportUrl": "https://support.verifywise.com",
+      "isOfficial": true,
+      "isPublished": true,
+      "requiresConfiguration": false,
+      "installationType": "tenant_scoped",
+      "features": [
+        {
+          "name": "Truth in Advertising",
+          "description": "Ensure AI claims are truthful and substantiated",
+          "displayOrder": 1
+        },
+        {
+          "name": "Algorithmic Fairness",
+          "description": "ECOA, FCRA, and Fair Housing Act compliance",
+          "displayOrder": 2
+        },
+        {
+          "name": "Consumer Protection",
+          "description": "Data privacy, transparency, and redress mechanisms",
+          "displayOrder": 3
+        },
+        {
+          "name": "Auto-Import",
+          "description": "Framework automatically imported on plugin installation",
+          "displayOrder": 4
+        }
+      ],
+      "tags": [
+        "ftc",
+        "us",
+        "ai-guidelines",
+        "consumer-protection",
+        "fair-practices",
+        "advertising",
+        "compliance"
+      ],
+      "pluginPath": "plugins/ftc-ai-guidelines",
+      "entryPoint": "dist/index.js",
+      "dependencies": {},
+      "ui": {
+        "bundleUrl": "/api/plugins/ftc-ai-guidelines/ui/dist/index.esm.js",
+        "globalName": "PluginCustomFrameworkImport",
+        "slots": [
+          {
+            "slotId": "page.settings.tabs",
+            "componentName": "CustomFrameworkConfig",
+            "renderType": "tab",
+            "props": {
+              "label": "Custom Frameworks",
+              "icon": "FileJson",
+              "value": "custom-frameworks",
+              "pluginKey": "ftc-ai-guidelines"
+            }
+          },
+          {
+            "slotId": "modal.framework.selection",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "ftc-ai-guidelines"
+            }
+          },
+          {
+            "slotId": "page.controls.custom-framework",
+            "componentName": "CustomFrameworkControls",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "ftc-ai-guidelines"
+            }
+          },
+          {
+            "slotId": "page.project-controls.custom-framework",
+            "componentName": "CustomFrameworkControls",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "ftc-ai-guidelines"
+            }
+          },
+          {
+            "slotId": "page.framework-dashboard.custom",
+            "componentName": "CustomFrameworkDashboard",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "ftc-ai-guidelines"
+            }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "ftc-ai-guidelines"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "ftc-ai-guidelines"
+            }
+          }
+        ]
+      },
+      "frameworkType": "project"
     },
     {
       "key": "cis-controls",
@@ -1442,6 +1678,124 @@
             "renderType": "raw",
             "props": {
               "pluginKey": "ai-ethics"
+            }
+          }
+        ]
+      },
+      "frameworkType": "project"
+    },
+    {
+      "key": "oecd-ai-principles",
+      "name": "OECD AI Principles",
+      "displayName": "OECD AI Principles",
+      "description": "OECD Principles on Artificial Intelligence for responsible stewardship of trustworthy AI that respects human rights and democratic values.",
+      "region": "International",
+      "longDescription": "The OECD Principles on Artificial Intelligence, adopted in May 2019, were the first intergovernmental standard on AI. Endorsed by G20 leaders, this framework covers inclusive growth and sustainable development, human-centred values and fairness, transparency and explainability, robustness and safety, accountability, and stakeholder engagement.",
+      "version": "1.0.0",
+      "author": "VerifyWise",
+      "category": "compliance",
+      "iconUrl": "plugins/oecd-ai-principles/icon.svg",
+      "documentationUrl": "https://docs.verifywise.com/frameworks/oecd-ai-principles",
+      "supportUrl": "https://support.verifywise.com",
+      "isOfficial": true,
+      "isPublished": true,
+      "requiresConfiguration": false,
+      "installationType": "tenant_scoped",
+      "features": [
+        {
+          "name": "G20 Endorsed",
+          "description": "First intergovernmental AI standard endorsed by G20",
+          "displayOrder": 1
+        },
+        {
+          "name": "Five Core Principles",
+          "description": "Growth, Fairness, Transparency, Safety, Accountability",
+          "displayOrder": 2
+        },
+        {
+          "name": "Human-Centred AI",
+          "description": "Focus on human rights and democratic values",
+          "displayOrder": 3
+        },
+        {
+          "name": "Auto-Import",
+          "description": "Framework automatically imported on plugin installation",
+          "displayOrder": 4
+        }
+      ],
+      "tags": [
+        "oecd",
+        "international",
+        "ai-principles",
+        "g20",
+        "trustworthy-ai",
+        "ai-governance",
+        "compliance"
+      ],
+      "pluginPath": "plugins/oecd-ai-principles",
+      "entryPoint": "dist/index.js",
+      "dependencies": {},
+      "ui": {
+        "bundleUrl": "/api/plugins/oecd-ai-principles/ui/dist/index.esm.js",
+        "globalName": "PluginCustomFrameworkImport",
+        "slots": [
+          {
+            "slotId": "page.settings.tabs",
+            "componentName": "CustomFrameworkConfig",
+            "renderType": "tab",
+            "props": {
+              "label": "Custom Frameworks",
+              "icon": "FileJson",
+              "value": "custom-frameworks",
+              "pluginKey": "oecd-ai-principles"
+            }
+          },
+          {
+            "slotId": "modal.framework.selection",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "oecd-ai-principles"
+            }
+          },
+          {
+            "slotId": "page.controls.custom-framework",
+            "componentName": "CustomFrameworkControls",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "oecd-ai-principles"
+            }
+          },
+          {
+            "slotId": "page.project-controls.custom-framework",
+            "componentName": "CustomFrameworkControls",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "oecd-ai-principles"
+            }
+          },
+          {
+            "slotId": "page.framework-dashboard.custom",
+            "componentName": "CustomFrameworkDashboard",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "oecd-ai-principles"
+            }
+          },
+          {
+            "slotId": "page.org-framework.management",
+            "componentName": "CustomFrameworkCards",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "oecd-ai-principles"
+            }
+          },
+          {
+            "slotId": "page.project-overview.custom-framework",
+            "componentName": "CustomFrameworkOverview",
+            "renderType": "raw",
+            "props": {
+              "pluginKey": "oecd-ai-principles"
             }
           }
         ]
