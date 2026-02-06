@@ -1194,7 +1194,7 @@ var plugin = createFrameworkPlugin({
   description: "New York City Local Law 144 compliance framework for automated employment decision tools (AEDTs) requiring bias audits and candidate notifications.",
   version: "1.0.0",
   author: "VerifyWise",
-  template: template_default,
+  template: template_default.framework,
   autoImport: true
 });
 var { metadata, install, uninstall, validateConfig, router } = plugin;
