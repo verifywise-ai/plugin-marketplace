@@ -1836,35 +1836,68 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
       >
         <DialogTitle
           sx={{
-            fontSize: 16,
-            fontWeight: 600,
-            borderBottom: "1px solid #E5E7EB",
-            pb: 2,
+            background: "linear-gradient(180deg, #F8FAFB 0%, #F3F5F8 100%)",
+            borderBottom: "1px solid #E0E4E9",
+            padding: "16px 24px",
+            paddingBottom: "36px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
           }}
         >
-          <Box>
-            <Typography sx={{ fontSize: 16, fontWeight: 600, color: "#111827" }}>
+          <Stack spacing={0.5}>
+            <Typography
+              sx={{
+                fontSize: 15,
+                fontWeight: 600,
+                color: "#101828",
+                lineHeight: "28px",
+              }}
+            >
               Attach Existing Files as Evidence
             </Typography>
-            <Typography sx={{ fontSize: 13, color: "#6B7280", mt: 0.5 }}>
+            <Typography
+              sx={{
+                fontSize: 13,
+                fontWeight: 400,
+                color: "#475467",
+                lineHeight: "20px",
+              }}
+            >
               Select files from your organization to attach as evidence
             </Typography>
-          </Box>
-          <IconButton
+          </Stack>
+          <Box
+            component="span"
+            role="button"
+            tabIndex={0}
             onClick={() => setIsFilePickerOpen(false)}
-            size="small"
             sx={{
-              color: "#6B7280",
-              "&:hover": { backgroundColor: "#F3F4F6" },
+              cursor: "pointer",
+              color: "#98A2B3",
+              display: "flex",
+              alignItems: "center",
+              padding: "4px",
+              borderRadius: "4px",
+              "&:hover": { backgroundColor: "#F2F4F7" },
             }}
           >
-            <CloseIcon size={18} />
-          </IconButton>
+            <CloseIcon size={20} />
+          </Box>
         </DialogTitle>
-        <DialogContent sx={{ p: 2.5 }}>
+        <DialogContent
+          sx={{
+            padding: "20px",
+            margin: "0 24px",
+            marginTop: "-20px",
+            marginBottom: "-20px",
+            border: "1px solid #E0E4E9",
+            borderRadius: "16px",
+            backgroundColor: "#FFFFFF",
+            zIndex: 1,
+            position: "relative",
+          }}
+        >
           <Stack spacing={2.5}>
             {/* Search field */}
             <TextField
@@ -2043,7 +2076,7 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                               </Typography>
                             )}
                             {file.size && file.uploader && (
-                              <Typography sx={{ fontSize: 11, color: "#D1D5DB" }}>·</Typography>
+                              <Typography sx={{ fontSize: 11, color: "#D1D5DB" }}>•</Typography>
                             )}
                             {file.uploader && (
                               <Typography sx={{ fontSize: 11, color: "#6B7280" }}>
@@ -2051,7 +2084,7 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                               </Typography>
                             )}
                             {(file.size || file.uploader) && file.uploadDate && (
-                              <Typography sx={{ fontSize: 11, color: "#D1D5DB" }}>·</Typography>
+                              <Typography sx={{ fontSize: 11, color: "#D1D5DB" }}>•</Typography>
                             )}
                             {file.uploadDate && (
                               <Typography sx={{ fontSize: 11, color: "#6B7280" }}>
@@ -2072,7 +2105,16 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
             </Box>
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #E5E7EB", p: 2, justifyContent: "flex-end", gap: 1 }}>
+        <DialogActions
+          sx={{
+            background: "linear-gradient(180deg, #F3F5F8 0%, #F8FAFB 100%)",
+            borderTop: "1px solid #E0E4E9",
+            padding: "12px 24px",
+            paddingTop: "32px",
+            justifyContent: "flex-end",
+            gap: 1,
+          }}
+        >
           <Button
             variant="outlined"
             onClick={() => setIsFilePickerOpen(false)}
