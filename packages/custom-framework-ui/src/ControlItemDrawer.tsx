@@ -266,26 +266,47 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const response = await fetch("/api/file-manager/list", { headers });
-      if (response.ok) {
-        const result = await response.json();
+      // Fetch from both endpoints like the main app does
+      const [fileManagerResponse, filesResponse] = await Promise.all([
+        fetch("/api/file-manager", { headers }),
+        fetch("/api/files", { headers }),
+      ]);
+
+      let allFiles: any[] = [];
+
+      if (fileManagerResponse.ok) {
+        const result = await fileManagerResponse.json();
         const files = result.data?.files || result.files || [];
-        // Map to EvidenceFile format and filter by approval workflow
-        const mappedFiles = files
-          .filter((f: any) => {
-            // Hide files that have approval workflow but are not yet approved
-            if (f.approval_workflow_id && f.review_status !== "approved") return false;
-            return true;
-          })
-          .map((f: any) => ({
-            id: f.id,
-            fileName: f.filename || f.fileName,
-            size: f.size,
-            type: f.type || f.mimetype,
-            uploadDate: f.upload_date || f.uploadDate,
-          }));
-        setAvailableFiles(mappedFiles);
+        allFiles = [...allFiles, ...files];
       }
+
+      if (filesResponse.ok) {
+        const result = await filesResponse.json();
+        const files = Array.isArray(result) ? result : (result.data || []);
+        allFiles = [...allFiles, ...files];
+      }
+
+      // Map to EvidenceFile format and filter by approval workflow
+      const mappedFiles = allFiles
+        .filter((f: any) => {
+          // Hide files that have approval workflow but are not yet approved
+          if (f.approval_workflow_id && f.review_status !== "approved") return false;
+          return true;
+        })
+        .map((f: any) => ({
+          id: f.id,
+          fileName: f.filename || f.fileName,
+          size: f.size,
+          type: f.type || f.mimetype,
+          uploadDate: f.upload_date || f.uploaded_time || f.uploadDate,
+        }));
+
+      // Remove duplicates by id
+      const uniqueFiles = mappedFiles.filter(
+        (file, index, self) => index === self.findIndex((f) => f.id === file.id)
+      );
+
+      setAvailableFiles(uniqueFiles);
     } catch (err) {
       console.log("[ControlItemDrawer] Error loading available files:", err);
     } finally {
