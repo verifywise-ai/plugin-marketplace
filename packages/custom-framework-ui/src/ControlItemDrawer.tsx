@@ -1118,12 +1118,13 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                           minWidth: 155,
                           height: 25,
                           fontSize: 11,
-                          border: "1px solid #D0D5DD",
-                          backgroundColor: "white",
-                          color: "#344054",
+                          border: "1px solid #13715B",
+                          backgroundColor: "#13715B",
+                          color: "white",
+                          textTransform: "none",
                           "&:hover": {
-                            backgroundColor: "#F9FAFB",
-                            border: "1px solid #D0D5DD",
+                            backgroundColor: "#0F5C49",
+                            border: "1px solid #0F5C49",
                           },
                         }}
                       >
@@ -2027,13 +2028,22 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
             </Box>
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #E5E7EB", p: 2, justifyContent: "flex-end" }}>
+        <DialogActions sx={{ borderTop: "1px solid #E5E7EB", p: 2, justifyContent: "flex-end", gap: 1 }}>
           <Button
+            variant="outlined"
             onClick={() => setIsFilePickerOpen(false)}
             sx={{
+              minWidth: "80px",
+              height: "34px",
+              border: "1px solid #D0D5DD",
               color: "#344054",
               textTransform: "none",
               fontSize: 13,
+              borderRadius: "6px",
+              "&:hover": {
+                backgroundColor: "#F9FAFB",
+                border: "1px solid #D0D5DD",
+              },
             }}
           >
             Cancel
@@ -2043,13 +2053,16 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
             onClick={handleFilePickerConfirm}
             disabled={selectedFileIds.size === 0}
             sx={{
+              minWidth: "80px",
+              height: "34px",
               backgroundColor: "#13715B",
               textTransform: "none",
               fontSize: 13,
-              "&:hover": {
-                backgroundColor: "#0e5c47",
+              borderRadius: "6px",
+              "&:hover:not(.Mui-disabled)": {
+                backgroundColor: "#0F5A47",
               },
-              "&:disabled": {
+              "&.Mui-disabled": {
                 backgroundColor: "#E5E7EB",
                 color: "#9CA3AF",
               },
