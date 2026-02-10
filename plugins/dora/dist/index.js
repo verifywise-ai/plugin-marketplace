@@ -650,8 +650,29 @@ function createRouteHandlers(pluginKey, config) {
               { replacements: { implId: l2.impl_id } }
             );
             l2.linked_risks = risks;
+            const [linkedFiles] = await sequelize.query(
+              `SELECT
+                f.id,
+                f.filename,
+                f.size,
+                f.type as mimetype,
+                f.uploaded_time as upload_date,
+                u.name as uploader_name,
+                u.surname as uploader_surname,
+                fel.link_type
+              FROM "${tenantId}".file_entity_links fel
+              JOIN "${tenantId}".files f ON fel.file_id = f.id
+              LEFT JOIN public.users u ON f.uploaded_by = u.id
+              WHERE fel.framework_type = :frameworkType
+                AND fel.entity_type = 'level2_impl'
+                AND fel.entity_id = :implId
+              ORDER BY fel.created_at DESC`,
+              { replacements: { frameworkType: pluginKey, implId: l2.impl_id } }
+            );
+            l2.linked_files = linkedFiles;
           } else {
             l2.linked_risks = [];
+            l2.linked_files = [];
           }
           if (pf.hierarchy_type === "three_level") {
             const [level3Items] = await sequelize.query(
@@ -665,6 +686,32 @@ function createRouteHandlers(pluginKey, config) {
                ORDER BY l3.order_no`,
               { replacements: { level2Id: l2.id, level2ImplId: l2.impl_id } }
             );
+            for (const l3 of level3Items) {
+              if (l3.impl_id) {
+                const [l3Files] = await sequelize.query(
+                  `SELECT
+                    f.id,
+                    f.filename,
+                    f.size,
+                    f.type as mimetype,
+                    f.uploaded_time as upload_date,
+                    u.name as uploader_name,
+                    u.surname as uploader_surname,
+                    fel.link_type
+                  FROM "${tenantId}".file_entity_links fel
+                  JOIN "${tenantId}".files f ON fel.file_id = f.id
+                  LEFT JOIN public.users u ON f.uploaded_by = u.id
+                  WHERE fel.framework_type = :frameworkType
+                    AND fel.entity_type = 'level3_impl'
+                    AND fel.entity_id = :implId
+                  ORDER BY fel.created_at DESC`,
+                  { replacements: { frameworkType: pluginKey, implId: l3.impl_id } }
+                );
+                l3.linked_files = l3Files;
+              } else {
+                l3.linked_files = [];
+              }
+            }
             l2.items = level3Items;
           }
         }
@@ -861,6 +908,210 @@ function createRouteHandlers(pluginKey, config) {
       return { status: 500, data: { message: `Update failed: ${error.message}` } };
     }
   }
+  async function handleAttachFilesToLevel2(ctx) {
+    const { sequelize, tenantId, userId, params, body } = ctx;
+    const implId = parseInt(params.level2Id);
+    const { file_ids, link_type = "evidence" } = body;
+    if (!file_ids || !Array.isArray(file_ids) || file_ids.length === 0) {
+      return { status: 400, data: { message: "file_ids array is required" } };
+    }
+    try {
+      const [impl] = await sequelize.query(
+        `SELECT id FROM "${tenantId}".custom_framework_level2_impl WHERE id = :implId`,
+        { replacements: { implId } }
+      );
+      if (impl.length === 0) {
+        return { status: 404, data: { message: "Implementation record not found" } };
+      }
+      const results = [];
+      for (const fileId of file_ids) {
+        try {
+          await sequelize.query(
+            `INSERT INTO "${tenantId}".file_entity_links
+             (file_id, framework_type, entity_type, entity_id, link_type, created_by, created_at)
+             VALUES (:fileId, :frameworkType, 'level2_impl', :entityId, :linkType, :userId, NOW())
+             ON CONFLICT (file_id, framework_type, entity_type, entity_id) DO NOTHING`,
+            {
+              replacements: {
+                fileId,
+                frameworkType: pluginKey,
+                entityId: implId,
+                linkType: link_type,
+                userId
+              }
+            }
+          );
+          results.push({ file_id: fileId, success: true, message: "Attached" });
+        } catch (err) {
+          results.push({ file_id: fileId, success: false, message: err.message });
+        }
+      }
+      return { status: 200, data: { message: "Files attached", results } };
+    } catch (error) {
+      return { status: 500, data: { message: `Failed to attach files: ${error.message}` } };
+    }
+  }
+  async function handleGetLevel2Files(ctx) {
+    const { sequelize, tenantId, params } = ctx;
+    const implId = parseInt(params.level2Id);
+    try {
+      const [files] = await sequelize.query(
+        `SELECT
+          f.id,
+          f.filename,
+          f.size,
+          f.type as mimetype,
+          f.uploaded_time as upload_date,
+          f.uploaded_by,
+          u.name as uploader_name,
+          u.surname as uploader_surname,
+          fel.link_type,
+          fel.created_at as linked_at
+        FROM "${tenantId}".file_entity_links fel
+        JOIN "${tenantId}".files f ON fel.file_id = f.id
+        LEFT JOIN public.users u ON f.uploaded_by = u.id
+        WHERE fel.framework_type = :frameworkType
+          AND fel.entity_type = 'level2_impl'
+          AND fel.entity_id = :entityId
+        ORDER BY fel.created_at DESC`,
+        {
+          replacements: {
+            frameworkType: pluginKey,
+            entityId: implId
+          }
+        }
+      );
+      return { status: 200, data: files };
+    } catch (error) {
+      return { status: 500, data: { message: `Failed to get files: ${error.message}` } };
+    }
+  }
+  async function handleDetachFileFromLevel2(ctx) {
+    const { sequelize, tenantId, params } = ctx;
+    const implId = parseInt(params.level2Id);
+    const fileId = parseInt(params.fileId);
+    try {
+      await sequelize.query(
+        `DELETE FROM "${tenantId}".file_entity_links
+         WHERE file_id = :fileId
+           AND framework_type = :frameworkType
+           AND entity_type = 'level2_impl'
+           AND entity_id = :entityId`,
+        {
+          replacements: {
+            fileId,
+            frameworkType: pluginKey,
+            entityId: implId
+          }
+        }
+      );
+      return { status: 200, data: { message: "File detached successfully" } };
+    } catch (error) {
+      return { status: 500, data: { message: `Failed to detach file: ${error.message}` } };
+    }
+  }
+  async function handleAttachFilesToLevel3(ctx) {
+    const { sequelize, tenantId, userId, params, body } = ctx;
+    const implId = parseInt(params.level3Id);
+    const { file_ids, link_type = "evidence" } = body;
+    if (!file_ids || !Array.isArray(file_ids) || file_ids.length === 0) {
+      return { status: 400, data: { message: "file_ids array is required" } };
+    }
+    try {
+      const [impl] = await sequelize.query(
+        `SELECT id FROM "${tenantId}".custom_framework_level3_impl WHERE id = :implId`,
+        { replacements: { implId } }
+      );
+      if (impl.length === 0) {
+        return { status: 404, data: { message: "Implementation record not found" } };
+      }
+      const results = [];
+      for (const fileId of file_ids) {
+        try {
+          await sequelize.query(
+            `INSERT INTO "${tenantId}".file_entity_links
+             (file_id, framework_type, entity_type, entity_id, link_type, created_by, created_at)
+             VALUES (:fileId, :frameworkType, 'level3_impl', :entityId, :linkType, :userId, NOW())
+             ON CONFLICT (file_id, framework_type, entity_type, entity_id) DO NOTHING`,
+            {
+              replacements: {
+                fileId,
+                frameworkType: pluginKey,
+                entityId: implId,
+                linkType: link_type,
+                userId
+              }
+            }
+          );
+          results.push({ file_id: fileId, success: true, message: "Attached" });
+        } catch (err) {
+          results.push({ file_id: fileId, success: false, message: err.message });
+        }
+      }
+      return { status: 200, data: { message: "Files attached", results } };
+    } catch (error) {
+      return { status: 500, data: { message: `Failed to attach files: ${error.message}` } };
+    }
+  }
+  async function handleGetLevel3Files(ctx) {
+    const { sequelize, tenantId, params } = ctx;
+    const implId = parseInt(params.level3Id);
+    try {
+      const [files] = await sequelize.query(
+        `SELECT
+          f.id,
+          f.filename,
+          f.size,
+          f.type as mimetype,
+          f.uploaded_time as upload_date,
+          f.uploaded_by,
+          u.name as uploader_name,
+          u.surname as uploader_surname,
+          fel.link_type,
+          fel.created_at as linked_at
+        FROM "${tenantId}".file_entity_links fel
+        JOIN "${tenantId}".files f ON fel.file_id = f.id
+        LEFT JOIN public.users u ON f.uploaded_by = u.id
+        WHERE fel.framework_type = :frameworkType
+          AND fel.entity_type = 'level3_impl'
+          AND fel.entity_id = :entityId
+        ORDER BY fel.created_at DESC`,
+        {
+          replacements: {
+            frameworkType: pluginKey,
+            entityId: implId
+          }
+        }
+      );
+      return { status: 200, data: files };
+    } catch (error) {
+      return { status: 500, data: { message: `Failed to get files: ${error.message}` } };
+    }
+  }
+  async function handleDetachFileFromLevel3(ctx) {
+    const { sequelize, tenantId, params } = ctx;
+    const implId = parseInt(params.level3Id);
+    const fileId = parseInt(params.fileId);
+    try {
+      await sequelize.query(
+        `DELETE FROM "${tenantId}".file_entity_links
+         WHERE file_id = :fileId
+           AND framework_type = :frameworkType
+           AND entity_type = 'level3_impl'
+           AND entity_id = :entityId`,
+        {
+          replacements: {
+            fileId,
+            frameworkType: pluginKey,
+            entityId: implId
+          }
+        }
+      );
+      return { status: 200, data: { message: "File detached successfully" } };
+    } catch (error) {
+      return { status: 500, data: { message: `Failed to detach file: ${error.message}` } };
+    }
+  }
   return {
     handleGetFrameworks,
     handleGetFrameworkById,
@@ -871,7 +1122,14 @@ function createRouteHandlers(pluginKey, config) {
     handleGetProjectFramework,
     handleGetProgress,
     handleUpdateLevel2,
-    handleUpdateLevel3
+    handleUpdateLevel3,
+    // File attachment handlers
+    handleAttachFilesToLevel2,
+    handleGetLevel2Files,
+    handleDetachFileFromLevel2,
+    handleAttachFilesToLevel3,
+    handleGetLevel3Files,
+    handleDetachFileFromLevel3
   };
 }
 function createFrameworkPlugin(config) {
@@ -948,7 +1206,15 @@ function createFrameworkPlugin(config) {
     "GET /projects/:projectId/frameworks/:frameworkId": handlers.handleGetProjectFramework,
     "GET /projects/:projectId/frameworks/:frameworkId/progress": handlers.handleGetProgress,
     "PATCH /level2/:level2Id": handlers.handleUpdateLevel2,
-    "PATCH /level3/:level3Id": handlers.handleUpdateLevel3
+    "PATCH /level3/:level3Id": handlers.handleUpdateLevel3,
+    // File attachment routes for level2 implementations
+    "POST /level2/:level2Id/files": handlers.handleAttachFilesToLevel2,
+    "GET /level2/:level2Id/files": handlers.handleGetLevel2Files,
+    "DELETE /level2/:level2Id/files/:fileId": handlers.handleDetachFileFromLevel2,
+    // File attachment routes for level3 implementations
+    "POST /level3/:level3Id/files": handlers.handleAttachFilesToLevel3,
+    "GET /level3/:level3Id/files": handlers.handleGetLevel3Files,
+    "DELETE /level3/:level3Id/files/:fileId": handlers.handleDetachFileFromLevel3
   };
   return {
     metadata: metadata2,

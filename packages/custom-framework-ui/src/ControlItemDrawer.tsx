@@ -179,6 +179,14 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
   const [evidenceFiles, setEvidenceFiles] = useState<EvidenceFile[]>([]);
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [deletedFileIds, setDeletedFileIds] = useState<number[]>([]);
+  const [pendingAttachFiles, setPendingAttachFiles] = useState<EvidenceFile[]>([]);
+
+  // File picker modal state
+  const [isFilePickerOpen, setIsFilePickerOpen] = useState(false);
+  const [availableFiles, setAvailableFiles] = useState<EvidenceFile[]>([]);
+  const [filePickerLoading, setFilePickerLoading] = useState(false);
+  const [filePickerSearchQuery, setFilePickerSearchQuery] = useState("");
+  const [selectedFileIds, setSelectedFileIds] = useState<Set<number>>(new Set());
 
   // Linked risks state
   const [linkedRisks, setLinkedRisks] = useState<LinkedRisk[]>([]);
@@ -250,6 +258,41 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
     }
   }, []);
 
+  // Load available files from File Manager for attaching
+  const loadAvailableFiles = useCallback(async () => {
+    setFilePickerLoading(true);
+    try {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const response = await fetch("/api/file-manager/list", { headers });
+      if (response.ok) {
+        const result = await response.json();
+        const files = result.data?.files || result.files || [];
+        // Map to EvidenceFile format and filter by approval workflow
+        const mappedFiles = files
+          .filter((f: any) => {
+            // Hide files that have approval workflow but are not yet approved
+            if (f.approval_workflow_id && f.review_status !== "approved") return false;
+            return true;
+          })
+          .map((f: any) => ({
+            id: f.id,
+            fileName: f.filename || f.fileName,
+            size: f.size,
+            type: f.type || f.mimetype,
+            uploadDate: f.upload_date || f.uploadDate,
+          }));
+        setAvailableFiles(mappedFiles);
+      }
+    } catch (err) {
+      console.log("[ControlItemDrawer] Error loading available files:", err);
+    } finally {
+      setFilePickerLoading(false);
+    }
+  }, []);
+
   // Load all project risks for linking
   const loadProjectRisks = useCallback(async () => {
     try {
@@ -297,6 +340,7 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
       setLinkedRisks(item.linked_risks || []);
       setUploadFiles([]);
       setDeletedFileIds([]);
+      setPendingAttachFiles([]);
       setRisksToAdd([]);
       setRisksToRemove([]);
       setRiskSearchQuery("");
@@ -384,7 +428,16 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
         uploadDate: new Date().toISOString(),
       }));
 
-      const evidence_links = [...existingLinks, ...newLinks];
+      // Add pending attach files (existing files from File Manager)
+      const attachedLinks = pendingAttachFiles.map((f) => ({
+        id: f.id,
+        fileName: f.fileName,
+        size: f.size,
+        type: f.type,
+        uploadDate: f.uploadDate,
+      }));
+
+      const evidence_links = [...existingLinks, ...newLinks, ...attachedLinks];
 
       // 3. Build payload
       const payload: any = {
@@ -477,6 +530,52 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
   const handleRemoveUploadFile = (index: number) => {
     setUploadFiles((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const handleRemovePendingAttachFile = (fileId: number) => {
+    setPendingAttachFiles((prev) => prev.filter((f) => f.id !== fileId));
+  };
+
+  // File picker handlers
+  const handleOpenFilePicker = () => {
+    setIsFilePickerOpen(true);
+    loadAvailableFiles();
+    setSelectedFileIds(new Set());
+    setFilePickerSearchQuery("");
+  };
+
+  const handleFilePickerToggle = (fileId: number) => {
+    setSelectedFileIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(fileId)) {
+        newSet.delete(fileId);
+      } else {
+        newSet.add(fileId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleFilePickerConfirm = () => {
+    const filesToAttach = availableFiles.filter((f) => selectedFileIds.has(f.id));
+    setPendingAttachFiles((prev) => [...prev, ...filesToAttach]);
+    setIsFilePickerOpen(false);
+    setSelectedFileIds(new Set());
+  };
+
+  // Get excluded file IDs (already attached or pending)
+  const getExcludedFileIds = (): Set<number> => {
+    const ids = new Set<number>();
+    evidenceFiles.forEach((f) => ids.add(f.id));
+    pendingAttachFiles.forEach((f) => ids.add(f.id));
+    return ids;
+  };
+
+  // Filter available files for picker
+  const filteredAvailableFiles = availableFiles.filter((file) => {
+    if (getExcludedFileIds().has(file.id)) return false;
+    if (!filePickerSearchQuery) return true;
+    return file.fileName.toLowerCase().includes(filePickerSearchQuery.toLowerCase());
+  });
 
   const getStatusColor = (status: string) => {
     return statusColors[status as StatusType]?.color || "#94a3b8";
@@ -982,25 +1081,46 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                     }}
                   />
                   <Stack spacing={2}>
-                    <Button
-                      variant="contained"
-                      onClick={() => document.getElementById("evidence-file-input")?.click()}
-                      sx={{
-                        borderRadius: 2,
-                        minWidth: 155,
-                        height: 25,
-                        fontSize: 11,
-                        border: "1px solid #D0D5DD",
-                        backgroundColor: "white",
-                        color: "#344054",
-                        "&:hover": {
-                          backgroundColor: "#F9FAFB",
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        variant="contained"
+                        onClick={() => document.getElementById("evidence-file-input")?.click()}
+                        sx={{
+                          borderRadius: 2,
+                          minWidth: 155,
+                          height: 25,
+                          fontSize: 11,
                           border: "1px solid #D0D5DD",
-                        },
-                      }}
-                    >
-                      Add evidence files
-                    </Button>
+                          backgroundColor: "white",
+                          color: "#344054",
+                          "&:hover": {
+                            backgroundColor: "#F9FAFB",
+                            border: "1px solid #D0D5DD",
+                          },
+                        }}
+                      >
+                        Add evidence files
+                      </Button>
+                      <Button
+                        variant="contained"
+                        onClick={handleOpenFilePicker}
+                        sx={{
+                          borderRadius: 2,
+                          minWidth: 155,
+                          height: 25,
+                          fontSize: 11,
+                          border: "1px solid #D0D5DD",
+                          backgroundColor: "white",
+                          color: "#344054",
+                          "&:hover": {
+                            backgroundColor: "#F9FAFB",
+                            border: "1px solid #D0D5DD",
+                          },
+                        }}
+                      >
+                        Attach existing files
+                      </Button>
+                    </Stack>
 
                     <Stack direction="row" spacing={2}>
                       <Typography sx={{ fontSize: 11, color: "#344054" }}>
@@ -1009,6 +1129,11 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                       {uploadFiles.length > 0 && (
                         <Typography sx={{ fontSize: 11, color: "#13715B" }}>
                           {`+${uploadFiles.length} pending upload`}
+                        </Typography>
+                      )}
+                      {pendingAttachFiles.length > 0 && (
+                        <Typography sx={{ fontSize: 11, color: "#0369A1" }}>
+                          {`+${pendingAttachFiles.length} pending attach`}
                         </Typography>
                       )}
                       {deletedFileIds.length > 0 && (
@@ -1157,8 +1282,69 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                   </Stack>
                 )}
 
+                {/* Pending Attach Files (from File Manager) */}
+                {pendingAttachFiles.length > 0 && (
+                  <Stack spacing={1}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#0369A1" }}>
+                      Pending attach from File Manager
+                    </Typography>
+                    {pendingAttachFiles.map((file) => (
+                      <Box
+                        key={file.id}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "10px 12px",
+                          border: "1px solid #BAE6FD",
+                          borderRadius: "4px",
+                          backgroundColor: "#F0F9FF",
+                        }}
+                      >
+                        <Box sx={{ display: "flex", gap: 1.5, flex: 1, minWidth: 0 }}>
+                          <FileIcon size={18} color="#0369A1" />
+                          <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Typography
+                              sx={{
+                                fontSize: 13,
+                                fontWeight: 500,
+                                color: "#0C4A6E",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {file.fileName}
+                            </Typography>
+                            {file.size && (
+                              <Typography sx={{ fontSize: 11, color: "#0369A1" }}>
+                                {((file.size || 0) / 1024).toFixed(1)} KB
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                        <Tooltip title="Remove from queue">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleRemovePendingAttachFile(file.id)}
+                            sx={{
+                              color: "#0369A1",
+                              "&:hover": {
+                                color: "#D32F2F",
+                                backgroundColor: "rgba(211, 47, 47, 0.08)",
+                              },
+                            }}
+                          >
+                            <DeleteIcon size={16} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    ))}
+                  </Stack>
+                )}
+
                 {/* Empty State */}
-                {evidenceFiles.length === 0 && uploadFiles.length === 0 && (
+                {evidenceFiles.length === 0 && uploadFiles.length === 0 && pendingAttachFiles.length === 0 && (
                   <Box
                     sx={{
                       textAlign: "center",
@@ -1173,7 +1359,7 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                       No evidence files uploaded yet
                     </Typography>
                     <Typography variant="caption" color="#9CA3AF">
-                      Click "Add evidence files" to upload documentation for this requirement
+                      Click "Add evidence files" to upload or "Attach existing files" to link from File Manager
                     </Typography>
                   </Box>
                 )}
@@ -1616,6 +1802,181 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
             }}
           >
             Done
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* File Picker Modal */}
+      <Dialog
+        open={isFilePickerOpen}
+        onClose={() => setIsFilePickerOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "8px",
+            maxHeight: "80vh",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontSize: 16,
+            fontWeight: 600,
+            borderBottom: "1px solid #E5E7EB",
+            pb: 2,
+          }}
+        >
+          Attach Existing Files
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          <Box sx={{ p: 2 }}>
+            <TextField
+              placeholder="Search files..."
+              value={filePickerSearchQuery}
+              onChange={(e) => setFilePickerSearchQuery(e.target.value)}
+              size="small"
+              fullWidth
+              sx={{ mb: 2 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon size={16} color="#9CA3AF" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            {filePickerLoading ? (
+              <Box sx={{ textAlign: "center", py: 4 }}>
+                <CircularProgress size={24} sx={{ color: colors.primary }} />
+                <Typography sx={{ mt: 1, color: "#6B7280" }}>Loading files...</Typography>
+              </Box>
+            ) : filteredAvailableFiles.length === 0 ? (
+              <Box
+                sx={{
+                  textAlign: "center",
+                  py: 4,
+                  color: "#6B7280",
+                }}
+              >
+                <Typography>No files available to attach</Typography>
+                <Typography variant="caption" color="#9CA3AF">
+                  {availableFiles.length > 0
+                    ? "All files are already attached or filtered out"
+                    : "Upload files to File Manager first"}
+                </Typography>
+              </Box>
+            ) : (
+              <TableContainer
+                component={Paper}
+                elevation={0}
+                sx={{
+                  border: "1px solid #E5E7EB",
+                  maxHeight: "400px",
+                  overflow: "auto",
+                }}
+              >
+                <Table stickyHeader size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell padding="checkbox" sx={{ backgroundColor: "#F9FAFB" }}>
+                        <Typography sx={{ fontSize: 12, fontWeight: 600 }}>Select</Typography>
+                      </TableCell>
+                      <TableCell sx={{ backgroundColor: "#F9FAFB" }}>
+                        <Typography sx={{ fontSize: 12, fontWeight: 600 }}>File Name</Typography>
+                      </TableCell>
+                      <TableCell sx={{ backgroundColor: "#F9FAFB" }}>
+                        <Typography sx={{ fontSize: 12, fontWeight: 600 }}>Size</Typography>
+                      </TableCell>
+                      <TableCell sx={{ backgroundColor: "#F9FAFB" }}>
+                        <Typography sx={{ fontSize: 12, fontWeight: 600 }}>Type</Typography>
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredAvailableFiles.map((file) => {
+                      const isSelected = selectedFileIds.has(file.id);
+
+                      return (
+                        <TableRow
+                          key={file.id}
+                          hover
+                          onClick={() => handleFilePickerToggle(file.id)}
+                          sx={{
+                            cursor: "pointer",
+                            backgroundColor: isSelected ? "#F0F9FF" : "inherit",
+                          }}
+                        >
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              checked={isSelected}
+                              onChange={() => handleFilePickerToggle(file.id)}
+                              size="small"
+                              sx={{
+                                color: "#D1D5DB",
+                                "&.Mui-checked": {
+                                  color: "#0369A1",
+                                },
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                              <FileIcon size={16} color="#475467" />
+                              <Typography sx={{ fontSize: 13, color: "#1F2937" }}>
+                                {file.fileName}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Typography sx={{ fontSize: 12, color: "#6B7280" }}>
+                              {file.size ? `${(file.size / 1024).toFixed(1)} KB` : "-"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography sx={{ fontSize: 12, color: "#6B7280" }}>
+                              {file.type || "-"}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ borderTop: "1px solid #E5E7EB", p: 2 }}>
+          <Typography sx={{ fontSize: 12, color: "#6B7280", mr: "auto" }}>
+            {selectedFileIds.size} file(s) selected
+          </Typography>
+          <Button
+            onClick={() => setIsFilePickerOpen(false)}
+            sx={{
+              color: "#344054",
+              textTransform: "none",
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleFilePickerConfirm}
+            disabled={selectedFileIds.size === 0}
+            sx={{
+              backgroundColor: "#0369A1",
+              textTransform: "none",
+              "&:hover": {
+                backgroundColor: "#075985",
+              },
+              "&:disabled": {
+                backgroundColor: "#E5E7EB",
+              },
+            }}
+          >
+            Attach Selected
           </Button>
         </DialogActions>
       </Dialog>
