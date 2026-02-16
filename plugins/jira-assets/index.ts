@@ -204,10 +204,10 @@ class JiraAssetsClient {
   }
 
   private async request<T>(endpoint: string, method: string = "GET", body?: any): Promise<T> {
-    // Cloud: /jsm/assets/workspace/{workspaceId}/v1/{endpoint}
-    // Data Center: /rest/insight/1.0/{endpoint}
+    // Cloud: https://api.atlassian.com/jsm/assets/workspace/{workspaceId}/v1/{endpoint}
+    // Data Center: {baseUrl}/rest/insight/1.0/{endpoint}
     const url = this.deploymentType === "cloud"
-      ? `${this.baseUrl}/jsm/assets/workspace/${this.workspaceId}/v1/${endpoint}`
+      ? `https://api.atlassian.com/jsm/assets/workspace/${this.workspaceId}/v1/${endpoint}`
       : `${this.baseUrl}/rest/insight/1.0/${endpoint}`;
 
     console.log(`[JiraAssetsClient] ${method} ${url} (deploymentType: ${this.deploymentType})`);
