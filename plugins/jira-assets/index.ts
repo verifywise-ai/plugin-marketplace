@@ -246,15 +246,17 @@ class JiraAssetsClient {
       const result = await this.request<JiraObjectType[]>(
         `objectschema/${schemaId}/objecttypes/flat`
       );
-      console.log("[JiraAssets] DC getObjectTypes raw:", JSON.stringify(result, null, 2));
       return Array.isArray(result) ? result : [];
     } else {
-      // Cloud returns { values: [...] }
-      const result = await this.request<{ values: JiraObjectType[] }>(
+      // Cloud: objecttypes endpoint returns array directly (not wrapped in values)
+      const result = await this.request<any>(
         `objectschema/${schemaId}/objecttypes`
       );
-      console.log("[JiraAssets] Cloud getObjectTypes raw:", JSON.stringify(result, null, 2));
-      return result.values || [];
+      // Handle both array (direct) and { values: [...] } format
+      if (Array.isArray(result)) {
+        return result;
+      }
+      return result?.values || [];
     }
   }
 

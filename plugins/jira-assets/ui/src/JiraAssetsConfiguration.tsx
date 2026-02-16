@@ -167,8 +167,11 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
     setIsLoadingObjectTypes(true);
     try {
       const response = await pluginApiCall("GET", `/schemas/${schemaId}/object-types`);
+      console.log("[JiraConfig] loadObjectTypes response:", response, "isArray:", Array.isArray(response));
       if (response && Array.isArray(response)) {
         setObjectTypes(response);
+      } else {
+        console.warn("[JiraConfig] Object types response is not an array:", typeof response);
       }
     } catch (error) {
       console.error("Failed to load object types:", error);
