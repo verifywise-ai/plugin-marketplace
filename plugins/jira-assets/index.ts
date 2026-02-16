@@ -1007,9 +1007,25 @@ async function handleTestConnection(ctx: PluginRouteContext): Promise<PluginRout
  * GET /schemas - Get available schemas
  */
 async function handleGetSchemas(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { configuration } = ctx;
+  const { configuration, sequelize, tenantId } = ctx;
 
-  if (!configuration?.jira_base_url || !configuration?.workspace_id) {
+  console.log("[JiraAssets] handleGetSchemas - ctx.configuration:", JSON.stringify(configuration, null, 2));
+
+  // If configuration not provided via context, load from our own table
+  let config = configuration;
+  if (!config?.jira_base_url || !config?.workspace_id) {
+    console.log("[JiraAssets] Configuration not in context, loading from jira_assets_config table");
+    const configs: any[] = await sequelize.query(
+      `SELECT * FROM "${tenantId}".jira_assets_config LIMIT 1`,
+      { type: "SELECT" }
+    );
+    if (configs.length > 0) {
+      config = configs[0];
+      console.log("[JiraAssets] Loaded config from table:", JSON.stringify(config, null, 2));
+    }
+  }
+
+  if (!config?.jira_base_url || !config?.workspace_id) {
     return {
       status: 400,
       data: { error: "JIRA not configured" },
@@ -1018,15 +1034,15 @@ async function handleGetSchemas(ctx: PluginRouteContext): Promise<PluginRouteRes
 
   try {
     // Decrypt API token
-    const apiToken = Buffer.from(configuration.api_token_encrypted || "", "base64").toString("utf-8") ||
-                     configuration.api_token;
+    const apiToken = Buffer.from(config.api_token_encrypted || "", "base64").toString("utf-8") ||
+                     config.api_token;
 
     const client = new JiraAssetsClient(
-      configuration.jira_base_url,
-      configuration.workspace_id,
-      configuration.email,
+      config.jira_base_url,
+      config.workspace_id,
+      config.email,
       apiToken,
-      configuration.deployment_type || "cloud"
+      config.deployment_type || "cloud"
     );
 
     const schemas = await client.getSchemas();

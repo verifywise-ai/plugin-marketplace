@@ -262,7 +262,14 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
 
   // Load schemas on mount only if already configured (has_api_token indicates saved config)
   useEffect(() => {
+    console.log("[JiraConfig] Schema load check:", {
+      has_api_token: localConfig.has_api_token,
+      jira_base_url: localConfig.jira_base_url,
+      workspace_id: localConfig.workspace_id,
+      schemas_length: schemas.length,
+    });
     if (localConfig.has_api_token && localConfig.jira_base_url && localConfig.workspace_id && schemas.length === 0) {
+      console.log("[JiraConfig] Calling loadSchemas()");
       loadSchemas();
     }
   }, [localConfig.has_api_token, localConfig.jira_base_url, localConfig.workspace_id, loadSchemas, schemas.length]);
