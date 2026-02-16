@@ -8,7 +8,7 @@
 
 // Type declaration for Node.js Buffer global
 declare const Buffer: {
-  from(str: string): { toString(encoding: string): string };
+  from(str: string, encoding?: string): { toString(encoding?: string): string };
 };
 
 // ========== TYPE DEFINITIONS ==========
@@ -420,9 +420,9 @@ export async function uninstall(
 
 export async function configure(
   _userId: number,
-  tenantId: string,
+  _tenantId: string,
   config: JiraAssetsConfig,
-  context: PluginContext
+  _context: PluginContext
 ): Promise<ConfigureResult> {
   try {
     const validation = validateConfig(config);
@@ -1050,7 +1050,7 @@ async function handleGetOrgProject(ctx: PluginRouteContext): Promise<PluginRoute
  * POST /import - Import selected JIRA objects
  */
 async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, userId, body, configuration } = ctx;
+  const { sequelize, tenantId, body, configuration } = ctx;
 
   const { object_ids, is_organizational } = body;
 
