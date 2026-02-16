@@ -117,27 +117,18 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
 
   // Load config from plugin's own endpoint on mount (only once)
   useEffect(() => {
-    console.log("[JiraConfig] useEffect triggered - configLoaded:", configLoaded, "apiServices:", !!apiServices);
     if (configLoaded || !apiServices) return;
 
     const loadConfig = async () => {
-      console.log("[JiraConfig] Loading config from /plugins/jira-assets/config");
       try {
         const url = "/plugins/jira-assets/config";
         const response = await apiServices.get(url);
-        console.log("[JiraConfig] Raw response:", response);
         const data = response.data?.data ?? response.data;
-        console.log("[JiraConfig] Extracted data:", data);
         if (data) {
-          console.log("[JiraConfig] Setting localConfig with:", data);
-          setLocalConfig((prev) => {
-            const newConfig = { ...prev, ...data };
-            console.log("[JiraConfig] New localConfig:", newConfig);
-            return newConfig;
-          });
+          setLocalConfig((prev) => ({ ...prev, ...data }));
         }
       } catch (error) {
-        console.error("[JiraConfig] Failed to load config:", error);
+        console.error("Failed to load JIRA config:", error);
       } finally {
         setConfigLoaded(true);
       }
@@ -244,10 +235,11 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
       const data = response.data?.data ?? response.data;
       if (data?.success) {
         setSaveMessage({ type: "success", text: "Configuration saved successfully!" });
-        // Reload config to get updated has_api_token flag
+        // Update localConfig with has_api_token flag so schemas can load
+        setLocalConfig((prev) => ({ ...prev, has_api_token: true }));
+        // Reload config to get full updated data
         setConfigLoaded(false);
-        // Load schemas after successful save
-        loadSchemas();
+        // Note: loadSchemas will be triggered by useEffect when has_api_token becomes true
       } else {
         setSaveMessage({ type: "error", text: data?.errors?.join(", ") || data?.message || "Failed to save configuration" });
       }
