@@ -210,6 +210,8 @@ class JiraAssetsClient {
       ? `${this.baseUrl}/jsm/assets/workspace/${this.workspaceId}/v1/${endpoint}`
       : `${this.baseUrl}/rest/insight/1.0/${endpoint}`;
 
+    console.log(`[JiraAssetsClient] ${method} ${url} (deploymentType: ${this.deploymentType})`);
+
     const response = await fetch(url, {
       method,
       headers: {
@@ -222,6 +224,7 @@ class JiraAssetsClient {
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.log(`[JiraAssetsClient] Error ${response.status} for ${url}`);
       throw new Error(`JIRA API error ${response.status}: ${errorText || "No details"}`);
     }
 
