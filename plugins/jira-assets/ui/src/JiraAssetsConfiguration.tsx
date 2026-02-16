@@ -202,19 +202,19 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
     }
   };
 
-  // Load schemas on mount if already configured
+  // Load schemas on mount only if already configured (has_api_token indicates saved config)
   useEffect(() => {
-    if (localConfig.jira_base_url && localConfig.workspace_id && schemas.length === 0) {
+    if (localConfig.has_api_token && localConfig.jira_base_url && localConfig.workspace_id && schemas.length === 0) {
       loadSchemas();
     }
-  }, [localConfig.jira_base_url, localConfig.workspace_id, loadSchemas, schemas.length]);
+  }, [localConfig.has_api_token, localConfig.jira_base_url, localConfig.workspace_id, loadSchemas, schemas.length]);
 
-  // Load object types if schema is already selected
+  // Load object types if schema is already selected (only if config is saved)
   useEffect(() => {
-    if (localConfig.selected_schema_id && objectTypes.length === 0) {
+    if (localConfig.has_api_token && localConfig.selected_schema_id && objectTypes.length === 0) {
       loadObjectTypes(localConfig.selected_schema_id);
     }
-  }, [localConfig.selected_schema_id, loadObjectTypes, objectTypes.length]);
+  }, [localConfig.has_api_token, localConfig.selected_schema_id, loadObjectTypes, objectTypes.length]);
 
   const syncIntervalOptions = [
     { value: 1, label: "Every hour" },
