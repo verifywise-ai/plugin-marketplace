@@ -112,6 +112,8 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
   const [isLoadingObjectTypes, setIsLoadingObjectTypes] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [connectionMessage, setConnectionMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Load config from plugin's own endpoint on mount (only once)
   useEffect(() => {
@@ -216,6 +218,43 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
     } catch (error: any) {
       setConnectionStatus("error");
       setConnectionMessage(error.message || "Connection test failed");
+    }
+  };
+
+  // Save configuration to plugin's own endpoint
+  const handleSaveConfig = async () => {
+    if (!apiServices) return;
+
+    setIsSaving(true);
+    setSaveMessage(null);
+
+    try {
+      const response = await apiServices.post("/plugins/jira-assets/config", {
+        jira_base_url: localConfig.jira_base_url,
+        workspace_id: localConfig.workspace_id,
+        email: localConfig.email,
+        api_token: localConfig.api_token || undefined, // Only send if user entered a new one
+        deployment_type: localConfig.deployment_type || "cloud",
+        selected_schema_id: localConfig.selected_schema_id || undefined,
+        selected_object_type_id: localConfig.selected_object_type_id || undefined,
+        sync_enabled: localConfig.sync_enabled || false,
+        sync_interval_hours: localConfig.sync_interval_hours || 24,
+      });
+
+      const data = response.data?.data ?? response.data;
+      if (data?.success) {
+        setSaveMessage({ type: "success", text: "Configuration saved successfully!" });
+        // Reload config to get updated has_api_token flag
+        setConfigLoaded(false);
+        // Load schemas after successful save
+        loadSchemas();
+      } else {
+        setSaveMessage({ type: "error", text: data?.errors?.join(", ") || data?.message || "Failed to save configuration" });
+      }
+    } catch (error: any) {
+      setSaveMessage({ type: "error", text: error.message || "Failed to save configuration" });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -542,32 +581,39 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
         selectedObjectTypeId={localConfig.selected_object_type_id}
       />
 
+      {/* Save Message */}
+      {saveMessage && (
+        <Box sx={{ mt: 2 }}>
+          <Alert severity={saveMessage.type} sx={{ fontSize: "13px" }} onClose={() => setSaveMessage(null)}>
+            {saveMessage.text}
+          </Alert>
+        </Box>
+      )}
+
       {/* Save Button */}
       <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
-        {onSaveConfiguration && (
-          <Button
-            variant="contained"
-            onClick={onSaveConfiguration}
-            disabled={isSavingConfig || !localConfig.jira_base_url || !localConfig.workspace_id || !localConfig.email || (!localConfig.api_token && !localConfig.has_api_token)}
-            sx={{
-              backgroundColor: "#13715B",
-              textTransform: "none",
-              fontSize: "13px",
-              fontWeight: 500,
-              "&:hover": { backgroundColor: "#0f5a47" },
-              "&:disabled": { backgroundColor: "#d0d5dd" },
-            }}
-          >
-            {isSavingConfig ? (
-              <>
-                <CircularProgress size={16} sx={{ mr: 1, color: "white" }} />
-                Saving...
-              </>
-            ) : (
-              "Save Configuration"
-            )}
-          </Button>
-        )}
+        <Button
+          variant="contained"
+          onClick={handleSaveConfig}
+          disabled={isSaving || !localConfig.jira_base_url || !localConfig.workspace_id || !localConfig.email || (!localConfig.api_token && !localConfig.has_api_token)}
+          sx={{
+            backgroundColor: "#13715B",
+            textTransform: "none",
+            fontSize: "13px",
+            fontWeight: 500,
+            "&:hover": { backgroundColor: "#0f5a47" },
+            "&:disabled": { backgroundColor: "#d0d5dd" },
+          }}
+        >
+          {isSaving ? (
+            <>
+              <CircularProgress size={16} sx={{ mr: 1, color: "white" }} />
+              Saving...
+            </>
+          ) : (
+            "Save Configuration"
+          )}
+        </Button>
       </Box>
     </Box>
   );
