@@ -16,7 +16,6 @@ import {
   Chip,
   Collapse,
 } from "@mui/material";
-import { JiraAssetsAttributeMapping } from "./JiraAssetsAttributeMapping";
 
 interface Schema {
   id: string;
@@ -570,18 +569,6 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
           </Alert>
         </Box>
       )}
-
-      <Divider sx={{ my: 3 }} />
-
-      {/* Step 4: Attribute Mapping */}
-      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2, color: "#344054" }}>
-        Step 4: Attribute Mapping (Optional)
-      </Typography>
-
-      <JiraAssetsAttributeMapping
-        pluginApiCall={pluginApiCall}
-        selectedObjectTypeId={localConfig.selected_object_type_id}
-      />
 
       {/* Save Message */}
       {saveMessage && (

@@ -345,17 +345,10 @@ export async function install(
       CREATE TABLE IF NOT EXISTS "${tenantId}".jira_assets_use_cases (
         id SERIAL PRIMARY KEY,
         jira_object_id VARCHAR(100) NOT NULL UNIQUE,
-        jira_object_key VARCHAR(100) NOT NULL,
         uc_id VARCHAR(50) UNIQUE,
-        name VARCHAR(500) NOT NULL,
-        is_organizational BOOLEAN DEFAULT false,
-        attributes JSONB NOT NULL DEFAULT '{}',
-        mapped_attributes JSONB NOT NULL DEFAULT '{}',
-        jira_created_at TIMESTAMP,
-        jira_updated_at TIMESTAMP,
+        data JSONB NOT NULL,
         last_synced_at TIMESTAMP,
         sync_status VARCHAR(50) DEFAULT 'synced',
-        is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -365,10 +358,6 @@ export async function install(
     await sequelize.query(`
       CREATE INDEX IF NOT EXISTS idx_jira_use_cases_jira_object_id
       ON "${tenantId}".jira_assets_use_cases(jira_object_id)
-    `);
-    await sequelize.query(`
-      CREATE INDEX IF NOT EXISTS idx_jira_use_cases_is_organizational
-      ON "${tenantId}".jira_assets_use_cases(is_organizational)
     `);
     await sequelize.query(`
       CREATE INDEX IF NOT EXISTS idx_jira_use_cases_sync_status
@@ -389,17 +378,6 @@ export async function install(
         started_at TIMESTAMP NOT NULL,
         completed_at TIMESTAMP,
         triggered_by INTEGER
-      )
-    `);
-
-    // Create jira_assets_org_links table
-    await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS "${tenantId}".jira_assets_org_links (
-        id SERIAL PRIMARY KEY,
-        jira_use_case_id INTEGER NOT NULL REFERENCES "${tenantId}".jira_assets_use_cases(id) ON DELETE CASCADE,
-        org_project_id INTEGER NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(jira_use_case_id)
       )
     `);
 
@@ -438,7 +416,6 @@ export async function uninstall(
     }
 
     // Drop tables in correct order (dependent tables first)
-    await sequelize.query(`DROP TABLE IF EXISTS "${tenantId}".jira_assets_org_links CASCADE`);
     await sequelize.query(`DROP TABLE IF EXISTS "${tenantId}".jira_assets_sync_history CASCADE`);
     await sequelize.query(`DROP TABLE IF EXISTS "${tenantId}".jira_assets_use_cases CASCADE`);
     await sequelize.query(`DROP TABLE IF EXISTS "${tenantId}".jira_assets_config CASCADE`);
@@ -622,7 +599,7 @@ async function syncObjects(
 
     // Get existing records
     const existingRecords: any[] = await sequelize.query(
-      `SELECT jira_object_id, jira_updated_at FROM "${tenantId}".jira_assets_use_cases WHERE is_active = true`,
+      `SELECT jira_object_id, data FROM "${tenantId}".jira_assets_use_cases`,
       { type: "SELECT" }
     );
     const existingMap = new Map(existingRecords.map((r) => [r.jira_object_id, r]));
@@ -635,46 +612,49 @@ async function syncObjects(
     // Process each JIRA object
     for (const jiraObj of jiraObjects) {
       const existing = existingMap.get(jiraObj.id);
-      const attributes = transformAttributes(jiraObj.attributes);
-      const name = jiraObj.label || attributes.Name || jiraObj.objectKey;
+
+      // Build data object to store
+      const data = {
+        id: jiraObj.id,
+        objectKey: jiraObj.objectKey,
+        label: jiraObj.label,
+        objectType: jiraObj.objectType,
+        attributes: transformAttributes(jiraObj.attributes),
+        created: jiraObj.created,
+        updated: jiraObj.updated,
+      };
 
       if (!existing) {
         // Create new record
         const ucId = await generateUcId(tenantId, sequelize);
         await sequelize.query(
           `INSERT INTO "${tenantId}".jira_assets_use_cases
-           (jira_object_id, jira_object_key, uc_id, name, attributes, jira_created_at, jira_updated_at, last_synced_at, sync_status)
-           VALUES (:jiraObjectId, :jiraObjectKey, :ucId, :name, :attributes, :jiraCreatedAt, :jiraUpdatedAt, :lastSyncedAt, 'synced')`,
+           (jira_object_id, uc_id, data, last_synced_at, sync_status)
+           VALUES (:jiraObjectId, :ucId, :data, :lastSyncedAt, 'synced')`,
           {
             replacements: {
               jiraObjectId: jiraObj.id,
-              jiraObjectKey: jiraObj.objectKey,
               ucId,
-              name,
-              attributes: JSON.stringify(attributes),
-              jiraCreatedAt: jiraObj.created ? new Date(jiraObj.created) : null,
-              jiraUpdatedAt: jiraObj.updated ? new Date(jiraObj.updated) : null,
+              data: JSON.stringify(data),
               lastSyncedAt: now,
             },
           }
         );
         objectsCreated++;
       } else {
-        // Update existing record
+        // Update existing record - check if JIRA data has changed
+        const existingData = typeof existing.data === 'string' ? JSON.parse(existing.data) : existing.data;
         const jiraUpdatedAt = jiraObj.updated ? new Date(jiraObj.updated) : null;
-        const existingUpdatedAt = existing.jira_updated_at ? new Date(existing.jira_updated_at) : null;
+        const existingUpdatedAt = existingData?.updated ? new Date(existingData.updated) : null;
 
         if (!existingUpdatedAt || !jiraUpdatedAt || jiraUpdatedAt > existingUpdatedAt) {
           await sequelize.query(
             `UPDATE "${tenantId}".jira_assets_use_cases
-             SET name = :name, attributes = :attributes, jira_updated_at = :jiraUpdatedAt,
-                 last_synced_at = :lastSyncedAt, sync_status = 'updated', updated_at = CURRENT_TIMESTAMP
+             SET data = :data, last_synced_at = :lastSyncedAt, sync_status = 'updated', updated_at = CURRENT_TIMESTAMP
              WHERE jira_object_id = :jiraObjectId`,
             {
               replacements: {
-                name,
-                attributes: JSON.stringify(attributes),
-                jiraUpdatedAt,
+                data: JSON.stringify(data),
                 lastSyncedAt: now,
                 jiraObjectId: jiraObj.id,
               },
@@ -691,7 +671,7 @@ async function syncObjects(
     for (const jiraObjectId of remainingIds) {
       await sequelize.query(
         `UPDATE "${tenantId}".jira_assets_use_cases
-         SET sync_status = 'deleted_in_jira', is_active = false, updated_at = CURRENT_TIMESTAMP
+         SET sync_status = 'deleted_in_jira', updated_at = CURRENT_TIMESTAMP
          WHERE jira_object_id = :jiraObjectId`,
         { replacements: { jiraObjectId } }
       );
@@ -821,18 +801,6 @@ async function generateUcId(tenantId: string, sequelize: any): Promise<string> {
   );
   const seq = result[0][0].seq;
   return `UC-J${seq}`;
-}
-
-async function findOrganizationalProject(tenantId: string, sequelize: any): Promise<any | null> {
-  try {
-    const projects: any[] = await sequelize.query(
-      `SELECT id, title FROM "${tenantId}".projects WHERE is_organizational = true LIMIT 1`,
-      { type: "SELECT" }
-    );
-    return projects.length > 0 ? projects[0] : null;
-  } catch {
-    return null;
-  }
 }
 
 // ========== PLUGIN METADATA ==========
@@ -1194,22 +1162,12 @@ async function handleGetObjects(ctx: PluginRouteContext): Promise<PluginRouteRes
 }
 
 /**
- * GET /org-project - Get organizational project
- */
-async function handleGetOrgProject(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId } = ctx;
-
-  const orgProject = await findOrganizationalProject(tenantId, sequelize);
-  return { status: 200, data: orgProject };
-}
-
-/**
  * POST /import - Import selected JIRA objects
  */
 async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
   const { sequelize, tenantId, body, configuration } = ctx;
 
-  const { object_ids, is_organizational } = body;
+  const { object_ids } = body;
 
   if (!object_ids || !Array.isArray(object_ids) || object_ids.length === 0) {
     return { status: 400, data: { error: "No objects selected for import" } };
@@ -1237,18 +1195,6 @@ async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRoute
       config.deployment_type || "cloud"
     );
 
-    // Get attribute mappings
-    const attributeMappings = config.attribute_mappings || {};
-
-    // Check for organizational project if needed
-    let orgProject: any = null;
-    if (is_organizational) {
-      orgProject = await findOrganizationalProject(tenantId, sequelize);
-      if (!orgProject) {
-        return { status: 400, data: { error: "No organizational project exists. Create one first or import as non-organizational." } };
-      }
-    }
-
     const now = new Date();
     let imported = 0;
     let skipped = 0;
@@ -1269,49 +1215,33 @@ async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRoute
 
         // Fetch object from JIRA
         const jiraObj = await client.getObjectById(objectId);
-        const attributes = transformAttributes(jiraObj.attributes);
-        const mappedAttributes = applyAttributeMappings(attributes, attributeMappings);
-        const name = jiraObj.label || attributes.Name || jiraObj.objectKey;
         const ucId = await generateUcId(tenantId, sequelize);
 
-        // Insert use case with both raw and mapped attributes
-        const insertResult: any = await sequelize.query(
+        // Store entire JIRA object in data column
+        const data = {
+          id: jiraObj.id,
+          objectKey: jiraObj.objectKey,
+          label: jiraObj.label,
+          objectType: jiraObj.objectType,
+          attributes: transformAttributes(jiraObj.attributes),
+          created: jiraObj.created,
+          updated: jiraObj.updated,
+        };
+
+        // Insert use case with data JSONB
+        await sequelize.query(
           `INSERT INTO "${tenantId}".jira_assets_use_cases
-           (jira_object_id, jira_object_key, uc_id, name, is_organizational, attributes, mapped_attributes,
-            jira_created_at, jira_updated_at, last_synced_at, sync_status)
-           VALUES (:jiraObjectId, :jiraObjectKey, :ucId, :name, :isOrganizational, :attributes, :mappedAttributes,
-                   :jiraCreatedAt, :jiraUpdatedAt, :lastSyncedAt, 'synced')
-           RETURNING id`,
+           (jira_object_id, uc_id, data, last_synced_at, sync_status)
+           VALUES (:jiraObjectId, :ucId, :data, :lastSyncedAt, 'synced')`,
           {
             replacements: {
               jiraObjectId: jiraObj.id,
-              jiraObjectKey: jiraObj.objectKey,
               ucId,
-              name,
-              isOrganizational: is_organizational,
-              attributes: JSON.stringify(attributes),
-              mappedAttributes: JSON.stringify(mappedAttributes),
-              jiraCreatedAt: jiraObj.created ? new Date(jiraObj.created) : null,
-              jiraUpdatedAt: jiraObj.updated ? new Date(jiraObj.updated) : null,
+              data: JSON.stringify(data),
               lastSyncedAt: now,
             },
-            type: "SELECT",
           }
         );
-
-        // Create org link if organizational
-        if (is_organizational && orgProject && insertResult[0]?.id) {
-          await sequelize.query(
-            `INSERT INTO "${tenantId}".jira_assets_org_links (jira_use_case_id, org_project_id)
-             VALUES (:jiraUseCaseId, :orgProjectId)`,
-            {
-              replacements: {
-                jiraUseCaseId: insertResult[0].id,
-                orgProjectId: orgProject.id,
-              },
-            }
-          );
-        }
 
         imported++;
       } catch (err: any) {
@@ -1417,18 +1347,12 @@ async function handleGetSyncHistory(ctx: PluginRouteContext): Promise<PluginRout
  * GET /use-cases - Get all imported use cases
  */
 async function handleGetUseCases(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, query } = ctx;
-  const includeInactive = query.includeInactive === "true";
+  const { sequelize, tenantId } = ctx;
 
   try {
-    let whereClause = includeInactive ? "" : "WHERE is_active = true";
-
     const useCases: any[] = await sequelize.query(
-      `SELECT uc.*, ol.org_project_id
-       FROM "${tenantId}".jira_assets_use_cases uc
-       LEFT JOIN "${tenantId}".jira_assets_org_links ol ON ol.jira_use_case_id = uc.id
-       ${whereClause}
-       ORDER BY uc.created_at DESC`,
+      `SELECT * FROM "${tenantId}".jira_assets_use_cases
+       ORDER BY created_at DESC`,
       { type: "SELECT" }
     );
 
@@ -1450,10 +1374,7 @@ async function handleGetUseCase(ctx: PluginRouteContext): Promise<PluginRouteRes
 
   try {
     const useCases: any[] = await sequelize.query(
-      `SELECT uc.*, ol.org_project_id
-       FROM "${tenantId}".jira_assets_use_cases uc
-       LEFT JOIN "${tenantId}".jira_assets_org_links ol ON ol.jira_use_case_id = uc.id
-       WHERE uc.id = :id`,
+      `SELECT * FROM "${tenantId}".jira_assets_use_cases WHERE id = :id`,
       { replacements: { id }, type: "SELECT" }
     );
 
@@ -1468,64 +1389,6 @@ async function handleGetUseCase(ctx: PluginRouteContext): Promise<PluginRouteRes
 }
 
 /**
- * PATCH /use-cases/:id - Update a use case
- */
-async function handleUpdateUseCase(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params, body } = ctx;
-  const id = params.id;
-
-  try {
-    // Get current use case
-    const existing: any[] = await sequelize.query(
-      `SELECT * FROM "${tenantId}".jira_assets_use_cases WHERE id = :id`,
-      { replacements: { id }, type: "SELECT" }
-    );
-
-    if (existing.length === 0) {
-      return { status: 404, data: { error: "Use case not found" } };
-    }
-
-    const current = existing[0];
-
-    // Handle is_organizational change
-    if (body.is_organizational !== undefined && body.is_organizational !== current.is_organizational) {
-      if (body.is_organizational) {
-        // Changing to organizational - need org project
-        const orgProject = await findOrganizationalProject(tenantId, sequelize);
-        if (!orgProject) {
-          return { status: 400, data: { error: "No organizational project exists" } };
-        }
-
-        // Create org link
-        await sequelize.query(
-          `INSERT INTO "${tenantId}".jira_assets_org_links (jira_use_case_id, org_project_id)
-           VALUES (:jiraUseCaseId, :orgProjectId)
-           ON CONFLICT (jira_use_case_id) DO UPDATE SET org_project_id = :orgProjectId`,
-          { replacements: { jiraUseCaseId: id, orgProjectId: orgProject.id } }
-        );
-      } else {
-        // Changing to non-organizational - remove org link
-        await sequelize.query(
-          `DELETE FROM "${tenantId}".jira_assets_org_links WHERE jira_use_case_id = :id`,
-          { replacements: { id } }
-        );
-      }
-
-      await sequelize.query(
-        `UPDATE "${tenantId}".jira_assets_use_cases
-         SET is_organizational = :isOrganizational, updated_at = CURRENT_TIMESTAMP
-         WHERE id = :id`,
-        { replacements: { isOrganizational: body.is_organizational, id } }
-      );
-    }
-
-    return { status: 200, data: { success: true } };
-  } catch (error: any) {
-    return { status: 500, data: { error: error.message } };
-  }
-}
-
-/**
  * DELETE /use-cases/:id - Delete a use case
  */
 async function handleDeleteUseCase(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
@@ -1533,37 +1396,12 @@ async function handleDeleteUseCase(ctx: PluginRouteContext): Promise<PluginRoute
   const id = params.id;
 
   try {
-    // Soft delete by setting is_active to false
     await sequelize.query(
-      `UPDATE "${tenantId}".jira_assets_use_cases
-       SET is_active = false, updated_at = CURRENT_TIMESTAMP
-       WHERE id = :id`,
+      `DELETE FROM "${tenantId}".jira_assets_use_cases WHERE id = :id`,
       { replacements: { id } }
     );
 
     return { status: 200, data: { success: true } };
-  } catch (error: any) {
-    return { status: 500, data: { error: error.message } };
-  }
-}
-
-/**
- * GET /org-links - Get all organizational links
- */
-async function handleGetOrgLinks(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId } = ctx;
-
-  try {
-    const links: any[] = await sequelize.query(
-      `SELECT ol.*, uc.uc_id, uc.name, uc.jira_object_key, uc.last_synced_at
-       FROM "${tenantId}".jira_assets_org_links ol
-       JOIN "${tenantId}".jira_assets_use_cases uc ON uc.id = ol.jira_use_case_id
-       WHERE uc.is_active = true
-       ORDER BY ol.created_at DESC`,
-      { type: "SELECT" }
-    );
-
-    return { status: 200, data: links };
   } catch (error: any) {
     return { status: 500, data: { error: error.message } };
   }
@@ -1676,7 +1514,7 @@ export const router: Record<string, (ctx: PluginRouteContext) => Promise<PluginR
   "POST /config": handleSaveConfig,
   "POST /test-connection": handleTestConnection,
 
-  // Attribute Mappings
+  // Attribute Mappings (kept for reference but not used)
   "GET /vw-attributes": handleGetVWAttributes,
   "GET /mappings": handleGetMappings,
   "POST /mappings": handleSaveMappings,
@@ -1687,9 +1525,6 @@ export const router: Record<string, (ctx: PluginRouteContext) => Promise<PluginR
   "GET /object-types/:objectTypeId/attributes": handleGetAttributes,
   "GET /object-types/:objectTypeId/objects": handleGetObjects,
 
-  // Organizational project
-  "GET /org-project": handleGetOrgProject,
-
   // Import & Sync
   "POST /import": handleImportObjects,
   "POST /sync": handleManualSync,
@@ -1699,9 +1534,5 @@ export const router: Record<string, (ctx: PluginRouteContext) => Promise<PluginR
   // Use Cases
   "GET /use-cases": handleGetUseCases,
   "GET /use-cases/:id": handleGetUseCase,
-  "PATCH /use-cases/:id": handleUpdateUseCase,
   "DELETE /use-cases/:id": handleDeleteUseCase,
-
-  // Organizational links
-  "GET /org-links": handleGetOrgLinks,
 };

@@ -19,21 +19,16 @@ import {
   DialogActions,
   Checkbox,
   FormControlLabel,
-  RadioGroup,
-  Radio,
   Alert,
   CircularProgress,
   Drawer,
   Stack,
   Divider,
-  LinearProgress,
 } from "@mui/material";
 import {
   RefreshCw,
   Download,
   Eye,
-  Building2,
-  User,
   X,
   Check,
   AlertCircle,
@@ -50,21 +45,28 @@ interface JiraObject {
   updated: string;
 }
 
+interface UseCaseData {
+  id: string;
+  objectKey: string;
+  label: string;
+  objectType?: {
+    id: string;
+    name: string;
+  };
+  attributes: Record<string, any>;
+  created: string;
+  updated: string;
+}
+
 interface UseCase {
   id: number;
   jira_object_id: string;
-  jira_object_key: string;
   uc_id: string;
-  name: string;
-  is_organizational: boolean;
-  attributes: Record<string, any>;
-  mapped_attributes?: Record<string, any>;
-  jira_created_at: string;
-  jira_updated_at: string;
+  data: UseCaseData;
   last_synced_at: string;
   sync_status: string;
-  is_active: boolean;
-  org_project_id?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 interface SyncStatus {
@@ -141,10 +143,8 @@ export const JiraAssetsUseCasesTab: React.FC<JiraAssetsUseCasesTabProps> = ({
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [jiraObjects, setJiraObjects] = useState<JiraObject[]>([]);
   const [selectedObjects, setSelectedObjects] = useState<Set<string>>(new Set());
-  const [importType, setImportType] = useState<"organizational" | "non-organizational">("non-organizational");
   const [isLoadingObjects, setIsLoadingObjects] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [orgProject, setOrgProject] = useState<{ id: number; title: string } | null>(null);
 
   // Detail drawer state
   const [selectedUseCase, setSelectedUseCase] = useState<UseCase | null>(null);
@@ -219,10 +219,6 @@ export const JiraAssetsUseCasesTab: React.FC<JiraAssetsUseCasesTabProps> = ({
     setJiraObjects([]);
 
     try {
-      // Get org project info
-      const orgProjectResponse = await pluginApiCall("GET", "/org-project");
-      setOrgProject(orgProjectResponse);
-
       // Get config to find object type
       const configResponse = await pluginApiCall("GET", "/config");
       const objectTypeId = configResponse?.selected_object_type_id;
@@ -270,7 +266,7 @@ export const JiraAssetsUseCasesTab: React.FC<JiraAssetsUseCasesTabProps> = ({
     }
   };
 
-  // Import selected objects
+  // Import selected objects (always as non-organizational)
   const handleImport = async () => {
     if (!pluginApiCall || selectedObjects.size === 0) return;
 
@@ -280,7 +276,6 @@ export const JiraAssetsUseCasesTab: React.FC<JiraAssetsUseCasesTabProps> = ({
     try {
       const response = await pluginApiCall("POST", "/import", {
         object_ids: Array.from(selectedObjects),
-        is_organizational: importType === "organizational",
       });
 
       if (response?.success) {
@@ -302,25 +297,18 @@ export const JiraAssetsUseCasesTab: React.FC<JiraAssetsUseCasesTabProps> = ({
     setDrawerOpen(true);
   };
 
-  // Toggle organizational status
-  const handleToggleOrganizational = async (useCase: UseCase) => {
-    if (!hasApiAccess) return;
 
-    try {
-      await pluginApiCall("PATCH", `/use-cases/${useCase.id}`, {
-        is_organizational: !useCase.is_organizational,
-      });
-      await loadUseCases();
-    } catch (err: any) {
-      setError(err.message || "Failed to update use case");
-    }
+  // Helper to get display name from use case
+  const getUseCaseName = (useCase: UseCase): string => {
+    const data = typeof useCase.data === 'string' ? JSON.parse(useCase.data) : useCase.data;
+    return data?.label || data?.attributes?.Name || useCase.uc_id;
   };
 
   // Delete use case
   const handleDelete = async (useCase: UseCase) => {
     if (!hasApiAccess) return;
 
-    if (!window.confirm(`Are you sure you want to delete "${useCase.name}"?`)) {
+    if (!window.confirm(`Are you sure you want to delete "${getUseCaseName(useCase)}"?`)) {
       return;
     }
 
@@ -455,7 +443,6 @@ export const JiraAssetsUseCasesTab: React.FC<JiraAssetsUseCasesTabProps> = ({
                 <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>UC-ID</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>Name</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>JIRA Key</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>Type</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>Sync Status</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>Last Synced</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: "12px" }} align="right">
@@ -464,44 +451,32 @@ export const JiraAssetsUseCasesTab: React.FC<JiraAssetsUseCasesTabProps> = ({
               </TableRow>
             </TableHead>
             <TableBody>
-              {useCases.map((uc) => (
-                <TableRow key={uc.id} hover>
-                  <TableCell sx={{ fontSize: "13px", fontFamily: "monospace" }}>{uc.uc_id}</TableCell>
-                  <TableCell sx={{ fontSize: "13px" }}>{uc.name}</TableCell>
-                  <TableCell sx={{ fontSize: "13px", fontFamily: "monospace" }}>{uc.jira_object_key}</TableCell>
-                  <TableCell>
-                    <Chip
-                      icon={uc.is_organizational ? <Building2 size={14} /> : <User size={14} />}
-                      label={uc.is_organizational ? "Organizational" : "Non-Org"}
-                      size="small"
-                      color={uc.is_organizational ? "primary" : "default"}
-                      variant="outlined"
-                      sx={{ fontSize: "11px" }}
-                    />
-                  </TableCell>
-                  <TableCell>{getSyncStatusChip(uc.sync_status)}</TableCell>
-                  <TableCell sx={{ fontSize: "12px", color: "#667085" }}>
-                    {formatDate(uc.last_synced_at)}
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="View Details">
-                      <IconButton size="small" onClick={() => handleViewDetails(uc)}>
-                        <Eye size={16} />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title={uc.is_organizational ? "Make Non-Organizational" : "Make Organizational"}>
-                      <IconButton size="small" onClick={() => handleToggleOrganizational(uc)}>
-                        {uc.is_organizational ? <User size={16} /> : <Building2 size={16} />}
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton size="small" onClick={() => handleDelete(uc)} color="error">
-                        <Trash2 size={16} />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {useCases.map((uc) => {
+                const data = typeof uc.data === 'string' ? JSON.parse(uc.data) : uc.data;
+                return (
+                  <TableRow key={uc.id} hover>
+                    <TableCell sx={{ fontSize: "13px", fontFamily: "monospace" }}>{uc.uc_id}</TableCell>
+                    <TableCell sx={{ fontSize: "13px" }}>{data?.label || data?.attributes?.Name || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: "13px", fontFamily: "monospace" }}>{data?.objectKey || '-'}</TableCell>
+                    <TableCell>{getSyncStatusChip(uc.sync_status)}</TableCell>
+                    <TableCell sx={{ fontSize: "12px", color: "#667085" }}>
+                      {formatDate(uc.last_synced_at)}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="View Details">
+                        <IconButton size="small" onClick={() => handleViewDetails(uc)}>
+                          <Eye size={16} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete">
+                        <IconButton size="small" onClick={() => handleDelete(uc)} color="error">
+                          <Trash2 size={16} />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>
@@ -530,51 +505,6 @@ export const JiraAssetsUseCasesTab: React.FC<JiraAssetsUseCasesTabProps> = ({
             </Alert>
           ) : (
             <>
-              {/* Import Type Selection */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
-                  Import Type
-                </Typography>
-                <RadioGroup
-                  value={importType}
-                  onChange={(e) => setImportType(e.target.value as "organizational" | "non-organizational")}
-                >
-                  <FormControlLabel
-                    value="non-organizational"
-                    control={<Radio size="small" />}
-                    label={
-                      <Box>
-                        <Typography variant="body2" fontWeight={500}>
-                          Non-Organizational
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Standalone use-cases with their own UC-IDs
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                  <FormControlLabel
-                    value="organizational"
-                    control={<Radio size="small" />}
-                    disabled={!orgProject}
-                    label={
-                      <Box>
-                        <Typography variant="body2" fontWeight={500}>
-                          Organizational
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {orgProject
-                            ? `Links to organizational project: ${orgProject.title}`
-                            : "No organizational project exists - create one first"}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                </RadioGroup>
-              </Box>
-
-              <Divider sx={{ my: 2 }} />
-
               {/* Objects Table */}
               <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <FormControlLabel
@@ -656,133 +586,102 @@ export const JiraAssetsUseCasesTab: React.FC<JiraAssetsUseCasesTabProps> = ({
       {/* Detail Drawer */}
       <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
         <Box sx={{ width: 480, p: 3 }}>
-          {selectedUseCase && (
-            <>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 3 }}>
-                <Box>
-                  <Typography variant="h6">{selectedUseCase.name}</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontFamily: "monospace" }}>
-                    {selectedUseCase.uc_id} | {selectedUseCase.jira_object_key}
-                  </Typography>
-                </Box>
-                <IconButton onClick={() => setDrawerOpen(false)}>
-                  <X size={20} />
-                </IconButton>
-              </Box>
+          {selectedUseCase && (() => {
+            const data = typeof selectedUseCase.data === 'string'
+              ? JSON.parse(selectedUseCase.data)
+              : selectedUseCase.data;
+            const name = data?.label || data?.attributes?.Name || selectedUseCase.uc_id;
+            const objectKey = data?.objectKey || '-';
 
-              <Stack spacing={2}>
-                {/* Status Chips */}
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <Chip
-                    icon={selectedUseCase.is_organizational ? <Building2 size={14} /> : <User size={14} />}
-                    label={selectedUseCase.is_organizational ? "Organizational" : "Non-Organizational"}
-                    size="small"
-                    color={selectedUseCase.is_organizational ? "primary" : "default"}
-                  />
-                  {getSyncStatusChip(selectedUseCase.sync_status)}
+            return (
+              <>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 3 }}>
+                  <Box>
+                    <Typography variant="h6">{name}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontFamily: "monospace" }}>
+                      {selectedUseCase.uc_id} | {objectKey}
+                    </Typography>
+                  </Box>
+                  <IconButton onClick={() => setDrawerOpen(false)}>
+                    <X size={20} />
+                  </IconButton>
                 </Box>
 
-                <Divider />
+                <Stack spacing={2}>
+                  {/* Status Chips */}
+                  <Box sx={{ display: "flex", gap: 1 }}>
+                    {getSyncStatusChip(selectedUseCase.sync_status)}
+                  </Box>
 
-                {/* Metadata */}
-                <Box>
-                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
-                    Sync Information
-                  </Typography>
-                  <Stack spacing={1}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Last Synced
-                      </Typography>
-                      <Typography variant="body2">{formatDate(selectedUseCase.last_synced_at)}</Typography>
-                    </Box>
-                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                      <Typography variant="body2" color="text.secondary">
-                        JIRA Created
-                      </Typography>
-                      <Typography variant="body2">{formatDate(selectedUseCase.jira_created_at)}</Typography>
-                    </Box>
-                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                      <Typography variant="body2" color="text.secondary">
-                        JIRA Updated
-                      </Typography>
-                      <Typography variant="body2">{formatDate(selectedUseCase.jira_updated_at)}</Typography>
-                    </Box>
-                  </Stack>
-                </Box>
+                  <Divider />
 
-                <Divider />
-
-                {/* Mapped VerifyWise Attributes */}
-                {selectedUseCase.mapped_attributes && Object.keys(selectedUseCase.mapped_attributes).length > 0 && (
-                  <>
-                    <Box>
-                      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1, color: "#13715B" }}>
-                        VerifyWise AI System Attributes
-                      </Typography>
-                      <Stack spacing={1}>
-                        {Object.entries(selectedUseCase.mapped_attributes).map(([key, value]) => (
-                          <Box key={key}>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                              {key}
-                            </Typography>
-                            <Typography variant="body2" sx={{ wordBreak: "break-word" }}>
-                              {Array.isArray(value) ? value.join(", ") : String(value ?? "N/A")}
-                            </Typography>
-                          </Box>
-                        ))}
-                      </Stack>
-                    </Box>
-                    <Divider />
-                  </>
-                )}
-
-                {/* JIRA Attributes */}
-                <Box>
-                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
-                    JIRA Attributes (Raw)
-                  </Typography>
-                  <Stack spacing={1}>
-                    {Object.entries(selectedUseCase.attributes || {}).map(([key, value]) => (
-                      <Box key={key}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                          {key}
+                  {/* Metadata */}
+                  <Box>
+                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                      Sync Information
+                    </Typography>
+                    <Stack spacing={1}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Last Synced
                         </Typography>
-                        <Typography variant="body2" sx={{ wordBreak: "break-word" }}>
-                          {Array.isArray(value) ? value.join(", ") : String(value ?? "N/A")}
-                        </Typography>
+                        <Typography variant="body2">{formatDate(selectedUseCase.last_synced_at)}</Typography>
                       </Box>
-                    ))}
-                  </Stack>
-                </Box>
+                      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                        <Typography variant="body2" color="text.secondary">
+                          JIRA Created
+                        </Typography>
+                        <Typography variant="body2">{formatDate(data?.created)}</Typography>
+                      </Box>
+                      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                        <Typography variant="body2" color="text.secondary">
+                          JIRA Updated
+                        </Typography>
+                        <Typography variant="body2">{formatDate(data?.updated)}</Typography>
+                      </Box>
+                    </Stack>
+                  </Box>
 
-                <Divider />
+                  <Divider />
 
-                {/* Actions */}
-                <Box sx={{ display: "flex", gap: 2 }}>
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    onClick={() => handleToggleOrganizational(selectedUseCase)}
-                    startIcon={selectedUseCase.is_organizational ? <User size={16} /> : <Building2 size={16} />}
-                    sx={{ textTransform: "none" }}
-                  >
-                    {selectedUseCase.is_organizational ? "Make Non-Org" : "Make Organizational"}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    fullWidth
-                    onClick={() => handleDelete(selectedUseCase)}
-                    startIcon={<Trash2 size={16} />}
-                    sx={{ textTransform: "none" }}
-                  >
-                    Delete
-                  </Button>
-                </Box>
-              </Stack>
-            </>
-          )}
+                  {/* JIRA Attributes */}
+                  <Box>
+                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                      JIRA Attributes
+                    </Typography>
+                    <Stack spacing={1}>
+                      {Object.entries(data?.attributes || {}).map(([key, value]) => (
+                        <Box key={key}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                            {key}
+                          </Typography>
+                          <Typography variant="body2" sx={{ wordBreak: "break-word" }}>
+                            {Array.isArray(value) ? value.join(", ") : String(value ?? "N/A")}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Stack>
+                  </Box>
+
+                  <Divider />
+
+                  {/* Actions */}
+                  <Box sx={{ display: "flex", gap: 2 }}>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      fullWidth
+                      onClick={() => handleDelete(selectedUseCase)}
+                      startIcon={<Trash2 size={16} />}
+                      sx={{ textTransform: "none" }}
+                    >
+                      Delete
+                    </Button>
+                  </Box>
+                </Stack>
+              </>
+            );
+          })()}
         </Box>
       </Drawer>
     </Box>
