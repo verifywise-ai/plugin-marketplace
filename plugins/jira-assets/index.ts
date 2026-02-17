@@ -293,7 +293,6 @@ class JiraAssetsClient {
           includeAttributes: true,
         }
       );
-      const resultStr = JSON.stringify(result, null, 2);
 
       // AQL returns { values: [...] } or { objectEntries: [...] }
       const objects = result?.values || result?.objectEntries || [];
@@ -631,12 +630,10 @@ async function syncObjects(
       const jiraObjectId = String(jiraObj.id);
       const existing = existingMap.get(jiraObjectId);
 
-      const rawAttrsStr = JSON.stringify(jiraObj.attributes || [], null, 2);
 
       // Build data object to store - use injected attrIdToName mapping
       const attrIdToName = (jiraObj as any)._attrIdToName || {};
       const transformedAttrs = transformAttributes(jiraObj.attributes || [], attrIdToName);
-      const transformedStr = JSON.stringify(transformedAttrs, null, 2);
 
       const data = {
         id: jiraObj.id,
