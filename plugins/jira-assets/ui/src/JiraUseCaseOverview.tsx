@@ -48,7 +48,7 @@ const formatDate = (dateStr?: string): string => {
   }
 };
 
-// EXACT same styles as native InfoCard/DescriptionCard
+// EXACT copy from /Clients/src/presentation/components/Cards/InfoCard/style.ts
 const infoCardStyle = {
   border: `1px solid #d0d5dd`,
   borderRadius: 2,
@@ -56,7 +56,7 @@ const infoCardStyle = {
   minWidth: 228,
   width: "100%",
   padding: "8px 36px 14px 14px",
-  position: "relative" as const,
+  position: "relative",
 };
 
 const infoCardTitleStyle = {
@@ -72,10 +72,11 @@ const infoCardbodyStyle = {
   color: "#2D3748",
 };
 
+// EXACT copy from /Clients/src/presentation/components/Cards/DescriptionCard/style.ts
 const descCardbodyStyle = {
   fontSize: 13,
   color: "#2D3748",
-  textAlign: "justify" as const,
+  textAlign: "justify",
 };
 
 // EXACT same row/column styles as native Overview
@@ -100,63 +101,51 @@ const projectRiskSection = {
   fontSize: 16,
 };
 
-// InfoCard component - exact copy of native component
-const InfoCard = ({
-  title,
-  body,
-  icon,
-}: {
-  title: string;
-  body: string;
-  icon?: React.ReactNode;
-}) => (
-  <Stack sx={infoCardStyle}>
-    {icon && (
-      <Box
-        sx={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          color: "#8594AC",
-          opacity: 0.7,
-        }}
-      >
-        {icon}
-      </Box>
-    )}
-    <Typography sx={infoCardTitleStyle}>{title}</Typography>
-    <Typography sx={infoCardbodyStyle}>{body}</Typography>
-  </Stack>
-);
+// InfoCard - EXACT copy from /Clients/src/presentation/components/Cards/InfoCard/index.tsx
+function InfoCard({ title, body, icon }: { title: string; body: string; icon?: React.ReactNode }) {
+  return (
+    <Stack sx={infoCardStyle}>
+      {icon && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            color: "#8594AC",
+            opacity: 0.7,
+          }}
+        >
+          {icon}
+        </Box>
+      )}
+      <Typography sx={infoCardTitleStyle}>{title}</Typography>
+      <Typography sx={infoCardbodyStyle}>{body}</Typography>
+    </Stack>
+  );
+}
 
-// DescriptionCard component - exact copy of native component
-const DescriptionCard = ({
-  title,
-  body,
-  icon,
-}: {
-  title: string;
-  body: string;
-  icon?: React.ReactNode;
-}) => (
-  <Stack sx={infoCardStyle}>
-    {icon && (
-      <Box
-        sx={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          color: "#8594AC",
-          opacity: 0.7,
-        }}
-      >
-        {icon}
-      </Box>
-    )}
-    <Typography sx={infoCardTitleStyle}>{title}</Typography>
-    <Typography sx={descCardbodyStyle}>{body}</Typography>
-  </Stack>
-);
+// DescriptionCard - EXACT copy from /Clients/src/presentation/components/Cards/DescriptionCard/index.tsx
+function DescriptionCard({ title, body, icon }: { title: string; body: string; icon?: React.ReactNode }) {
+  return (
+    <Stack sx={infoCardStyle}>
+      {icon && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            color: "#8594AC",
+            opacity: 0.7,
+          }}
+        >
+          {icon}
+        </Box>
+      )}
+      <Typography sx={infoCardTitleStyle}>{title}</Typography>
+      <Typography sx={descCardbodyStyle}>{body}</Typography>
+    </Stack>
+  );
+}
 
 export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({
   project,
@@ -252,15 +241,12 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({
         </Stack>
 
         {/* Description Section - matches native DescriptionCard pattern */}
-        <Stack sx={{ mb: 10 }}>
-          <Typography sx={projectRiskSection}>Description / Purpose</Typography>
-          <Stack className="vw-project-overview-row" sx={rowStyle}>
-            <DescriptionCard
-              title=""
-              body={description}
-              icon={<TargetIcon size={16} />}
-            />
-          </Stack>
+        <Stack className="vw-project-overview-row" sx={rowStyle}>
+          <DescriptionCard
+            title="Description / Purpose"
+            body={description}
+            icon={<TargetIcon size={16} />}
+          />
         </Stack>
 
         <Divider />

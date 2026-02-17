@@ -23,10 +23,8 @@ import {
   TableRow,
   Paper,
   Checkbox,
-  IconButton,
-  Tooltip,
 } from "@mui/material";
-import { RefreshCw, Download, Trash2, Eye } from "lucide-react";
+import { RefreshCw, Download } from "lucide-react";
 
 interface Schema {
   id: string;
@@ -308,26 +306,6 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
       setSyncMessage({ type: "error", text: error.message || "Sync failed" });
     } finally {
       setIsSyncing(false);
-    }
-  };
-
-  // Delete imported use case
-  const handleDeleteUseCase = async (useCase: ImportedUseCase) => {
-    if (!hasApiAccess) return;
-
-    const data = typeof useCase.data === 'string' ? JSON.parse(useCase.data) : useCase.data;
-    const name = data?.label || data?.attributes?.Name || useCase.uc_id;
-
-    if (!window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      return;
-    }
-
-    try {
-      await pluginApiCall("DELETE", `/use-cases/${useCase.id}`);
-      await loadImportedUseCases();
-      await loadJiraObjects();
-    } catch (error: any) {
-      setImportMessage({ type: "error", text: error.message || "Failed to delete" });
     }
   };
 
@@ -899,32 +877,21 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
             <Typography variant="subtitle2" fontWeight={600} sx={{ color: "#344054" }}>
               Imported Use Cases ({importedUseCases.length})
             </Typography>
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <Button
-                variant="contained"
-                startIcon={isSyncing ? <CircularProgress size={14} sx={{ color: "white" }} /> : <RefreshCw size={14} />}
-                onClick={handleSyncNow}
-                disabled={isSyncing || isLoadingUseCases}
-                sx={{
-                  backgroundColor: "#13715B",
-                  textTransform: "none",
-                  fontSize: "12px",
-                  "&:hover": { backgroundColor: "#0f5a47" },
-                  "&:disabled": { backgroundColor: "#d0d5dd" },
-                }}
-              >
-                {isSyncing ? "Syncing..." : "Sync Now"}
-              </Button>
-              <Button
-                variant="text"
-                startIcon={<RefreshCw size={14} />}
-                onClick={loadImportedUseCases}
-                disabled={isLoadingUseCases || isSyncing}
-                sx={{ textTransform: "none", fontSize: "12px", color: "#667085" }}
-              >
-                Refresh List
-              </Button>
-            </Box>
+            <Button
+              variant="contained"
+              startIcon={isSyncing ? <CircularProgress size={14} sx={{ color: "white" }} /> : <RefreshCw size={14} />}
+              onClick={handleSyncNow}
+              disabled={isSyncing || isLoadingUseCases}
+              sx={{
+                backgroundColor: "#13715B",
+                textTransform: "none",
+                fontSize: "12px",
+                "&:hover": { backgroundColor: "#0f5a47" },
+                "&:disabled": { backgroundColor: "#d0d5dd" },
+              }}
+            >
+              {isSyncing ? "Syncing..." : "Sync Now"}
+            </Button>
           </Box>
 
           {/* Sync Message */}
@@ -946,12 +913,11 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
             <TableContainer component={Paper} sx={{ maxHeight: 400, boxShadow: "none", border: "1px solid #e4e7ec" }}>
               <Table size="small" stickyHeader>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: "#f9fafb" }}>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>UC-ID</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>Name</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>JIRA Key</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "12px" }} align="right">Actions</TableCell>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb", py: 1 }}>UC-ID</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb", py: 1 }}>Name</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb", py: 1 }}>JIRA Key</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb", py: 1 }}>Status</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -961,23 +927,16 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
                     const objectKey = data?.objectKey || '-';
                     return (
                       <TableRow key={uc.id} hover>
-                        <TableCell sx={{ fontSize: "13px", fontFamily: "monospace" }}>{uc.uc_id}</TableCell>
-                        <TableCell sx={{ fontSize: "13px" }}>{name}</TableCell>
-                        <TableCell sx={{ fontSize: "13px", fontFamily: "monospace" }}>{objectKey}</TableCell>
-                        <TableCell>
+                        <TableCell sx={{ fontSize: "13px", fontFamily: "monospace", py: 1 }}>{uc.uc_id}</TableCell>
+                        <TableCell sx={{ fontSize: "13px", py: 1 }}>{name}</TableCell>
+                        <TableCell sx={{ fontSize: "13px", fontFamily: "monospace", py: 1 }}>{objectKey}</TableCell>
+                        <TableCell sx={{ py: 1 }}>
                           <Chip
                             label={uc.sync_status}
                             size="small"
                             color={uc.sync_status === "synced" ? "success" : uc.sync_status === "updated" ? "info" : "default"}
                             sx={{ fontSize: "11px" }}
                           />
-                        </TableCell>
-                        <TableCell align="right">
-                          <Tooltip title="Delete">
-                            <IconButton size="small" onClick={() => handleDeleteUseCase(uc)} color="error">
-                              <Trash2 size={16} />
-                            </IconButton>
-                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     );

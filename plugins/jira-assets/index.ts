@@ -276,7 +276,15 @@ class JiraAssetsClient {
       );
       return result.objectEntries || [];
     } else {
-      // Cloud - use AQL endpoint which properly supports includeAttributes
+      // Cloud - first fetch attribute definitions to get ID -> name mapping
+      const attrDefs = await this.getAttributes(objectTypeId);
+      const attrIdToName: Record<string, string> = {};
+      for (const attr of attrDefs) {
+        attrIdToName[attr.id] = attr.name;
+      }
+      console.log("[JiraAssets] Attribute ID to Name mapping:", JSON.stringify(attrIdToName, null, 2));
+
+      // Then fetch objects with AQL
       const result = await this.request<any>(
         `object/aql`,
         "POST",
@@ -284,18 +292,20 @@ class JiraAssetsClient {
           qlQuery: `objectTypeId = ${objectTypeId}`,
           resultPerPage: maxResults,
           includeAttributes: true,
-          includeTypeAttributes: true,
         }
       );
       const resultStr = JSON.stringify(result, null, 2);
       console.log("[JiraAssets] AQL Objects response:", resultStr ? resultStr.substring(0, 1500) : 'null');
+
       // AQL returns { values: [...] } or { objectEntries: [...] }
       const objects = result?.values || result?.objectEntries || [];
       console.log("[JiraAssets] Found", objects.length, "objects");
-      if (objects.length > 0) {
-        const firstObjStr = JSON.stringify(objects[0], null, 2);
-        console.log("[JiraAssets] First object structure:", firstObjStr ? firstObjStr.substring(0, 1500) : 'null');
+
+      // Inject attribute name mapping into each object for later transformation
+      for (const obj of objects) {
+        (obj as any)._attrIdToName = attrIdToName;
       }
+
       return objects;
     }
   }
@@ -627,8 +637,9 @@ async function syncObjects(
       const rawAttrsStr = JSON.stringify(jiraObj.attributes || [], null, 2);
       console.log("[JiraAssets] Raw attributes from JIRA:", rawAttrsStr ? rawAttrsStr.substring(0, 2000) : 'none');
 
-      // Build data object to store
-      const transformedAttrs = transformAttributes(jiraObj.attributes || []);
+      // Build data object to store - use injected attrIdToName mapping
+      const attrIdToName = (jiraObj as any)._attrIdToName || {};
+      const transformedAttrs = transformAttributes(jiraObj.attributes || [], attrIdToName);
       const transformedStr = JSON.stringify(transformedAttrs, null, 2);
       console.log("[JiraAssets] Transformed attributes:", transformedStr ? transformedStr.substring(0, 1000) : 'none');
 
@@ -766,7 +777,7 @@ async function syncObjects(
 
 // ========== HELPER FUNCTIONS ==========
 
-function transformAttributes(attributes: any): Record<string, any> {
+function transformAttributes(attributes: any, attrIdToName?: Record<string, string>): Record<string, any> {
   const result: Record<string, any> = {};
 
   // Handle case where attributes is not iterable
@@ -776,7 +787,12 @@ function transformAttributes(attributes: any): Record<string, any> {
   }
 
   for (const attr of attributes) {
-    const name = attr.objectTypeAttribute?.name || attr.objectTypeAttributeId || attr.name;
+    // Try to get name from: objectTypeAttribute.name, then ID->name mapping, then fall back to ID
+    const attrId = attr.objectTypeAttributeId || attr.id;
+    const name = attr.objectTypeAttribute?.name ||
+                 (attrIdToName && attrId ? attrIdToName[attrId] : null) ||
+                 attr.name ||
+                 attrId;
     if (!name) continue;
 
     const values = attr.objectAttributeValues || attr.values || [];
@@ -1238,15 +1254,18 @@ async function handleGetObjects(ctx: PluginRouteContext): Promise<PluginRouteRes
     const objects = await client.getObjects(objectTypeId);
     console.log("[JiraAssets] Fetched", objects.length, "objects from JIRA");
 
-    // Transform objects for UI
-    const transformed = objects.map((obj) => ({
-      id: obj.id,
-      key: obj.objectKey,
-      name: obj.label,
-      attributes: transformAttributes(obj.attributes),
-      created: obj.created,
-      updated: obj.updated,
-    }));
+    // Transform objects for UI - use injected attrIdToName mapping
+    const transformed = objects.map((obj) => {
+      const attrIdToName = (obj as any)._attrIdToName || {};
+      return {
+        id: obj.id,
+        key: obj.objectKey,
+        name: obj.label,
+        attributes: transformAttributes(obj.attributes, attrIdToName),
+        created: obj.created,
+        updated: obj.updated,
+      };
+    });
 
     console.log("[JiraAssets] Returning", transformed.length, "transformed objects");
     return { status: 200, data: transformed };
@@ -1299,6 +1318,15 @@ async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRoute
     let skipped = 0;
     const errors: string[] = [];
 
+    // Fetch attribute definitions once for ID -> name mapping
+    let attrIdToName: Record<string, string> = {};
+    if (config.selected_object_type_id) {
+      const attrDefs = await client.getAttributes(config.selected_object_type_id);
+      for (const attr of attrDefs) {
+        attrIdToName[attr.id] = attr.name;
+      }
+    }
+
     for (const objectId of object_ids) {
       try {
         // Check if already imported
@@ -1322,7 +1350,7 @@ async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRoute
           objectKey: jiraObj.objectKey,
           label: jiraObj.label,
           objectType: jiraObj.objectType,
-          attributes: transformAttributes(jiraObj.attributes),
+          attributes: transformAttributes(jiraObj.attributes, attrIdToName),
           created: jiraObj.created,
           updated: jiraObj.updated,
         };
