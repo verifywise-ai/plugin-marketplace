@@ -282,7 +282,6 @@ class JiraAssetsClient {
       for (const attr of attrDefs) {
         attrIdToName[attr.id] = attr.name;
       }
-      console.log("[JiraAssets] Attribute ID to Name mapping:", JSON.stringify(attrIdToName, null, 2));
 
       // Then fetch objects with AQL
       const result = await this.request<any>(
@@ -295,11 +294,9 @@ class JiraAssetsClient {
         }
       );
       const resultStr = JSON.stringify(result, null, 2);
-      console.log("[JiraAssets] AQL Objects response:", resultStr ? resultStr.substring(0, 1500) : 'null');
 
       // AQL returns { values: [...] } or { objectEntries: [...] }
       const objects = result?.values || result?.objectEntries || [];
-      console.log("[JiraAssets] Found", objects.length, "objects");
 
       // Inject attribute name mapping into each object for later transformation
       for (const obj of objects) {
@@ -634,15 +631,12 @@ async function syncObjects(
       const jiraObjectId = String(jiraObj.id);
       const existing = existingMap.get(jiraObjectId);
 
-      console.log("[JiraAssets] Processing object:", jiraObjectId, jiraObj.objectKey || jiraObj.label);
       const rawAttrsStr = JSON.stringify(jiraObj.attributes || [], null, 2);
-      console.log("[JiraAssets] Raw attributes from JIRA:", rawAttrsStr ? rawAttrsStr.substring(0, 2000) : 'none');
 
       // Build data object to store - use injected attrIdToName mapping
       const attrIdToName = (jiraObj as any)._attrIdToName || {};
       const transformedAttrs = transformAttributes(jiraObj.attributes || [], attrIdToName);
       const transformedStr = JSON.stringify(transformedAttrs, null, 2);
-      console.log("[JiraAssets] Transformed attributes:", transformedStr ? transformedStr.substring(0, 1000) : 'none');
 
       const data = {
         id: jiraObj.id,
@@ -783,7 +777,6 @@ function transformAttributes(attributes: any, attrIdToName?: Record<string, stri
 
   // Handle case where attributes is not iterable
   if (!attributes || !Array.isArray(attributes)) {
-    console.log("[JiraAssets] transformAttributes: attributes is not an array:", typeof attributes);
     return result;
   }
 
@@ -1104,19 +1097,16 @@ async function handleTestConnection(ctx: PluginRouteContext): Promise<PluginRout
 async function handleGetSchemas(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
   const { configuration, sequelize, tenantId } = ctx;
 
-  console.log("[JiraAssets] handleGetSchemas - ctx.configuration:", JSON.stringify(configuration, null, 2));
 
   // If configuration not provided via context, load from our own table
   let config = configuration;
   if (!config?.jira_base_url || !config?.workspace_id) {
-    console.log("[JiraAssets] Configuration not in context, loading from jira_assets_config table");
     const configs: any[] = await sequelize.query(
       `SELECT * FROM "${tenantId}".jira_assets_config LIMIT 1`,
       { type: "SELECT" }
     );
     if (configs.length > 0) {
       config = configs[0];
-      console.log("[JiraAssets] Loaded config from table:", JSON.stringify(config, null, 2));
     }
   }
 
@@ -1177,7 +1167,6 @@ async function handleGetObjectTypes(ctx: PluginRouteContext): Promise<PluginRout
     );
 
     const objectTypes = await client.getObjectTypes(schemaId);
-    console.log("[JiraAssets] getObjectTypes response:", JSON.stringify(objectTypes, null, 2));
     return { status: 200, data: objectTypes };
   } catch (error: any) {
     console.error("[JiraAssets] getObjectTypes error:", error.message);
@@ -1228,7 +1217,6 @@ async function handleGetObjects(ctx: PluginRouteContext): Promise<PluginRouteRes
   const { configuration, params, sequelize, tenantId } = ctx;
   const objectTypeId = params.objectTypeId;
 
-  console.log("[JiraAssets] handleGetObjects called for objectTypeId:", objectTypeId);
 
   // Load config from database if not in context
   let config = configuration;
@@ -1253,7 +1241,6 @@ async function handleGetObjects(ctx: PluginRouteContext): Promise<PluginRouteRes
     );
 
     const objects = await client.getObjects(objectTypeId);
-    console.log("[JiraAssets] Fetched", objects.length, "objects from JIRA");
 
     // Transform objects for UI - use injected attrIdToName mapping
     const transformed = objects.map((obj) => {
@@ -1268,7 +1255,6 @@ async function handleGetObjects(ctx: PluginRouteContext): Promise<PluginRouteRes
       };
     });
 
-    console.log("[JiraAssets] Returning", transformed.length, "transformed objects");
     return { status: 200, data: transformed };
   } catch (error: any) {
     return { status: 500, data: { error: error.message } };
@@ -1281,16 +1267,13 @@ async function handleGetObjects(ctx: PluginRouteContext): Promise<PluginRouteRes
 async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
   const { sequelize, tenantId, body, configuration } = ctx;
 
-  console.log("[JiraAssets] handleImportObjects called with body:", JSON.stringify(body, null, 2));
 
   const { object_ids } = body;
 
   if (!object_ids || !Array.isArray(object_ids) || object_ids.length === 0) {
-    console.log("[JiraAssets] No objects selected for import");
     return { status: 400, data: { error: "No objects selected for import" } };
   }
 
-  console.log("[JiraAssets] Importing", object_ids.length, "objects");
 
   // Load config from database if not in context
   let config = configuration;
