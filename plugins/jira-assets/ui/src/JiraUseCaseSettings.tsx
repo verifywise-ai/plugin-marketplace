@@ -1,22 +1,17 @@
 /**
  * JIRA Use Case Settings
- * Shows all JIRA object attributes with the same styling as ProjectSettings
+ * Shows all JIRA object attributes with the EXACT same styling as native ProjectSettings
  */
 
-import React, { useState } from "react";
+import React from "react";
 import {
   Stack,
   Typography,
   Box,
   Chip,
-  Divider,
-  TextField,
-  InputLabel,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  useTheme,
 } from "@mui/material";
-import { Database, ChevronDown, ExternalLink } from "lucide-react";
+import { Database } from "lucide-react";
 
 interface JiraUseCaseSettingsProps {
   project: {
@@ -61,34 +56,80 @@ const formatValue = (value: any): string => {
   return String(value) || "-";
 };
 
-const styles = {
-  sectionTitle: {
-    color: "#1A1919",
-    fontWeight: 600,
-    mb: 2,
-    fontSize: 16,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: 500,
-    color: "#344054",
-    mb: 0.5,
-  },
-  fieldContainer: {
-    mb: 2,
-  },
-  readOnlyField: {
-    "& .MuiInputBase-root": {
+// Exact same styles as ProjectSettings/styles.ts
+const useStyles = () => {
+  const theme = useTheme();
+
+  return {
+    root: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: theme.spacing(4),
+      fontSize: 13,
+      width: '100%',
+      margin: '0 auto',
+    },
+    card: {
+      background: theme.palette.background.paper,
+      border: `1.5px solid ${(theme.palette as any).border?.light || '#E5E7EB'}`,
+      borderRadius: theme.shape.borderRadius,
+      padding: theme.spacing(5, 6),
+      marginBottom: theme.spacing(4),
+      boxShadow: 'none',
+      width: '100%',
+    },
+    sectionTitle: {
+      fontWeight: 600,
+      fontSize: 16,
+      marginBottom: theme.spacing(2),
+      color: theme.palette.text.primary,
+    },
+    gridContainer: {
+      display: "grid",
+      gridTemplateColumns: "220px 1fr",
+      rowGap: "25px",
+      columnGap: "250px",
+      alignItems: "center",
+      mt: 2,
+    },
+    labelTitle: {
+      fontSize: 13,
+      fontWeight: 500,
+    },
+    labelDescription: {
+      fontSize: 12,
+      color: "#888",
+      mt: 0.5,
+    },
+    valueField: {
       backgroundColor: "#F9FAFB",
+      border: "1px solid #E5E7EB",
+      borderRadius: "4px",
+      padding: "8px 14px",
+      fontSize: 13,
+      color: "#344054",
+      minHeight: "34px",
+      display: "flex",
+      alignItems: "center",
+      width: 400,
     },
-    "& .MuiOutlinedInput-notchedOutline": {
-      borderColor: "#E5E7EB",
+    multilineValue: {
+      backgroundColor: "#F9FAFB",
+      border: "1px solid #E5E7EB",
+      borderRadius: "4px",
+      padding: "8px 14px",
+      fontSize: 13,
+      color: "#344054",
+      minHeight: "60px",
+      width: 400,
+      whiteSpace: "pre-wrap" as const,
+      wordBreak: "break-word" as const,
     },
-  },
+  };
 };
 
 export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ project }) => {
-  const [expandedSections, setExpandedSections] = useState<string[]>(["basic", "attributes"]);
+  const styles = useStyles();
 
   if (!project) {
     return <Typography>No JIRA use case found</Typography>;
@@ -97,13 +138,22 @@ export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ projec
   const jiraData = project._jira_data;
   const attributes = jiraData?.attributes || {};
 
-  const handleSectionToggle = (section: string) => {
-    setExpandedSections((prev) =>
-      prev.includes(section) ? prev.filter((s) => s !== section) : [...prev, section]
-    );
-  };
+  // Render a read-only field row (matching ProjectSettings grid row pattern)
+  const renderFieldRow = (label: string, description: string | null, value: any, isMultiline = false) => (
+    <>
+      <Box>
+        <Typography sx={styles.labelTitle}>{label}</Typography>
+        {description && (
+          <Typography sx={styles.labelDescription}>{description}</Typography>
+        )}
+      </Box>
+      <Box sx={isMultiline ? styles.multilineValue : styles.valueField}>
+        {formatValue(value)}
+      </Box>
+    </>
+  );
 
-  // Categorize attributes
+  // Categorize JIRA attributes for organized display
   const identificationAttrs = [
     "System Name / Identifier",
     "Name",
@@ -148,154 +198,177 @@ export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ projec
     "Human Oversight Mechanisms",
   ];
 
+  const categorizedAttrs = [
+    ...identificationAttrs,
+    ...ownershipAttrs,
+    ...classificationAttrs,
+    ...riskAttrs,
+    ...technicalAttrs,
+  ];
+
   const otherAttrs = Object.keys(attributes).filter(
-    (key) =>
-      ![
-        ...identificationAttrs,
-        ...ownershipAttrs,
-        ...classificationAttrs,
-        ...riskAttrs,
-        ...technicalAttrs,
-      ].includes(key)
+    (key) => !categorizedAttrs.includes(key)
   );
 
-  const renderField = (label: string, value: any) => (
-    <Box sx={styles.fieldContainer} key={label}>
-      <InputLabel sx={styles.label}>{label}</InputLabel>
-      <TextField
-        fullWidth
-        size="small"
-        value={formatValue(value)}
-        InputProps={{ readOnly: true }}
-        sx={styles.readOnlyField}
-        multiline={String(value || "").length > 100}
-        rows={String(value || "").length > 100 ? 3 : 1}
-      />
-    </Box>
-  );
-
-  const renderAttributeSection = (title: string, attrKeys: string[]) => {
-    const sectionAttrs = attrKeys.filter((key) => attributes[key] !== undefined);
-    if (sectionAttrs.length === 0) return null;
-
-    return (
-      <Box sx={{ mb: 3 }}>
-        <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#475467", mb: 2 }}>
-          {title}
-        </Typography>
-        <Stack direction="row" flexWrap="wrap" gap={2}>
-          {sectionAttrs.map((key) => (
-            <Box key={key} sx={{ minWidth: 280, flex: "1 1 280px", maxWidth: "calc(50% - 8px)" }}>
-              {renderField(key, attributes[key])}
-            </Box>
-          ))}
-        </Stack>
-      </Box>
-    );
+  // Render attribute rows for a category
+  const renderCategoryRows = (attrKeys: string[]) => {
+    return attrKeys
+      .filter((key) => attributes[key] !== undefined)
+      .map((key) => {
+        const value = attributes[key];
+        const isMultiline = String(value || "").length > 80;
+        return (
+          <React.Fragment key={key}>
+            {renderFieldRow(key, null, value, isMultiline)}
+          </React.Fragment>
+        );
+      });
   };
 
   return (
-    <Stack sx={{ width: "100%", maxWidth: 1200 }}>
-      {/* JIRA Source Badge */}
-      <Box sx={{ mb: 3, display: "flex", gap: 2, alignItems: "center" }}>
-        <Chip
-          icon={<Database size={14} />}
-          label="JIRA Assets Object"
-          size="small"
-          sx={{
-            backgroundColor: "#E3F2FD",
-            color: "#1565C0",
-            "& .MuiChip-icon": { color: "#1565C0" },
-          }}
-        />
-        <Typography sx={{ fontSize: 13, color: "#6B7280" }}>
-          This use case is imported from JIRA and is read-only
-        </Typography>
-      </Box>
-
-      {/* Basic Information Section */}
-      <Accordion
-        expanded={expandedSections.includes("basic")}
-        onChange={() => handleSectionToggle("basic")}
-        sx={{ mb: 2, boxShadow: "none", border: "1px solid #E5E7EB", borderRadius: "8px !important" }}
-      >
-        <AccordionSummary expandIcon={<ChevronDown size={20} />}>
-          <Typography sx={styles.sectionTitle}>Basic Information</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Stack direction="row" flexWrap="wrap" gap={2}>
-            <Box sx={{ minWidth: 280, flex: "1 1 280px" }}>
-              {renderField("Use Case ID", project.uc_id)}
-            </Box>
-            <Box sx={{ minWidth: 280, flex: "1 1 280px" }}>
-              {renderField("Name", project.project_title)}
-            </Box>
-            <Box sx={{ minWidth: 280, flex: "1 1 280px" }}>
-              {renderField("JIRA Object Key", jiraData?.objectKey)}
-            </Box>
-            <Box sx={{ minWidth: 280, flex: "1 1 280px" }}>
-              {renderField("Object Type", jiraData?.objectType?.name)}
-            </Box>
-            <Box sx={{ minWidth: 280, flex: "1 1 280px" }}>
-              {renderField("Created in JIRA", formatDate(jiraData?.created))}
-            </Box>
-            <Box sx={{ minWidth: 280, flex: "1 1 280px" }}>
-              {renderField("Last Updated in JIRA", formatDate(jiraData?.updated))}
-            </Box>
-            <Box sx={{ minWidth: 280, flex: "1 1 280px" }}>
-              {renderField("Sync Status", project._sync_status || "synced")}
-            </Box>
-          </Stack>
-        </AccordionDetails>
-      </Accordion>
-
-      {/* All Attributes Section */}
-      <Accordion
-        expanded={expandedSections.includes("attributes")}
-        onChange={() => handleSectionToggle("attributes")}
-        sx={{ mb: 2, boxShadow: "none", border: "1px solid #E5E7EB", borderRadius: "8px !important" }}
-      >
-        <AccordionSummary expandIcon={<ChevronDown size={20} />}>
-          <Typography sx={styles.sectionTitle}>
-            JIRA Attributes ({Object.keys(attributes).length})
+    <Stack>
+      <Box sx={styles.root}>
+        {/* JIRA Source Badge */}
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 2 }}>
+          <Chip
+            icon={<Database size={14} />}
+            label="JIRA Assets Object"
+            size="small"
+            sx={{
+              backgroundColor: "#E3F2FD",
+              color: "#1565C0",
+              "& .MuiChip-icon": { color: "#1565C0" },
+            }}
+          />
+          <Typography sx={{ fontSize: 13, color: "#6B7280" }}>
+            This use case is imported from JIRA and is read-only
           </Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          {renderAttributeSection("Identification", identificationAttrs)}
-          {renderAttributeSection("Ownership & Governance", ownershipAttrs)}
-          {renderAttributeSection("Classification & Function", classificationAttrs)}
-          {renderAttributeSection("Risk & Compliance", riskAttrs)}
-          {renderAttributeSection("Technical Details", technicalAttrs)}
-          {otherAttrs.length > 0 && renderAttributeSection("Other Attributes", otherAttrs)}
+        </Box>
 
-          {Object.keys(attributes).length === 0 && (
+        {/* Use Case Overview Card - matches native ProjectSettings */}
+        <Box sx={styles.card}>
+          <Typography sx={styles.sectionTitle}>Use Case Overview</Typography>
+          <Box sx={styles.gridContainer}>
+            {renderFieldRow(
+              "Use case title",
+              "Imported from JIRA Assets",
+              project.project_title
+            )}
+            {renderFieldRow(
+              "Use case ID",
+              "Generated identifier for this use case",
+              project.uc_id
+            )}
+            {renderFieldRow(
+              "JIRA object key",
+              "Original key in JIRA Assets",
+              jiraData?.objectKey
+            )}
+            {renderFieldRow(
+              "Sync status",
+              "Current synchronization state",
+              project._sync_status || "synced"
+            )}
+          </Box>
+        </Box>
+
+        {/* JIRA Details Card */}
+        <Box sx={styles.card}>
+          <Typography sx={styles.sectionTitle}>JIRA Details</Typography>
+          <Box sx={styles.gridContainer}>
+            {renderFieldRow(
+              "Object type",
+              "JIRA Assets object type",
+              jiraData?.objectType?.name
+            )}
+            {renderFieldRow(
+              "Created in JIRA",
+              "When this object was created",
+              formatDate(jiraData?.created)
+            )}
+            {renderFieldRow(
+              "Last updated in JIRA",
+              "When this object was last modified",
+              formatDate(jiraData?.updated)
+            )}
+            {renderFieldRow(
+              "JIRA Object ID",
+              "Internal JIRA identifier",
+              jiraData?.id
+            )}
+          </Box>
+        </Box>
+
+        {/* Identification & Description Card */}
+        {identificationAttrs.some((key) => attributes[key] !== undefined) && (
+          <Box sx={styles.card}>
+            <Typography sx={styles.sectionTitle}>Identification & Description</Typography>
+            <Box sx={styles.gridContainer}>
+              {renderCategoryRows(identificationAttrs)}
+            </Box>
+          </Box>
+        )}
+
+        {/* Ownership & Governance Card */}
+        {ownershipAttrs.some((key) => attributes[key] !== undefined) && (
+          <Box sx={styles.card}>
+            <Typography sx={styles.sectionTitle}>Ownership & Governance</Typography>
+            <Box sx={styles.gridContainer}>
+              {renderCategoryRows(ownershipAttrs)}
+            </Box>
+          </Box>
+        )}
+
+        {/* Classification & Function Card */}
+        {classificationAttrs.some((key) => attributes[key] !== undefined) && (
+          <Box sx={styles.card}>
+            <Typography sx={styles.sectionTitle}>Classification & Function</Typography>
+            <Box sx={styles.gridContainer}>
+              {renderCategoryRows(classificationAttrs)}
+            </Box>
+          </Box>
+        )}
+
+        {/* Risk & Compliance Card */}
+        {riskAttrs.some((key) => attributes[key] !== undefined) && (
+          <Box sx={styles.card}>
+            <Typography sx={styles.sectionTitle}>Risk & Compliance</Typography>
+            <Box sx={styles.gridContainer}>
+              {renderCategoryRows(riskAttrs)}
+            </Box>
+          </Box>
+        )}
+
+        {/* Technical Details Card */}
+        {technicalAttrs.some((key) => attributes[key] !== undefined) && (
+          <Box sx={styles.card}>
+            <Typography sx={styles.sectionTitle}>Technical Details</Typography>
+            <Box sx={styles.gridContainer}>
+              {renderCategoryRows(technicalAttrs)}
+            </Box>
+          </Box>
+        )}
+
+        {/* Other Attributes Card */}
+        {otherAttrs.length > 0 && (
+          <Box sx={styles.card}>
+            <Typography sx={styles.sectionTitle}>Other Attributes</Typography>
+            <Box sx={styles.gridContainer}>
+              {renderCategoryRows(otherAttrs)}
+            </Box>
+          </Box>
+        )}
+
+        {/* No attributes message */}
+        {Object.keys(attributes).length === 0 && (
+          <Box sx={styles.card}>
+            <Typography sx={styles.sectionTitle}>JIRA Attributes</Typography>
             <Typography sx={{ color: "#6B7280", fontStyle: "italic" }}>
               No attributes available for this object
             </Typography>
-          )}
-        </AccordionDetails>
-      </Accordion>
-
-      {/* Raw Data Section (collapsed by default) */}
-      <Accordion
-        expanded={expandedSections.includes("raw")}
-        onChange={() => handleSectionToggle("raw")}
-        sx={{ boxShadow: "none", border: "1px solid #E5E7EB", borderRadius: "8px !important" }}
-      >
-        <AccordionSummary expandIcon={<ChevronDown size={20} />}>
-          <Typography sx={styles.sectionTitle}>Raw JIRA Data</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <TextField
-            fullWidth
-            multiline
-            rows={15}
-            value={JSON.stringify(jiraData, null, 2)}
-            InputProps={{ readOnly: true, sx: { fontFamily: "monospace", fontSize: 12 } }}
-            sx={styles.readOnlyField}
-          />
-        </AccordionDetails>
-      </Accordion>
+          </Box>
+        )}
+      </Box>
     </Stack>
   );
 };

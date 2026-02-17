@@ -648,26 +648,21 @@ async function syncObjects(
         );
         objectsCreated++;
       } else {
-        // Update existing record - check if JIRA data has changed
-        const existingData = typeof existing.data === 'string' ? JSON.parse(existing.data) : existing.data;
-        const jiraUpdatedAt = jiraObj.updated ? new Date(jiraObj.updated) : null;
-        const existingUpdatedAt = existingData?.updated ? new Date(existingData.updated) : null;
-
-        if (!existingUpdatedAt || !jiraUpdatedAt || jiraUpdatedAt > existingUpdatedAt) {
-          await sequelize.query(
-            `UPDATE "${tenantId}".jira_assets_use_cases
-             SET data = :data, last_synced_at = :lastSyncedAt, sync_status = 'updated', updated_at = CURRENT_TIMESTAMP
-             WHERE jira_object_id = :jiraObjectId`,
-            {
-              replacements: {
-                data: JSON.stringify(data),
-                lastSyncedAt: now,
-                jiraObjectId: jiraObj.id,
-              },
-            }
-          );
-          objectsUpdated++;
-        }
+        // Always overwrite with latest data from JIRA
+        // (JIRA may not update timestamps when only attributes change)
+        await sequelize.query(
+          `UPDATE "${tenantId}".jira_assets_use_cases
+           SET data = :data, last_synced_at = :lastSyncedAt, sync_status = 'synced', updated_at = CURRENT_TIMESTAMP
+           WHERE jira_object_id = :jiraObjectId`,
+          {
+            replacements: {
+              data: JSON.stringify(data),
+              lastSyncedAt: now,
+              jiraObjectId: jiraObj.id,
+            },
+          }
+        );
+        objectsUpdated++;
       }
       existingMap.delete(jiraObj.id);
     }
