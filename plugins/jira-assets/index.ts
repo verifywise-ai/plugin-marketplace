@@ -284,7 +284,7 @@ class JiraAssetsClient {
           qlQuery: `objectTypeId = ${objectTypeId}`,
           resultPerPage: maxResults,
           includeAttributes: true,
-          includeAttributeValues: true,
+          includeTypeAttributes: true,
         }
       );
       const resultStr = JSON.stringify(result, null, 2);
