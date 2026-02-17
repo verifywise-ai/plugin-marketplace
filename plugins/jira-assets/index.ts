@@ -370,6 +370,13 @@ export async function install(
       )
     `);
 
+    // Add _source column to projects table for plugin identification
+    // This allows the slot system to recognize plugin-sourced projects
+    await sequelize.query(`
+      ALTER TABLE "${tenantId}".projects
+      ADD COLUMN IF NOT EXISTS _source VARCHAR(100)
+    `);
+
     // Create indexes for jira_assets_use_cases
     await sequelize.query(`
       CREATE INDEX IF NOT EXISTS idx_jira_use_cases_jira_object_id
@@ -440,6 +447,13 @@ export async function uninstall(
     await sequelize.query(`DROP TABLE IF EXISTS "${tenantId}".jira_assets_config CASCADE`);
 
     // Drop sequence
+    await sequelize.query(`DROP SEQUENCE IF EXISTS "${tenantId}".jira_use_case_uc_id_seq`);
+
+    // Remove _source column from projects table (clean up)
+    await sequelize.query(`
+      ALTER TABLE "${tenantId}".projects
+      DROP COLUMN IF EXISTS _source
+    `);
 
     return {
       success: true,
@@ -651,12 +665,12 @@ async function syncObjects(
       };
 
       if (!existing) {
-        // Create native project entry
+        // Create native project entry with _source for plugin identification
         const ucId = await generateUcId(tenantId, sequelize);
         const projectResult: any[] = await sequelize.query(
           `INSERT INTO "${tenantId}".projects
-           (uc_id, project_title, owner, start_date, goal, geography, last_updated, created_at)
-           VALUES (:ucId, :title, 1, :startDate, :goal, 1, :lastUpdated, :createdAt)
+           (uc_id, project_title, owner, start_date, goal, geography, last_updated, created_at, _source)
+           VALUES (:ucId, :title, 1, :startDate, :goal, 1, :lastUpdated, :createdAt, 'jira-assets')
            RETURNING id`,
           {
             replacements: {
@@ -1375,11 +1389,11 @@ async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRoute
         // Generate UC-ID
         const ucId = await generateUcId(tenantId, sequelize);
 
-        // Create minimal native project entry
+        // Create native project entry with _source for plugin identification
         const projectResult: any[] = await sequelize.query(
           `INSERT INTO "${tenantId}".projects
-           (uc_id, project_title, owner, start_date, goal, geography, last_updated, created_at)
-           VALUES (:ucId, :title, 1, :startDate, :goal, 1, :lastUpdated, :createdAt)
+           (uc_id, project_title, owner, start_date, goal, geography, last_updated, created_at, _source)
+           VALUES (:ucId, :title, 1, :startDate, :goal, 1, :lastUpdated, :createdAt, 'jira-assets')
            RETURNING id`,
           {
             replacements: {
@@ -1545,17 +1559,19 @@ async function handleGetUseCases(ctx: PluginRouteContext): Promise<PluginRouteRe
 }
 
 /**
- * GET /use-cases/:id - Get a specific use case
+ * GET /use-cases/:id - Get a specific use case by project_id
+ * The :id parameter is the projects.id (native project ID)
  * Returns data formatted for the frontend ProjectView
  */
 async function handleGetUseCase(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
   const { sequelize, tenantId, params } = ctx;
-  const id = params.id;
+  const projectId = params.id; // This is projects.id
 
   try {
+    // Look up by project_id (native project ID)
     const useCases: any[] = await sequelize.query(
-      `SELECT * FROM "${tenantId}".jira_assets_use_cases WHERE id = :id`,
-      { replacements: { id }, type: "SELECT" }
+      `SELECT * FROM "${tenantId}".jira_assets_use_cases WHERE project_id = :projectId`,
+      { replacements: { projectId }, type: "SELECT" }
     );
 
     if (useCases.length === 0) {
@@ -1565,23 +1581,32 @@ async function handleGetUseCase(ctx: PluginRouteContext): Promise<PluginRouteRes
     const uc = useCases[0];
     const data = typeof uc.data === 'string' ? JSON.parse(uc.data) : uc.data;
 
+    // Fetch native project data for complete info
+    const projects: any[] = await sequelize.query(
+      `SELECT * FROM "${tenantId}".projects WHERE id = :projectId`,
+      { replacements: { projectId }, type: "SELECT" }
+    );
+    const nativeProject = projects[0] || {};
+
     // Transform to match Project interface expected by frontend
+    // Use project_id (from projects table) as id so native APIs work
     const transformedUseCase = {
-      id: uc.id,
-      uc_id: uc.uc_id,
-      project_title: data?.label || data?.attributes?.Name || uc.uc_id,
-      owner: null,
+      id: uc.project_id,
+      uc_id: nativeProject.uc_id || uc.uc_id,
+      project_title: nativeProject.project_title || data?.label || data?.attributes?.Name || uc.uc_id,
+      owner: nativeProject.owner || null,
       members: [],
-      start_date: data?.created || uc.created_at,
-      ai_risk_classification: null,
-      type_of_high_risk_role: null,
-      goal: data?.attributes?.Description || data?.attributes?.Purpose || "",
-      last_updated: data?.updated || uc.updated_at,
-      last_updated_by: null,
+      start_date: nativeProject.start_date || data?.created || uc.created_at,
+      ai_risk_classification: nativeProject.ai_risk_classification || null,
+      type_of_high_risk_role: nativeProject.type_of_high_risk_role || null,
+      goal: nativeProject.goal || data?.attributes?.Description || data?.attributes?.Purpose || "",
+      last_updated: nativeProject.last_updated || data?.updated || uc.updated_at,
+      last_updated_by: nativeProject.last_updated_by || null,
       framework: [],
       monitored_regulations_and_standards: [],
       // Plugin-specific fields
       _source: "jira-assets",
+      _jira_use_case_id: uc.id,
       _jira_data: data,
       _sync_status: uc.sync_status,
     };
@@ -1593,16 +1618,19 @@ async function handleGetUseCase(ctx: PluginRouteContext): Promise<PluginRouteRes
 }
 
 /**
- * DELETE /use-cases/:id - Delete a use case
+ * DELETE /use-cases/:id - Delete a use case by project_id
+ * The :id parameter is the projects.id (native project ID)
+ * Deletes the native project (cascades to jira_assets_use_cases via FK)
  */
 async function handleDeleteUseCase(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
   const { sequelize, tenantId, params } = ctx;
-  const id = params.id;
+  const projectId = params.id; // This is projects.id
 
   try {
+    // Delete the native project (cascades to jira_assets_use_cases via FK)
     await sequelize.query(
-      `DELETE FROM "${tenantId}".jira_assets_use_cases WHERE id = :id`,
-      { replacements: { id } }
+      `DELETE FROM "${tenantId}".projects WHERE id = :projectId`,
+      { replacements: { projectId } }
     );
 
     return { status: 200, data: { success: true } };

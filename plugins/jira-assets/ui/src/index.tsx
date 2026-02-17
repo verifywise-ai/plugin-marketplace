@@ -10,3 +10,4 @@ export { JiraAssetsUseCasesTab } from "./JiraAssetsUseCasesTab";
 export { JiraUseCaseOverview } from "./JiraUseCaseOverview";
 export { JiraUseCaseSettings } from "./JiraUseCaseSettings";
 export { JiraUseCaseFrameworks } from "./JiraUseCaseFrameworks";
+export { JiraUseCaseMonitoring } from "./JiraUseCaseMonitoring";

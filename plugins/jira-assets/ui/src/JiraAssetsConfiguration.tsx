@@ -49,6 +49,7 @@ interface JiraObject {
 
 interface ImportedUseCase {
   id: number;
+  project_id: number;
   jira_object_id: string;
   uc_id: string;
   data: any;
@@ -927,7 +928,18 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
                     return (
                       <TableRow key={uc.id} hover>
                         <TableCell sx={{ fontSize: "13px", fontFamily: "monospace", py: 1 }}>{uc.uc_id}</TableCell>
-                        <TableCell sx={{ fontSize: "13px", py: 1 }}>{uc.name || data?.label || '-'}</TableCell>
+                        <TableCell
+                          sx={{
+                            fontSize: "13px",
+                            py: 1,
+                            cursor: "pointer",
+                            color: "#13715B",
+                            "&:hover": { textDecoration: "underline" }
+                          }}
+                          onClick={() => window.location.href = `/project-view?projectId=jira-assets-${uc.project_id}`}
+                        >
+                          {uc.name || data?.label || '-'}
+                        </TableCell>
                         <TableCell sx={{ fontSize: "13px", fontFamily: "monospace", py: 1 }}>{objectKey}</TableCell>
                         <TableCell sx={{ py: 1 }}>
                           <Chip

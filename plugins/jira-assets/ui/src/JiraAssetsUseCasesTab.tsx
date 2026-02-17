@@ -34,6 +34,7 @@ import {
   AlertCircle,
   Clock,
   Trash2,
+  ExternalLink,
 } from "lucide-react";
 
 interface JiraObject {
@@ -60,6 +61,7 @@ interface UseCaseData {
 
 interface UseCase {
   id: number;
+  project_id: number;
   jira_object_id: string;
   uc_id: string;
   data: UseCaseData;
@@ -291,10 +293,16 @@ export const JiraAssetsUseCasesTab: React.FC<JiraAssetsUseCasesTabProps> = ({
     }
   };
 
-  // View use case details
+  // View use case details in drawer
   const handleViewDetails = (useCase: UseCase) => {
     setSelectedUseCase(useCase);
     setDrawerOpen(true);
+  };
+
+  // Navigate to full use case view (using plugin-sourced format)
+  const handleOpenUseCase = (useCase: UseCase) => {
+    // Format: jira-assets-{id} triggers useProjectData to fetch from plugin API
+    window.location.href = `/project-view?projectId=jira-assets-${useCase.project_id}`;
   };
 
 
@@ -456,14 +464,29 @@ export const JiraAssetsUseCasesTab: React.FC<JiraAssetsUseCasesTabProps> = ({
                 return (
                   <TableRow key={uc.id} hover>
                     <TableCell sx={{ fontSize: "13px", fontFamily: "monospace" }}>{uc.uc_id}</TableCell>
-                    <TableCell sx={{ fontSize: "13px" }}>{data?.label || data?.attributes?.Name || '-'}</TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        color: "#13715B",
+                        "&:hover": { textDecoration: "underline" }
+                      }}
+                      onClick={() => handleOpenUseCase(uc)}
+                    >
+                      {data?.label || data?.attributes?.Name || '-'}
+                    </TableCell>
                     <TableCell sx={{ fontSize: "13px", fontFamily: "monospace" }}>{data?.objectKey || '-'}</TableCell>
                     <TableCell>{getSyncStatusChip(uc.sync_status)}</TableCell>
                     <TableCell sx={{ fontSize: "12px", color: "#667085" }}>
                       {formatDate(uc.last_synced_at)}
                     </TableCell>
                     <TableCell align="right">
-                      <Tooltip title="View Details">
+                      <Tooltip title="Open Use Case">
+                        <IconButton size="small" onClick={() => handleOpenUseCase(uc)} color="primary">
+                          <ExternalLink size={16} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="View JIRA Data">
                         <IconButton size="small" onClick={() => handleViewDetails(uc)}>
                           <Eye size={16} />
                         </IconButton>
