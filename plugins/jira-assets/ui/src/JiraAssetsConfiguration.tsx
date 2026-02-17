@@ -15,7 +15,18 @@ import {
   Divider,
   Chip,
   Collapse,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Checkbox,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
+import { RefreshCw, Download, Trash2, Eye } from "lucide-react";
 
 interface Schema {
   id: string;
@@ -27,6 +38,24 @@ interface ObjectType {
   id: string;
   name: string;
   objectCount?: number;
+}
+
+interface JiraObject {
+  id: string;
+  key: string;
+  name: string;
+  attributes: Record<string, any>;
+  created: string;
+  updated: string;
+}
+
+interface ImportedUseCase {
+  id: number;
+  jira_object_id: string;
+  uc_id: string;
+  data: any;
+  last_synced_at: string;
+  sync_status: string;
 }
 
 // apiServices type from VerifyWise
@@ -114,6 +143,17 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Import state
+  const [jiraObjects, setJiraObjects] = useState<JiraObject[]>([]);
+  const [selectedObjects, setSelectedObjects] = useState<Set<string>>(new Set());
+  const [isLoadingObjects, setIsLoadingObjects] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Imported use cases state
+  const [importedUseCases, setImportedUseCases] = useState<ImportedUseCase[]>([]);
+  const [isLoadingUseCases, setIsLoadingUseCases] = useState(false);
+
   // Load config from plugin's own endpoint on mount (only once)
   useEffect(() => {
     if (configLoaded || !apiServices) return;
@@ -178,6 +218,113 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
       setIsLoadingObjectTypes(false);
     }
   }, [hasApiAccess, pluginApiCall]);
+
+  // Load JIRA objects for import
+  const loadJiraObjects = useCallback(async () => {
+    if (!hasApiAccess || !localConfig.selected_object_type_id) return;
+
+    setIsLoadingObjects(true);
+    setImportMessage(null);
+    try {
+      const response = await pluginApiCall("GET", `/object-types/${localConfig.selected_object_type_id}/objects`);
+      if (response && Array.isArray(response)) {
+        // Filter out already imported objects
+        const importedIds = new Set(importedUseCases.map((uc) => uc.jira_object_id));
+        const newObjects = response.filter((obj: JiraObject) => !importedIds.has(obj.id));
+        setJiraObjects(newObjects);
+      }
+    } catch (error: any) {
+      setImportMessage({ type: "error", text: error.message || "Failed to load JIRA objects" });
+    } finally {
+      setIsLoadingObjects(false);
+    }
+  }, [hasApiAccess, pluginApiCall, localConfig.selected_object_type_id, importedUseCases]);
+
+  // Load imported use cases
+  const loadImportedUseCases = useCallback(async () => {
+    if (!hasApiAccess) return;
+
+    setIsLoadingUseCases(true);
+    try {
+      const response = await pluginApiCall("GET", "/use-cases");
+      if (response && Array.isArray(response)) {
+        setImportedUseCases(response);
+      }
+    } catch (error) {
+      console.error("Failed to load imported use cases:", error);
+    } finally {
+      setIsLoadingUseCases(false);
+    }
+  }, [hasApiAccess, pluginApiCall]);
+
+  // Import selected objects
+  const handleImport = async () => {
+    if (!hasApiAccess || selectedObjects.size === 0) return;
+
+    setIsImporting(true);
+    setImportMessage(null);
+    try {
+      const response = await pluginApiCall("POST", "/import", {
+        object_ids: Array.from(selectedObjects),
+      });
+
+      if (response?.success) {
+        setImportMessage({ type: "success", text: `Successfully imported ${response.imported} objects` });
+        setSelectedObjects(new Set());
+        // Reload both lists
+        await loadImportedUseCases();
+        await loadJiraObjects();
+      } else {
+        setImportMessage({ type: "error", text: response?.error || "Import failed" });
+      }
+    } catch (error: any) {
+      setImportMessage({ type: "error", text: error.message || "Import failed" });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Delete imported use case
+  const handleDeleteUseCase = async (useCase: ImportedUseCase) => {
+    if (!hasApiAccess) return;
+
+    const data = typeof useCase.data === 'string' ? JSON.parse(useCase.data) : useCase.data;
+    const name = data?.label || data?.attributes?.Name || useCase.uc_id;
+
+    if (!window.confirm(`Are you sure you want to delete "${name}"?`)) {
+      return;
+    }
+
+    try {
+      await pluginApiCall("DELETE", `/use-cases/${useCase.id}`);
+      await loadImportedUseCases();
+      await loadJiraObjects();
+    } catch (error: any) {
+      setImportMessage({ type: "error", text: error.message || "Failed to delete" });
+    }
+  };
+
+  // Toggle object selection
+  const toggleObjectSelection = (objectId: string) => {
+    setSelectedObjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(objectId)) {
+        next.delete(objectId);
+      } else {
+        next.add(objectId);
+      }
+      return next;
+    });
+  };
+
+  // Select all objects
+  const toggleSelectAll = () => {
+    if (selectedObjects.size === jiraObjects.length) {
+      setSelectedObjects(new Set());
+    } else {
+      setSelectedObjects(new Set(jiraObjects.map((obj) => obj.id)));
+    }
+  };
 
   // Test connection handler
   const handleTestConnection = async () => {
@@ -282,6 +429,13 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
       loadObjectTypes(localConfig.selected_schema_id);
     }
   }, [localConfig.has_api_token, localConfig.selected_schema_id, loadObjectTypes, objectTypes.length]);
+
+  // Load imported use cases on mount
+  useEffect(() => {
+    if (hasApiAccess && configLoaded) {
+      loadImportedUseCases();
+    }
+  }, [hasApiAccess, configLoaded, loadImportedUseCases]);
 
   const syncIntervalOptions = [
     { value: 1, label: "Every hour" },
@@ -604,6 +758,184 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
           )}
         </Button>
       </Box>
+
+      {/* Only show import section if config is saved and object type is selected */}
+      {localConfig.has_api_token && localConfig.selected_object_type_id && (
+        <>
+          <Divider sx={{ my: 3 }} />
+
+          {/* Step 4: Import Objects */}
+          <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2, color: "#344054" }}>
+            Step 4: Import JIRA Objects
+          </Typography>
+
+          <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+            <Button
+              variant="outlined"
+              startIcon={isLoadingObjects ? <CircularProgress size={16} /> : <Download size={16} />}
+              onClick={loadJiraObjects}
+              disabled={isLoadingObjects}
+              sx={{
+                borderColor: "#13715B",
+                color: "#13715B",
+                textTransform: "none",
+                fontSize: "13px",
+                "&:hover": { borderColor: "#0f5a47", backgroundColor: "rgba(19, 113, 91, 0.04)" },
+              }}
+            >
+              {isLoadingObjects ? "Loading..." : "Fetch Objects from JIRA"}
+            </Button>
+          </Box>
+
+          {importMessage && (
+            <Alert severity={importMessage.type} sx={{ mb: 2, fontSize: "13px" }} onClose={() => setImportMessage(null)}>
+              {importMessage.text}
+            </Alert>
+          )}
+
+          {jiraObjects.length > 0 && (
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={selectedObjects.size === jiraObjects.length && jiraObjects.length > 0}
+                      indeterminate={selectedObjects.size > 0 && selectedObjects.size < jiraObjects.length}
+                      onChange={toggleSelectAll}
+                      size="small"
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" fontSize={13}>
+                      Select All ({jiraObjects.length} available)
+                    </Typography>
+                  }
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleImport}
+                  disabled={isImporting || selectedObjects.size === 0}
+                  startIcon={isImporting ? <CircularProgress size={16} /> : <Download size={16} />}
+                  sx={{
+                    backgroundColor: "#13715B",
+                    textTransform: "none",
+                    fontSize: "13px",
+                    "&:hover": { backgroundColor: "#0f5a47" },
+                  }}
+                >
+                  {isImporting ? "Importing..." : `Import ${selectedObjects.size} Selected`}
+                </Button>
+              </Box>
+
+              <TableContainer component={Paper} sx={{ maxHeight: 300, boxShadow: "none", border: "1px solid #e4e7ec" }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: "#f9fafb" }}>
+                      <TableCell padding="checkbox" />
+                      <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>Key</TableCell>
+                      <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>Name</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {jiraObjects.map((obj) => (
+                      <TableRow
+                        key={obj.id}
+                        hover
+                        selected={selectedObjects.has(obj.id)}
+                        onClick={() => toggleObjectSelection(obj.id)}
+                        sx={{ cursor: "pointer" }}
+                      >
+                        <TableCell padding="checkbox">
+                          <Checkbox checked={selectedObjects.has(obj.id)} size="small" />
+                        </TableCell>
+                        <TableCell sx={{ fontSize: "13px", fontFamily: "monospace" }}>{obj.key}</TableCell>
+                        <TableCell sx={{ fontSize: "13px" }}>{obj.name}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+
+          {jiraObjects.length === 0 && !isLoadingObjects && (
+            <Alert severity="info" sx={{ mb: 3, fontSize: "13px" }}>
+              Click "Fetch Objects from JIRA" to load available objects for import.
+            </Alert>
+          )}
+
+          <Divider sx={{ my: 3 }} />
+
+          {/* Imported Use Cases */}
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+            <Typography variant="subtitle2" fontWeight={600} sx={{ color: "#344054" }}>
+              Imported Use Cases ({importedUseCases.length})
+            </Typography>
+            <Button
+              variant="text"
+              startIcon={<RefreshCw size={14} />}
+              onClick={loadImportedUseCases}
+              disabled={isLoadingUseCases}
+              sx={{ textTransform: "none", fontSize: "12px", color: "#667085" }}
+            >
+              Refresh
+            </Button>
+          </Box>
+
+          {isLoadingUseCases ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : importedUseCases.length === 0 ? (
+            <Alert severity="info" sx={{ fontSize: "13px" }}>
+              No objects imported yet. Fetch objects from JIRA and import them above.
+            </Alert>
+          ) : (
+            <TableContainer component={Paper} sx={{ maxHeight: 400, boxShadow: "none", border: "1px solid #e4e7ec" }}>
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: "#f9fafb" }}>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>UC-ID</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>Name</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>JIRA Key</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "12px" }} align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {importedUseCases.map((uc) => {
+                    const data = typeof uc.data === 'string' ? JSON.parse(uc.data) : uc.data;
+                    const name = data?.label || data?.attributes?.Name || '-';
+                    const objectKey = data?.objectKey || '-';
+                    return (
+                      <TableRow key={uc.id} hover>
+                        <TableCell sx={{ fontSize: "13px", fontFamily: "monospace" }}>{uc.uc_id}</TableCell>
+                        <TableCell sx={{ fontSize: "13px" }}>{name}</TableCell>
+                        <TableCell sx={{ fontSize: "13px", fontFamily: "monospace" }}>{objectKey}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={uc.sync_status}
+                            size="small"
+                            color={uc.sync_status === "synced" ? "success" : uc.sync_status === "updated" ? "info" : "default"}
+                            sx={{ fontSize: "11px" }}
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Tooltip title="Delete">
+                            <IconButton size="small" onClick={() => handleDeleteUseCase(uc)} color="error">
+                              <Trash2 size={16} />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </>
+      )}
     </Box>
   );
 };
