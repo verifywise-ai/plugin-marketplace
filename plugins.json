@@ -359,11 +359,6 @@
             "renderType": "raw"
           },
           {
-            "slotId": "page.usecase.frameworks",
-            "componentName": "JiraUseCaseFrameworks",
-            "renderType": "raw"
-          },
-          {
             "slotId": "page.usecase.monitoring",
             "componentName": "JiraUseCaseMonitoring",
             "renderType": "raw"
