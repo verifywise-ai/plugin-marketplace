@@ -370,12 +370,8 @@ export async function install(
       )
     `);
 
-    // Add _source column to projects table for plugin identification
-    // This allows the slot system to recognize plugin-sourced projects
-    await sequelize.query(`
-      ALTER TABLE "${tenantId}".projects
-      ADD COLUMN IF NOT EXISTS _source VARCHAR(100)
-    `);
+    // Note: _source column is part of core schema (added via migration)
+    // Plugin uses it to identify JIRA-imported projects
 
     // Create indexes for jira_assets_use_cases
     await sequelize.query(`
@@ -449,11 +445,8 @@ export async function uninstall(
     // Drop sequence
     await sequelize.query(`DROP SEQUENCE IF EXISTS "${tenantId}".jira_use_case_uc_id_seq`);
 
-    // Remove _source column from projects table (clean up)
-    await sequelize.query(`
-      ALTER TABLE "${tenantId}".projects
-      DROP COLUMN IF EXISTS _source
-    `);
+    // Note: _source column is part of core schema, not removed on uninstall
+    // JIRA-imported projects are deleted above, clearing their _source values
 
     return {
       success: true,
@@ -898,8 +891,9 @@ export const metadata: PluginMetadata = {
 
 export const dataProviders = {
   // This plugin provides use-cases/projects data
+  // DISABLED: We now create native projects instead, so no need for dataProviders
   "use-cases": {
-    enabled: true,
+    enabled: false,
     // Transform JIRA use cases to match the Project interface expected by the frontend
     async getData(ctx: { sequelize: any; tenantId: string }): Promise<any[]> {
       const { sequelize, tenantId } = ctx;
@@ -1747,6 +1741,94 @@ async function handleSaveMappings(ctx: PluginRouteContext): Promise<PluginRouteR
 }
 
 /**
+ * Get all custom frameworks and their progress for a project
+ * This allows JIRA use-cases to show completion status for plugin frameworks
+ */
+async function handleGetCustomFrameworksProgress(
+  ctx: PluginRouteContext
+): Promise<PluginRouteResponse> {
+  const { sequelize, tenantId, params } = ctx;
+  const projectId = parseInt(params.projectId);
+
+  try {
+    // Check if custom_frameworks table exists
+    const [tables] = await sequelize.query(`
+      SELECT table_name FROM information_schema.tables
+      WHERE table_schema = :tenantId AND table_name = 'custom_frameworks'
+    `, { replacements: { tenantId } });
+
+    if (tables.length === 0) {
+      // No custom frameworks table - return empty array
+      return { status: 200, data: [] };
+    }
+
+    // Get all custom frameworks assigned to this project
+    const [frameworks] = await sequelize.query(`
+      SELECT cf.id, cf.name, cf.plugin_key, cf.hierarchy_type,
+             cfp.id as project_framework_id
+      FROM "${tenantId}".custom_frameworks cf
+      JOIN "${tenantId}".custom_framework_projects cfp ON cf.id = cfp.framework_id
+      WHERE cfp.project_id = :projectId
+      ORDER BY cf.name
+    `, { replacements: { projectId } });
+
+    // For each framework, calculate progress
+    const frameworksWithProgress = await Promise.all(
+      (frameworks as any[]).map(async (fw) => {
+        let total = 0;
+        let completed = 0;
+
+        try {
+          if (fw.hierarchy_type === "three_level") {
+            // For three-level hierarchies, count level3 items
+            const [stats] = await sequelize.query(`
+              SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN l3.status = 'Implemented' THEN 1 ELSE 0 END) as completed
+              FROM "${tenantId}".custom_framework_level3_impl l3
+              JOIN "${tenantId}".custom_framework_level2_impl l2 ON l3.level2_impl_id = l2.id
+              WHERE l2.project_framework_id = :projectFrameworkId
+            `, { replacements: { projectFrameworkId: fw.project_framework_id } });
+
+            total = parseInt(stats[0]?.total || '0');
+            completed = parseInt(stats[0]?.completed || '0');
+          } else {
+            // For two-level hierarchies, count level2 items
+            const [stats] = await sequelize.query(`
+              SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'Implemented' THEN 1 ELSE 0 END) as completed
+              FROM "${tenantId}".custom_framework_level2_impl
+              WHERE project_framework_id = :projectFrameworkId
+            `, { replacements: { projectFrameworkId: fw.project_framework_id } });
+
+            total = parseInt(stats[0]?.total || '0');
+            completed = parseInt(stats[0]?.completed || '0');
+          }
+        } catch (err) {
+          // If progress query fails, return 0/0
+          console.error(`Error getting progress for framework ${fw.name}:`, err);
+        }
+
+        return {
+          framework_id: fw.id,
+          name: fw.name,
+          plugin_key: fw.plugin_key,
+          total,
+          completed,
+          percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
+        };
+      })
+    );
+
+    return { status: 200, data: frameworksWithProgress };
+  } catch (error: any) {
+    console.error("Error fetching custom frameworks progress:", error);
+    return { status: 500, data: { error: error.message } };
+  }
+}
+
+/**
  * Plugin router - maps routes to handler functions
  */
 export const router: Record<string, (ctx: PluginRouteContext) => Promise<PluginRouteResponse>> = {
@@ -1776,4 +1858,7 @@ export const router: Record<string, (ctx: PluginRouteContext) => Promise<PluginR
   "GET /use-cases": handleGetUseCases,
   "GET /use-cases/:id": handleGetUseCase,
   "DELETE /use-cases/:id": handleDeleteUseCase,
+
+  // Custom frameworks progress (for Overview completion status)
+  "GET /projects/:projectId/custom-frameworks-progress": handleGetCustomFrameworksProgress,
 };

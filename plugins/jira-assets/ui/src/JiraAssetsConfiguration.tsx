@@ -2,13 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Typography,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  FormControlLabel,
-  Switch,
-  Button,
   Stack,
   Alert,
   CircularProgress,
@@ -23,8 +16,12 @@ import {
   TableRow,
   Paper,
   Checkbox,
+  Button,
+  FormControlLabel,
+  SelectChangeEvent,
 } from "@mui/material";
 import { RefreshCw, Download } from "lucide-react";
+import { VWField, VWSelect, VWToggle, VWButton } from "./VWComponents";
 
 interface Schema {
   id: string;
@@ -471,56 +468,41 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
 
       <Stack spacing={2.5}>
         <Box>
-          <Typography variant="body2" fontWeight={500} fontSize={13} sx={{ mb: 0.75, color: "#344054" }}>
-            Deployment Type *
-          </Typography>
-          <FormControl fullWidth size="small">
-            <Select
-              value={localConfig.deployment_type || "cloud"}
-              onChange={(e) => handleChange("deployment_type", e.target.value)}
-              sx={{ fontSize: "13px", backgroundColor: "white" }}
-            >
-              <MenuItem value="cloud" sx={{ fontSize: "13px" }}>
-                JIRA Cloud (Atlassian-hosted)
-              </MenuItem>
-              <MenuItem value="datacenter" sx={{ fontSize: "13px" }}>
-                JIRA Data Center / Server (Self-hosted)
-              </MenuItem>
-            </Select>
-          </FormControl>
+          <VWSelect
+            id="deployment_type"
+            label="Deployment Type"
+            isRequired
+            value={localConfig.deployment_type || "cloud"}
+            onChange={(e) => handleChange("deployment_type", e.target.value)}
+            items={[
+              { _id: "cloud", name: "JIRA Cloud (Atlassian-hosted)" },
+              { _id: "datacenter", name: "JIRA Data Center / Server (Self-hosted)" },
+            ]}
+          />
           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
             Select Cloud for *.atlassian.net, or Data Center for self-hosted JIRA
           </Typography>
         </Box>
 
         <Box>
-          <Typography variant="body2" fontWeight={500} fontSize={13} sx={{ mb: 0.75, color: "#344054" }}>
-            JIRA Base URL *
-          </Typography>
-          <TextField
-            fullWidth
+          <VWField
+            id="jira_base_url"
+            label="JIRA Base URL"
+            isRequired
             placeholder={localConfig.deployment_type === "datacenter" ? "https://jira.your-company.com" : "https://your-company.atlassian.net"}
             value={localConfig.jira_base_url || ""}
             onChange={(e) => handleChange("jira_base_url", e.target.value)}
-            size="small"
-            sx={{ "& .MuiOutlinedInput-root": { fontSize: "13px", backgroundColor: "white" } }}
           />
         </Box>
 
         <Box>
-          <Typography variant="body2" fontWeight={500} fontSize={13} sx={{ mb: 0.75, color: "#344054" }}>
-            {localConfig.deployment_type === "datacenter" ? "Insight Object Schema ID" : "Workspace ID"} *
-          </Typography>
-          <TextField
-            fullWidth
+          <VWField
+            id="workspace_id"
+            label={localConfig.deployment_type === "datacenter" ? "Insight Object Schema ID" : "Workspace ID"}
+            isRequired
             placeholder={localConfig.deployment_type === "datacenter" ? "Enter object schema ID (e.g., 1)" : "Enter your JSM Assets workspace ID"}
             value={localConfig.workspace_id || ""}
             onChange={(e) => handleChange("workspace_id", e.target.value)}
-            size="small"
-            // helperText={localConfig.deployment_type === "datacenter"
-            //   ? "For Data Center: Use object schema ID from Insight settings"
-            //   : "Found in Assets settings or the URL when viewing Assets"}
-            sx={{ "& .MuiOutlinedInput-root": { fontSize: "13px", backgroundColor: "white" } }}
           />
           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
             {localConfig.deployment_type === "datacenter"
@@ -530,26 +512,22 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
         </Box>
 
         <Box>
-          <Typography variant="body2" fontWeight={500} fontSize={13} sx={{ mb: 0.75, color: "#344054" }}>
-            {localConfig.deployment_type === "datacenter" ? "Username" : "Email"} *
-          </Typography>
-          <TextField
-            fullWidth
+          <VWField
+            id="email"
+            label={localConfig.deployment_type === "datacenter" ? "Username" : "Email"}
+            isRequired
             type={localConfig.deployment_type === "datacenter" ? "text" : "email"}
             placeholder={localConfig.deployment_type === "datacenter" ? "your-username" : "your-email@company.com"}
             value={localConfig.email || ""}
             onChange={(e) => handleChange("email", e.target.value)}
-            size="small"
-            sx={{ "& .MuiOutlinedInput-root": { fontSize: "13px", backgroundColor: "white" } }}
           />
         </Box>
 
         <Box>
-          <Typography variant="body2" fontWeight={500} fontSize={13} sx={{ mb: 0.75, color: "#344054" }}>
-            {localConfig.deployment_type === "datacenter" ? "Password / Token" : "API Token"} {!localConfig.has_api_token && "*"}
-          </Typography>
-          <TextField
-            fullWidth
+          <VWField
+            id="api_token"
+            label={localConfig.deployment_type === "datacenter" ? "Password / Token" : "API Token"}
+            isRequired={!localConfig.has_api_token}
             type="password"
             placeholder={
               localConfig.has_api_token && !localConfig.api_token
@@ -560,15 +538,6 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
             }
             value={localConfig.api_token || ""}
             onChange={(e) => handleChange("api_token", e.target.value)}
-            size="small"
-            // helperText={
-            //   localConfig.has_api_token && !localConfig.api_token
-            //     ? "API token is saved. Leave empty to keep current token, or enter a new value to update."
-            //     : localConfig.deployment_type === "datacenter"
-            //       ? "Use your JIRA password or personal access token"
-            //       : "Generate at id.atlassian.com/manage-profile/security/api-tokens"
-            // }
-            sx={{ "& .MuiOutlinedInput-root": { fontSize: "13px", backgroundColor: "white" } }}
           />
           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
             {
@@ -668,54 +637,33 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
 
       <Stack spacing={2.5}>
         <Box>
-          <Typography variant="body2" fontWeight={500} fontSize={13} sx={{ mb: 0.75, color: "#344054" }}>
-            Schema
-          </Typography>
-          <FormControl fullWidth size="small">
-            <Select
-              value={localConfig.selected_schema_id || ""}
-              onChange={(e) => handleSchemaChange(e.target.value)}
-              disabled={isLoadingSchemas || schemas.length === 0}
-              displayEmpty
-              sx={{ fontSize: "13px", backgroundColor: "white" }}
-            >
-              <MenuItem value="" sx={{ fontSize: "13px" }}>
-                {isLoadingSchemas ? "Loading schemas..." : "Select a schema"}
-              </MenuItem>
-              {schemas.map((schema) => (
-                <MenuItem key={schema.id} value={schema.id} sx={{ fontSize: "13px" }}>
-                  {schema.name} ({schema.objectSchemaKey})
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <VWSelect
+            id="selected_schema_id"
+            label="Schema"
+            placeholder={isLoadingSchemas ? "Loading schemas..." : "Select a schema"}
+            value={localConfig.selected_schema_id || ""}
+            onChange={(e) => handleSchemaChange(e.target.value as string)}
+            disabled={isLoadingSchemas || schemas.length === 0}
+            items={schemas.map((schema) => ({
+              _id: schema.id,
+              name: `${schema.name} (${schema.objectSchemaKey})`,
+            }))}
+          />
         </Box>
 
         <Box>
-          <Typography variant="body2" fontWeight={500} fontSize={13} sx={{ mb: 0.75, color: "#344054" }}>
-            Object Type (AI Systems)
-          </Typography>
-          <FormControl fullWidth size="small">
-            <Select
-              value={localConfig.selected_object_type_id || ""}
-              onChange={(e) => handleChange("selected_object_type_id", e.target.value)}
-              disabled={isLoadingObjectTypes || objectTypes.length === 0 || !localConfig.selected_schema_id}
-              displayEmpty
-              sx={{ fontSize: "13px", backgroundColor: "white" }}
-            >
-              <MenuItem value="" sx={{ fontSize: "13px" }}>
-                {isLoadingObjectTypes ? "Loading object types..." : "Select an object type"}
-              </MenuItem>
-              {objectTypes.map((ot) => (
-                <MenuItem key={ot.id} value={ot.id} sx={{ fontSize: "13px" }}>
-                  {ot.name}
-                  {ot.objectCount !== undefined && (
-                    <Chip label={`${ot.objectCount} objects`} size="small" sx={{ ml: 1, fontSize: "11px" }} />
-                  )}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <VWSelect
+            id="selected_object_type_id"
+            label="Object Type (AI Systems)"
+            placeholder={isLoadingObjectTypes ? "Loading object types..." : "Select an object type"}
+            value={localConfig.selected_object_type_id || ""}
+            onChange={(e) => handleChange("selected_object_type_id", e.target.value)}
+            disabled={isLoadingObjectTypes || objectTypes.length === 0 || !localConfig.selected_schema_id}
+            items={objectTypes.map((ot) => ({
+              _id: ot.id,
+              name: ot.objectCount !== undefined ? `${ot.name} (${ot.objectCount} objects)` : ot.name,
+            }))}
+          />
         </Box>
       </Stack>
 
@@ -728,43 +676,26 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
 
       <Stack spacing={2.5}>
         <Box>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={localConfig.sync_enabled || false}
-                onChange={(e) => handleChange("sync_enabled", e.target.checked)}
-                sx={{
-                  "& .MuiSwitch-switchBase.Mui-checked": { color: "#13715B" },
-                  "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#13715B" },
-                }}
-              />
-            }
-            label={
-              <Typography variant="body2" fontSize={13} sx={{ color: "#344054" }}>
-                Enable automatic sync
-              </Typography>
-            }
+          <VWToggle
+            checked={localConfig.sync_enabled || false}
+            onChange={(e) => handleChange("sync_enabled", e.target.checked)}
+            label="Enable automatic sync"
+            description="Automatically sync data from JIRA on a schedule"
           />
         </Box>
 
         {localConfig.sync_enabled && (
           <Box>
-            <Typography variant="body2" fontWeight={500} fontSize={13} sx={{ mb: 0.75, color: "#344054" }}>
-              Sync Interval
-            </Typography>
-            <FormControl fullWidth size="small">
-              <Select
-                value={localConfig.sync_interval_hours || 24}
-                onChange={(e) => handleChange("sync_interval_hours", e.target.value)}
-                sx={{ fontSize: "13px", backgroundColor: "white" }}
-              >
-                {syncIntervalOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value} sx={{ fontSize: "13px" }}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <VWSelect
+              id="sync_interval_hours"
+              label="Sync Interval"
+              value={localConfig.sync_interval_hours || 24}
+              onChange={(e) => handleChange("sync_interval_hours", e.target.value)}
+              items={syncIntervalOptions.map((option) => ({
+                _id: option.value,
+                name: option.label,
+              }))}
+            />
           </Box>
         )}
       </Stack>
