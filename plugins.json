@@ -2862,6 +2862,65 @@
         ]
       },
       "frameworkType": "project"
+    },
+    {
+      "key": "azure-ai-agents",
+      "name": "Azure AI Agents",
+      "displayName": "Azure AI Agents",
+      "description": "Discover AI agents from Azure AI Foundry Agent Service for governance and inventory tracking.",
+      "longDescription": "Azure AI Agents integration discovers AI assistants created in your Azure AI Foundry projects. Automatically import agent metadata including model assignments, tool configurations, and permissions. Maintain a comprehensive inventory of all AI agents for compliance, governance, and risk management purposes.",
+      "version": "1.0.0",
+      "author": "VerifyWise",
+      "category": "agent_discovery",
+      "iconUrl": "/assets/azure_ai_logo.svg",
+      "documentationUrl": "https://docs.verifywise.com/integrations/azure-ai-agents",
+      "supportUrl": "https://support.verifywise.com",
+      "isOfficial": true,
+      "isPublished": true,
+      "requiresConfiguration": true,
+      "installationType": "tenant_scoped",
+      "features": [
+        {
+          "name": "Agent discovery",
+          "description": "Automatically discover AI assistants from Azure AI Foundry Agent Service",
+          "displayOrder": 1
+        },
+        {
+          "name": "Permission mapping",
+          "description": "Map Azure tool types to standardized permission categories",
+          "displayOrder": 2
+        },
+        {
+          "name": "Full pagination",
+          "description": "Paginate through all assistants with support for up to 10,000 agents",
+          "displayOrder": 3
+        },
+        {
+          "name": "Metadata preservation",
+          "description": "Capture model, tools, instructions, and configuration details",
+          "displayOrder": 4
+        },
+        {
+          "name": "Dual authentication",
+          "description": "Support for both API key and bearer token authentication",
+          "displayOrder": 5
+        }
+      ],
+      "tags": ["azure", "ai-agents", "assistants", "agent-discovery", "governance"],
+      "pluginPath": "plugins/azure-ai-agents",
+      "entryPoint": "index.ts",
+      "dependencies": {},
+      "ui": {
+        "bundleUrl": "/api/plugins/azure-ai-agents/ui/dist/index.esm.js",
+        "globalName": "PluginAzureAIAgents",
+        "slots": [
+          {
+            "slotId": "page.plugin.config",
+            "componentName": "AzureAIAgentsConfiguration",
+            "renderType": "card"
+          }
+        ]
+      }
     }
   ],
   "categories": [
@@ -2899,6 +2958,11 @@
       "id": "compliance",
       "name": "Compliance",
       "description": "Compliance frameworks and governance tools"
+    },
+    {
+      "id": "agent_discovery",
+      "name": "Agent Discovery",
+      "description": "Plugins that discover and import AI agents from external platforms"
     }
   ]
 }
