@@ -2872,7 +2872,7 @@
       "version": "1.0.0",
       "author": "VerifyWise",
       "category": "agent_discovery",
-      "iconUrl": "/assets/azure_ai_logo.svg",
+      "iconUrl": "plugins/azure-ai-agents/icon.jpg",
       "documentationUrl": "https://docs.verifywise.com/integrations/azure-ai-agents",
       "supportUrl": "https://support.verifywise.com",
       "isOfficial": true,

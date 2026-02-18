@@ -395,30 +395,20 @@ async function handleDiscover(
     !config.project_endpoint ||
     (!config.api_key && !config.bearer_token)
   ) {
-    // Return empty array — the sync service calls .filter() on response.data,
-    // so returning a non-array object would cause a TypeError crash.
-    return {
-      status: 200,
-      data: [],
-    };
+    // Throw so the sync service records this as a failed sync with a clear message,
+    // rather than silently logging "success, found=0".
+    throw new Error(
+      "Azure AI Agents plugin is not configured. Set a project endpoint and API key or bearer token."
+    );
   }
 
-  try {
-    const assistants = await fetchAllAssistants(config);
-    const primitives = assistants.map(mapAssistantToAgentPrimitive);
+  const assistants = await fetchAllAssistants(config);
+  const primitives = assistants.map(mapAssistantToAgentPrimitive);
 
-    return {
-      status: 200,
-      data: primitives,
-    };
-  } catch (error: any) {
-    // Return empty array on failure for the same reason — the sync service
-    // expects response.data to always be an array.
-    return {
-      status: 200,
-      data: [],
-    };
-  }
+  return {
+    status: 200,
+    data: primitives,
+  };
 }
 
 // ========== PLUGIN ROUTER ==========
