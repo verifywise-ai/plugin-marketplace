@@ -37,6 +37,7 @@ interface Project {
   id: number;
   project_title: string;
   is_organizational: boolean;
+  _source?: string; // Plugin source identifier (e.g., "jira-assets")
 }
 
 interface CustomFrameworkControlsProps {
