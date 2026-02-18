@@ -344,7 +344,8 @@ export function validateConfig(
 // ========== CONNECTION TEST ==========
 
 export async function testConnection(
-  config: AzureAIAgentsConfig
+  config: AzureAIAgentsConfig,
+  _context?: { sequelize: any; userId: number; tenantId: string }
 ): Promise<TestConnectionResult> {
   try {
     const validation = validateConfig(config);
@@ -395,13 +396,18 @@ async function handleDiscover(
     !config.project_endpoint ||
     (!config.api_key && !config.bearer_token)
   ) {
-    // Throw so the sync service records this as a failed sync with a clear message,
-    // rather than silently logging "success, found=0".
-    throw new Error(
-      "Azure AI Agents plugin is not configured. Set a project endpoint and API key or bearer token."
-    );
+    return {
+      status: 400,
+      data: {
+        success: false,
+        message:
+          "Azure AI Agents plugin is not configured. Set a project endpoint and API key or bearer token.",
+      },
+    };
   }
 
+  // Let Azure API errors propagate — the sync service catches thrown errors
+  // and records them as failed syncs with the error message.
   const assistants = await fetchAllAssistants(config);
   const primitives = assistants.map(mapAssistantToAgentPrimitive);
 
