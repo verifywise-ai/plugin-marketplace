@@ -3041,15 +3041,6 @@
         "globalName": "PluginModelLifecycle",
         "slots": [
           {
-            "slotId": "page.models.tabs",
-            "componentName": "ModelLifecycleTab",
-            "renderType": "tab",
-            "props": {
-              "label": "Model Lifecycle",
-              "icon": "GitBranch"
-            }
-          },
-          {
             "slotId": "page.plugin.config",
             "componentName": "ModelLifecycleConfig",
             "renderType": "card"
