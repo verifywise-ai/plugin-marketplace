@@ -44,6 +44,7 @@ interface Project {
   project_title: string;
   is_organizational: boolean;
   framework?: ProjectFramework[];
+  _source?: string; // Plugin source identifier (e.g., "jira-assets")
 }
 
 interface CustomFrameworkCardsProps {
@@ -149,27 +150,19 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
 
       // Handle various response structures
       let rawData = response.data;
-      // If wrapped in { data: ... }
       if (rawData && typeof rawData === 'object' && 'data' in rawData) {
         rawData = rawData.data;
       }
-      // If still wrapped (e.g., { status, data })
       if (rawData && typeof rawData === 'object' && !Array.isArray(rawData) && 'data' in rawData) {
         rawData = rawData.data;
       }
 
       const frameworksArray = Array.isArray(rawData) ? rawData : [];
 
-      // Debug logging
-      console.log("[CustomFrameworkCards] Raw frameworks response:", response.data);
-      console.log("[CustomFrameworkCards] Parsed frameworks:", frameworksArray);
-
       // Filter frameworks based on project type (organizational vs project-level)
       const filtered = frameworksArray.filter(
         (fw: CustomFramework) => fw.is_organizational === project.is_organizational
       );
-
-      console.log("[CustomFrameworkCards] Filtered frameworks:", filtered);
       setFrameworks(filtered);
 
       // Fetch which custom frameworks are added to this project
@@ -188,7 +181,6 @@ export const CustomFrameworkCards: React.FC<CustomFrameworkCardsProps> = ({
         const addedIds = new Set<number>(
           addedArray.map((f: any) => f.framework_id)
         );
-        console.log("[CustomFrameworkCards] Added framework IDs:", addedIds);
         setAddedFrameworkIds(addedIds);
       } catch {
         // If endpoint doesn't exist yet, just use empty set

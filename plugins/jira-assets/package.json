@@ -1,0 +1,11 @@
+{
+  "name": "@verifywise/plugin-jira-assets",
+  "version": "1.0.0",
+  "description": "Jira Assets Integration for VerifyWise - Import AI Systems from JSM Assets as use-cases",
+  "main": "index.ts",
+  "author": "VerifyWise",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}

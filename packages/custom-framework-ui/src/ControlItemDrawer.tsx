@@ -176,6 +176,7 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
   pluginKey,
 }) => {
   const [activeTab, setActiveTab] = useState("details");
+  const [selectedLevel3Index, setSelectedLevel3Index] = useState(0);
   const [formData, setFormData] = useState({
     status: "Not started",
     owner: "",
@@ -334,6 +335,7 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
       setRisksToAdd([]);
       setRisksToRemove([]);
       setRiskSearchQuery("");
+      setSelectedLevel3Index(0);
     }
   }, [item]);
 
@@ -649,129 +651,250 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
       open={open}
       onClose={onClose}
       anchor="right"
-      PaperProps={{
-        sx: {
+      sx={{
+        width: 600,
+        margin: 0,
+        "& .MuiDrawer-paper": {
           width: 600,
           margin: 0,
           borderRadius: 0,
           overflowX: "hidden",
+          backgroundColor: "#FCFCFD",
+          height: "100vh",
           display: "flex",
           flexDirection: "column",
-          height: "100%",
         },
       }}
     >
-      <Stack sx={{ width: 600, height: "100%", display: "flex", flexDirection: "column" }}>
-        {/* Header */}
-        <Stack
-          sx={{
-            width: 600,
-            padding: "15px 20px",
-            display: "flex",
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography fontSize={15} fontWeight={700} color={textColors.primary}>
-            {item.title}
-          </Typography>
-          <CloseIcon
-            size={20}
-            onClick={onClose}
-            style={{ cursor: "pointer", color: textColors.muted }}
-          />
-        </Stack>
-
-        <Divider />
-
-        {/* Tabs */}
-        <Box sx={{ padding: "0 20px" }}>
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
+      {/* DRAWER HEADER - matches NewControlPane exactly */}
+      <Box
+        sx={{
+          padding: "16px 20px",
+          borderBottom: "1px solid #eaecf0",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+        }}
+      >
+        <Box sx={{ flex: 1 }}>
+          <Typography
+            variant="h6"
             sx={{
-              minHeight: 40,
-              "& .MuiTab-root": {
-                minHeight: 40,
-                fontSize: 13,
-                textTransform: "none",
-                color: textColors.secondary,
-                "&.Mui-selected": {
-                  color: colors.primary,
-                },
-              },
-              "& .MuiTabs-indicator": {
-                backgroundColor: colors.primary,
-              },
+              fontSize: "16px",
+              fontWeight: 600,
+              color: "#1c2130",
+              mb: item.description ? 1.5 : 0,
             }}
           >
-            <Tab
-              value="details"
-              label={
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <FileIcon size={14} />
-                  Details
-                </Box>
-              }
-            />
-            <Tab
-              value="evidence"
-              label={
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <FolderOpen size={14} />
-                  Evidence
-                </Box>
-              }
-            />
-            <Tab
-              value="cross-mappings"
-              label={
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <LinkIcon size={14} />
-                  Cross mappings
-                </Box>
-              }
-            />
-            <Tab
-              value="notes"
-              label={
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <MessageSquare size={14} />
-                  Notes
-                </Box>
-              }
-            />
-          </Tabs>
+            {item.order_no ? `${item.order_no} ` : ""}{item.title}
+          </Typography>
+          {/* Control Description Panel */}
+          {item.description && (
+            <Stack
+              sx={{
+                border: "1px solid #eee",
+                padding: "12px",
+                backgroundColor: "#f8f9fa",
+                borderRadius: "4px",
+              }}
+            >
+              <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
+                <strong>Description:</strong>
+              </Typography>
+              <Typography fontSize={13} color="#666">
+                {item.description}
+              </Typography>
+            </Stack>
+          )}
         </Box>
+        <Button
+          onClick={onClose}
+          sx={{
+            minWidth: "auto",
+            padding: 0,
+            color: "#475467",
+          }}
+        >
+          <CloseIcon size={20} />
+        </Button>
+      </Box>
 
-        {/* Tab Content */}
-        <Box sx={{ flex: 1, overflow: "auto", minHeight: 0 }}>
+      {/* OUTER TABS - LEVEL 3 ITEMS (like Subcontrols) */}
+      {item.items && item.items.length > 0 && (
+        <Box
+          sx={{
+            overflowX: "auto",
+            overflowY: "hidden",
+            scrollBehavior: "smooth",
+            borderBottom: "1px solid #eaecf0",
+            "&::-webkit-scrollbar": {
+              height: "6px",
+            },
+            "&::-webkit-scrollbar-track": {
+              backgroundColor: "transparent",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: "#D0D5DD",
+              borderRadius: "3px",
+              "&:hover": {
+                backgroundColor: "#98A2B3",
+              },
+            },
+          }}
+        >
+          <Box sx={{ padding: "0 20px", minWidth: "max-content" }}>
+            <Tabs
+              value={selectedLevel3Index}
+              onChange={(_e, v) => setSelectedLevel3Index(v)}
+              sx={{
+                minHeight: 40,
+                "& .MuiTab-root": {
+                  minHeight: 40,
+                  fontSize: 13,
+                  textTransform: "none",
+                  color: textColors.secondary,
+                  "&.Mui-selected": {
+                    color: colors.primary,
+                  },
+                },
+                "& .MuiTabs-indicator": {
+                  backgroundColor: colors.primary,
+                },
+              }}
+            >
+              {item.items.map((l3, idx) => (
+                <Tab
+                  key={l3.id}
+                  value={idx}
+                  label={`${frameworkData?.level_3_name || "Subcontrol"} ${idx + 1}`}
+                />
+              ))}
+            </Tabs>
+          </Box>
+        </Box>
+      )}
+
+      {/* DRAWER CONTENT */}
+      <Box
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+          minHeight: 0,
+        }}
+      >
+        <Stack spacing={3} sx={{ padding: "20px" }}>
+          {/* Current Item Header (Level 3 title if exists) */}
+          {item.items && item.items.length > 0 && item.items[selectedLevel3Index] && (
+            <Box>
+              <Typography
+                sx={{
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  color: "#1c2130",
+                  mb: item.items[selectedLevel3Index].description ? 1.5 : 0,
+                }}
+              >
+                {item.order_no}.{item.items[selectedLevel3Index].order_no} {item.items[selectedLevel3Index].title}
+              </Typography>
+              {item.items[selectedLevel3Index].description && (
+                <Stack
+                  sx={{
+                    border: "1px solid #eee",
+                    padding: "12px",
+                    backgroundColor: "#f8f9fa",
+                    borderRadius: "4px",
+                  }}
+                >
+                  <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
+                    <strong>Description:</strong>
+                  </Typography>
+                  <Typography fontSize={13} color="#666">
+                    {item.items[selectedLevel3Index].description}
+                  </Typography>
+                </Stack>
+              )}
+            </Box>
+          )}
+
+          {/* INNER TABS - SECTIONS (matching core TabBar styling) */}
+          <Box
+            sx={{
+              borderBottom: "1px solid #eaecf0",
+              mx: "-20px",
+              px: "20px",
+            }}
+          >
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
+              sx={{
+                minHeight: 40,
+                "& .MuiTab-root": {
+                  minHeight: 40,
+                  minWidth: "auto",
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  textTransform: "none",
+                  color: "#475467",
+                  "&.Mui-selected": {
+                    color: "#13715B",
+                  },
+                },
+                "& .MuiTabs-indicator": {
+                  backgroundColor: "#13715B",
+                  height: 2,
+                },
+                "& .MuiTabs-flexContainer": {
+                  gap: "8px",
+                },
+              }}
+            >
+              <Tab
+                value="details"
+                label={
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <FileIcon size={14} />
+                    Details
+                  </Box>
+                }
+              />
+              <Tab
+                value="evidence"
+                label={
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <FolderOpen size={14} />
+                    Evidence
+                  </Box>
+                }
+              />
+              <Tab
+                value="cross-mappings"
+                label={
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <LinkIcon size={14} />
+                    Cross mappings
+                  </Box>
+                }
+              />
+              <Tab
+                value="notes"
+                label={
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <MessageSquare size={14} />
+                    Notes
+                  </Box>
+                }
+              />
+            </Tabs>
+          </Box>
+
+          {/* TAB CONTENT */}
           {/* Details Tab */}
           {activeTab === "details" && (
-            <Box sx={{ padding: "15px 20px" }}>
-              <Stack gap="15px">
-                {/* Description/Summary Panel */}
-                {item.description && (
-                  <Stack
-                    sx={{
-                      border: "1px solid #eee",
-                      padding: "12px",
-                      backgroundColor: "#f8f9fa",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
-                      <strong>Description:</strong>
-                    </Typography>
-                    <Typography fontSize={13} color="#666">
-                      {item.description}
-                    </Typography>
-                  </Stack>
-                )}
-
-                {/* Key Questions Panel */}
-                {item.questions && item.questions.length > 0 && (
+            <Stack sx={{ mx: "-20px", padding: "15px 20px" }} gap="15px">
+                {/* Key Questions Panel - only show if no Level3 items OR at Level2 */}
+                {(!item.items || item.items.length === 0) && item.questions && item.questions.length > 0 && (
                   <Stack
                     sx={{
                       border: "1px solid #e8d5d5",
@@ -854,11 +977,9 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                     }}
                   />
                 </Stack>
-              </Stack>
 
-              <Divider sx={{ my: 2 }} />
+                <Divider sx={{ my: 1 }} />
 
-              <Stack gap="24px">
                 {/* Status */}
                 <FormControl fullWidth size="small">
                   <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
@@ -994,8 +1115,7 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                     }}
                   />
                 </Stack>
-              </Stack>
-            </Box>
+            </Stack>
           )}
 
           {/* Evidence Tab */}
@@ -1488,9 +1608,8 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
               </Stack>
             </Box>
           )}
-        </Box>
 
-        {/* Error Alert */}
+          {/* Error Alert */}
         {error && (
           <Box sx={{ padding: "0 20px", mb: 2 }}>
             <Box
@@ -1550,6 +1669,7 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
           </Button>
         </Stack>
       </Stack>
+      </Box>
 
       {/* Linked Risks Modal */}
       <Dialog

@@ -289,6 +289,89 @@
       }
     },
     {
+      "key": "jira-assets",
+      "name": "Jira Assets Integration",
+      "displayName": "Jira Assets Integration",
+      "description": "Import AI Systems from Jira Service Management Assets as use-cases.",
+      "longDescription": "Jira Assets Integration connects VerifyWise with your JSM Assets (formerly Insight) to import AI System objects as use-cases. Supports organizational and non-organizational classification, automatic scheduled sync, and stores all JIRA attributes as-is. Import AI Systems with a few clicks and keep them in sync with your JIRA data.",
+      "version": "1.0.0",
+      "author": "VerifyWise",
+      "category": "data_management",
+      "iconUrl": "plugins/jira-assets/icon.svg",
+      "documentationUrl": "https://docs.verifywise.com/integrations/jira-assets",
+      "supportUrl": "https://support.verifywise.com",
+      "isOfficial": true,
+      "isPublished": true,
+      "requiresConfiguration": true,
+      "installationType": "tenant_scoped",
+      "features": [
+        {
+          "name": "Import AI Systems",
+          "description": "Import AI System objects from JSM Assets as use-cases",
+          "displayOrder": 1
+        },
+        {
+          "name": "Organizational Support",
+          "description": "Classify imports as organizational or non-organizational",
+          "displayOrder": 2
+        },
+        {
+          "name": "Automatic Sync",
+          "description": "Scheduled synchronization to keep data in sync",
+          "displayOrder": 3
+        },
+        {
+          "name": "Full Attribute Storage",
+          "description": "All JIRA attributes stored as-is without field mapping",
+          "displayOrder": 4
+        },
+        {
+          "name": "UC-ID Generation",
+          "description": "Auto-generated unique UC-IDs for imported use-cases",
+          "displayOrder": 5
+        }
+      ],
+      "tags": [
+        "jira",
+        "assets",
+        "import",
+        "use-cases",
+        "sync",
+        "integration"
+      ],
+      "pluginPath": "plugins/jira-assets",
+      "entryPoint": "index.ts",
+      "dependencies": {
+        "axios": "^1.6.0"
+      },
+      "ui": {
+        "bundleUrl": "/api/plugins/jira-assets/ui/dist/index.esm.js",
+        "globalName": "PluginJiraAssets",
+        "slots": [
+          {
+            "slotId": "page.plugin.config",
+            "componentName": "JiraAssetsConfiguration",
+            "renderType": "card"
+          },
+          {
+            "slotId": "page.usecase.overview",
+            "componentName": "JiraUseCaseOverview",
+            "renderType": "raw"
+          },
+          {
+            "slotId": "page.usecase.monitoring",
+            "componentName": "JiraUseCaseMonitoring",
+            "renderType": "raw"
+          },
+          {
+            "slotId": "page.usecase.settings",
+            "componentName": "JiraUseCaseSettings",
+            "renderType": "raw"
+          }
+        ]
+      }
+    },
+    {
       "key": "soc2",
       "name": "SOC 2 Type II",
       "displayName": "SOC 2 Type II",
