@@ -3010,7 +3010,7 @@
       "iconUrl": "plugins/model-lifecycle/icon.svg",
       "isOfficial": true,
       "isPublished": true,
-      "requiresConfiguration": false,
+      "requiresConfiguration": true,
       "installationType": "tenant_scoped",
       "features": [
         {
