@@ -3046,9 +3046,9 @@
             "renderType": "card"
           },
           {
-            "slotId": "table.model.row-actions",
-            "componentName": "ViewLifecycleMenuItem",
-            "renderType": "menuitem"
+            "slotId": "table.model.row-icon-actions",
+            "componentName": "ViewLifecycleButton",
+            "renderType": "button"
           },
           {
             "slotId": "page.model-detail.lifecycle",

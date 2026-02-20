@@ -7,5 +7,5 @@
 
 export { default as ModelLifecycleTab } from "./ModelLifecycleTab";
 export { default as ModelLifecycleConfig } from "./ModelLifecycleConfig";
-export { default as ViewLifecycleMenuItem } from "./ViewLifecycleMenuItem";
+export { default as ViewLifecycleButton } from "./ViewLifecycleButton";
 export { default as ModelLifecycleDetail } from "./ModelLifecycleDetail";
