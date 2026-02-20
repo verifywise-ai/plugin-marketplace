@@ -2945,6 +2945,118 @@
         ]
       },
       "frameworkType": "project"
+    },
+    {
+      "key": "dataset-bulk-upload",
+      "name": "Dataset Bulk Upload",
+      "displayName": "Dataset Bulk Upload",
+      "description": "Upload multiple CSV/XLSX datasets with metadata, PII detection, and batch processing",
+      "longDescription": "Dataset Bulk Upload enables data teams to import multiple datasets at once with automatic PII detection, metadata annotation, and batch processing. Each file is analyzed client-side for column structure, row count, and potential PII before upload. Supports CSV, XLSX, and XLS formats with per-file metadata customization.",
+      "version": "1.0.0",
+      "author": "VerifyWise",
+      "category": "data_management",
+      "iconUrl": "plugins/dataset-bulk-upload/icon.svg",
+      "isOfficial": true,
+      "isPublished": true,
+      "requiresConfiguration": false,
+      "installationType": "tenant_scoped",
+      "features": [
+        {
+          "name": "Bulk File Upload",
+          "description": "Upload up to 20 CSV/XLSX files at once with drag & drop support"
+        },
+        {
+          "name": "PII Detection",
+          "description": "Automatic detection of personally identifiable information in column headers"
+        },
+        {
+          "name": "Metadata Annotation",
+          "description": "Per-file metadata customization with batch defaults support"
+        },
+        {
+          "name": "Data Preview",
+          "description": "Preview file contents and column structure before uploading"
+        }
+      ],
+      "pluginPath": "plugins/dataset-bulk-upload",
+      "entryPoint": "index.ts",
+      "ui": {
+        "bundleUrl": "/api/plugins/dataset-bulk-upload/ui/dist/index.esm.js",
+        "globalName": "PluginDatasetBulkUpload",
+        "slots": [
+          {
+            "slotId": "page.datasets.actions",
+            "componentName": "BulkUploadButton",
+            "renderType": "button"
+          },
+          {
+            "slotId": "page.datasets.actions",
+            "componentName": "BulkUploadModal",
+            "renderType": "modal",
+            "trigger": "BulkUploadButton"
+          }
+        ]
+      }
+    },
+    {
+      "key": "model-lifecycle",
+      "name": "Model Lifecycle",
+      "displayName": "Model Lifecycle",
+      "description": "Track AI model lifecycle phases from registration through monitoring with configurable phases, approval workflows, and compliance documentation",
+      "longDescription": "Model Lifecycle provides comprehensive tracking of AI model lifecycle phases including registration, design, validation, deployment, monitoring, and human oversight. Features configurable phases with 7 field types (text, textarea, documents, people, classification, checklist, approval), per-model progress tracking, and an admin configuration editor for customizing phases and items.",
+      "version": "1.0.0",
+      "author": "VerifyWise",
+      "category": "ml_ops",
+      "iconUrl": "plugins/model-lifecycle/icon.svg",
+      "isOfficial": true,
+      "isPublished": true,
+      "requiresConfiguration": true,
+      "installationType": "tenant_scoped",
+      "features": [
+        {
+          "name": "Lifecycle Phase Tracking",
+          "description": "Track models through configurable lifecycle phases from registration to monitoring"
+        },
+        {
+          "name": "Multiple Field Types",
+          "description": "7 field types: text, textarea, documents, people, classification, checklist, approval"
+        },
+        {
+          "name": "Approval Workflows",
+          "description": "Built-in approval workflow support with multi-approver tracking"
+        },
+        {
+          "name": "Progress Tracking",
+          "description": "Visual progress tracking with per-phase and overall completion metrics"
+        },
+        {
+          "name": "Admin Configuration",
+          "description": "Full admin UI for adding, removing, and reordering phases and items"
+        }
+      ],
+      "pluginPath": "plugins/model-lifecycle",
+      "entryPoint": "index.ts",
+      "ui": {
+        "bundleUrl": "/api/plugins/model-lifecycle/ui/dist/index.esm.js",
+        "globalName": "PluginModelLifecycle",
+        "slots": [
+          {
+            "slotId": "page.plugin.config",
+            "componentName": "ModelLifecycleConfig",
+            "renderType": "card"
+          },
+          {
+            "slotId": "table.model.row-icon-actions",
+            "componentName": "ViewLifecycleButton",
+            "renderType": "button"
+          },
+          {
+            "slotId": "page.model-detail.lifecycle",
+            "componentName": "ModelLifecycleDetail",
+            "renderType": "raw"
+          }
+        ]
+      }
     }
   ],
   "categories": [

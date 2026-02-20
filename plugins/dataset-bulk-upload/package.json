@@ -1,0 +1,15 @@
+{
+  "name": "@verifywise/plugin-dataset-bulk-upload",
+  "version": "1.0.0",
+  "description": "Dataset bulk upload plugin for VerifyWise",
+  "main": "index.js",
+  "author": "VerifyWise",
+  "license": "MIT",
+  "keywords": [
+    "verifywise",
+    "plugin",
+    "dataset",
+    "bulk-upload",
+    "data_management"
+  ]
+}

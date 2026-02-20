@@ -1,0 +1,15 @@
+{
+  "name": "@verifywise/plugin-model-lifecycle",
+  "version": "1.0.0",
+  "description": "Model lifecycle tracking plugin for VerifyWise",
+  "main": "index.js",
+  "author": "VerifyWise",
+  "license": "MIT",
+  "keywords": [
+    "verifywise",
+    "plugin",
+    "model-lifecycle",
+    "ml_ops",
+    "compliance"
+  ]
+}
