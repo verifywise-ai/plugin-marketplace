@@ -1,0 +1,17 @@
+{
+  "name": "@verifywise/plugin-azure-ai-foundry",
+  "version": "1.0.0",
+  "description": "Azure AI Foundry integration plugin for VerifyWise",
+  "main": "index.js",
+  "author": "VerifyWise",
+  "license": "MIT",
+  "dependencies": {},
+  "keywords": [
+    "verifywise",
+    "plugin",
+    "azure",
+    "ai-foundry",
+    "model-registry",
+    "integration"
+  ]
+}
