@@ -56,6 +56,10 @@ interface CustomFrameworkControlsProps {
   };
   /** Plugin key for API routing (defaults to 'custom-framework-import') */
   pluginKey?: string;
+  /** Deep linking: ID of level2 item to scroll to and highlight */
+  level2Id?: number;
+  /** Deep linking: ID of level3 item to scroll to and highlight */
+  level3Id?: number;
 }
 
 // localStorage key for custom framework navigation (set by CustomFrameworkDashboard)
@@ -122,6 +126,8 @@ export const CustomFrameworkControls: React.FC<CustomFrameworkControlsProps> = (
   children: _children,
   apiServices,
   pluginKey,
+  level2Id,
+  level3Id,
 }) => {
   const [customFrameworks, setCustomFrameworks] = useState<CustomFramework[]>([]);
   const [selectedCustomFramework, setSelectedCustomFramework] = useState<number | null>(null);
@@ -351,6 +357,20 @@ export const CustomFrameworkControls: React.FC<CustomFrameworkControlsProps> = (
     }
   }, [customFrameworks]);
 
+  // Deep linking: auto-select custom framework when level2Id or level3Id is provided
+  useEffect(() => {
+    if (customFrameworks.length === 0) return;
+    if (!level2Id && !level3Id) return;
+
+    // If deep linking props are provided, auto-select the first custom framework
+    // (The specific item will be scrolled to by CustomFrameworkViewer)
+    if (!isCustomSelected && customFrameworks.length > 0) {
+      console.log("[CustomFrameworkControls] Deep linking: auto-selecting custom framework for level2Id/level3Id");
+      setIsCustomSelected(true);
+      setSelectedCustomFramework(customFrameworks[0].framework_id);
+    }
+  }, [customFrameworks, level2Id, level3Id, isCustomSelected]);
+
   const handleBuiltInSelect = (index: number) => {
     setIsCustomSelected(false);
     setSelectedCustomFramework(null);
@@ -488,6 +508,8 @@ export const CustomFrameworkControls: React.FC<CustomFrameworkControlsProps> = (
             onRefresh?.();
           }}
           pluginKey={pluginKey}
+          highlightLevel2Id={level2Id}
+          highlightLevel3Id={level3Id}
         />
       ) : (
         renderBuiltInContent()

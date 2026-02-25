@@ -38,6 +38,10 @@ interface CustomFrameworkViewerProps {
   onRefresh?: () => void;
   /** Plugin key for API routing (defaults to 'custom-framework-import') */
   pluginKey?: string;
+  /** Deep linking: ID of level2 item to scroll to and highlight */
+  highlightLevel2Id?: number;
+  /** Deep linking: ID of level3 item to scroll to and highlight */
+  highlightLevel3Id?: number;
 }
 
 interface FrameworkData {
@@ -163,6 +167,8 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
   apiServices,
   onRefresh,
   pluginKey,
+  highlightLevel2Id,
+  highlightLevel3Id,
 }) => {
   const [data, setData] = useState<FrameworkData | null>(null);
   const [progress, setProgress] = useState<ProgressData | null>(null);
@@ -170,6 +176,7 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [expandedLevel1, setExpandedLevel1] = useState<number | null>(0);
   const [flashingRow, setFlashingRow] = useState<number | null>(null);
+  const [highlightedImplId, setHighlightedImplId] = useState<number | null>(null);
 
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -310,6 +317,64 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
       console.log("[CustomFrameworkViewer] Error reading stored category:", err);
     }
   }, [data?.structure]);
+
+  // Deep linking: scroll to and highlight a specific level2/level3 item
+  useEffect(() => {
+    if (!data?.structure) return;
+
+    const targetImplId = highlightLevel2Id || highlightLevel3Id;
+    if (!targetImplId) return;
+
+    console.log("[CustomFrameworkViewer] Deep linking to item:", { highlightLevel2Id, highlightLevel3Id });
+
+    // Find the item in the structure
+    let foundLevel1Index = -1;
+    let foundImplId: number | null = null;
+
+    for (let i = 0; i < data.structure.length; i++) {
+      const level1 = data.structure[i];
+      for (const level2 of level1.items) {
+        // Check if this is the target level2 item
+        if (highlightLevel2Id && level2.impl_id === highlightLevel2Id) {
+          foundLevel1Index = i;
+          foundImplId = level2.impl_id;
+          break;
+        }
+        // Check level3 items if applicable
+        if (highlightLevel3Id && level2.items) {
+          for (const level3 of level2.items) {
+            if (level3.impl_id === highlightLevel3Id) {
+              foundLevel1Index = i;
+              foundImplId = level3.impl_id;
+              break;
+            }
+          }
+        }
+        if (foundImplId) break;
+      }
+      if (foundImplId) break;
+    }
+
+    if (foundLevel1Index !== -1 && foundImplId !== null) {
+      console.log("[CustomFrameworkViewer] Found item in level1 index:", foundLevel1Index, "impl_id:", foundImplId);
+
+      // Expand the accordion containing the item
+      setExpandedLevel1(foundLevel1Index);
+
+      // Highlight the item
+      setHighlightedImplId(foundImplId);
+
+      // Scroll to the item after expansion animation
+      setTimeout(() => {
+        const rowElement = document.querySelector(`[data-impl-id="${foundImplId}"]`);
+        if (rowElement) {
+          rowElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        // Remove highlight after a few seconds
+        setTimeout(() => setHighlightedImplId(null), 3000);
+      }, 500);
+    }
+  }, [data?.structure, highlightLevel2Id, highlightLevel3Id]);
 
   const handleRefresh = useCallback(() => {
     loadFrameworkData();
@@ -565,17 +630,20 @@ export const CustomFrameworkViewer: React.FC<CustomFrameworkViewerProps> = ({
                       .map((level2) => {
                         const completion = calculateItemCompletion(level2);
                         const isFlashing = flashingRow === level2.id;
+                        const isHighlighted = highlightedImplId === level2.impl_id;
 
                         return (
                           <TableRow
                             key={level2.id}
+                            data-impl-id={level2.impl_id}
                             onClick={() => handleItemClick(level2)}
                             sx={{
                               cursor: "pointer",
-                              backgroundColor: isFlashing ? "#e3f5e6" : "transparent",
+                              backgroundColor: isHighlighted ? "#fff3cd" : isFlashing ? "#e3f5e6" : "transparent",
                               transition: "background-color 0.3s",
+                              boxShadow: isHighlighted ? "inset 0 0 0 2px #ffc107" : "none",
                               "&:hover": {
-                                backgroundColor: isFlashing ? "#e3f5e6" : "#FBFBFB",
+                                backgroundColor: isHighlighted ? "#fff3cd" : isFlashing ? "#e3f5e6" : "#FBFBFB",
                               },
                             }}
                           >
