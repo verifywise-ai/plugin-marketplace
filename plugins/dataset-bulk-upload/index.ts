@@ -73,7 +73,7 @@ interface ValidationResult {
  */
 export async function install(
   _userId: number,
-  _tenantId: string,
+  _organizationId: number,
   _config: any,
   _context: PluginContext
 ): Promise<InstallResult> {
@@ -94,7 +94,7 @@ export async function install(
  */
 export async function uninstall(
   _userId: number,
-  _tenantId: string,
+  _organizationId: number,
   _context: PluginContext
 ): Promise<UninstallResult> {
   try {
@@ -122,13 +122,6 @@ function sanitizeFilename(filename: string): string {
   return filename.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
-function escapePgIdentifier(ident: string): string {
-  if (!/^[A-Za-z0-9_]{1,30}$/.test(ident)) {
-    throw new Error("Invalid tenant identifier");
-  }
-  return '"' + ident.replace(/"/g, '""') + '"';
-}
-
 // ========== ROUTE HANDLERS ==========
 
 /**
@@ -141,8 +134,7 @@ function escapePgIdentifier(ident: string): string {
  *   - body.metadata: JSON string with dataset metadata fields
  */
 async function handleUpload(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, userId, organizationId, body, file } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, userId, organizationId, body, file } = ctx;
 
   if (!file) {
     return {
@@ -169,19 +161,20 @@ async function handleUpload(ctx: PluginRouteContext): Promise<PluginRouteRespons
   try {
     // 1. Create dataset record
     const datasetResult = await sequelize.query(
-      `INSERT INTO ${schema}.datasets
-        (name, description, version, owner, type, function, source, license,
+      `INSERT INTO datasets
+        (organization_id, name, description, version, owner, type, function, source, license,
          format, classification, contains_pii, pii_types, status, status_date,
          known_biases, bias_mitigation, collection_method, preprocessing_steps,
          created_at, updated_at)
        VALUES
-        (:name, :description, :version, :owner, :type, :function, :source, :license,
+        (:organizationId, :name, :description, :version, :owner, :type, :function, :source, :license,
          :format, :classification, :contains_pii, :pii_types, :status, NOW(),
          :known_biases, :bias_mitigation, :collection_method, :preprocessing_steps,
          NOW(), NOW())
        RETURNING id;`,
       {
         replacements: {
+          organizationId,
           name: metadata.name || file.originalname.replace(/\.[^.]+$/, ""),
           description: metadata.description || "",
           version: metadata.version || "1.0",
@@ -213,35 +206,35 @@ async function handleUpload(ctx: PluginRouteContext): Promise<PluginRouteRespons
     const modelIds: number[] = metadata.models || [];
     for (const modelId of modelIds) {
       await sequelize.query(
-        `INSERT INTO ${schema}.dataset_models (dataset_id, model_id) VALUES (:datasetId, :modelId)
+        `INSERT INTO dataset_models (organization_id, dataset_id, model_id) VALUES (:organizationId, :datasetId, :modelId)
          ON CONFLICT DO NOTHING;`,
-        { replacements: { datasetId, modelId }, transaction }
+        { replacements: { organizationId, datasetId, modelId }, transaction }
       );
     }
 
     const projectIds: number[] = metadata.projects || [];
     for (const projectId of projectIds) {
       await sequelize.query(
-        `INSERT INTO ${schema}.dataset_projects (dataset_id, project_id) VALUES (:datasetId, :projectId)
+        `INSERT INTO dataset_projects (organization_id, dataset_id, project_id) VALUES (:organizationId, :datasetId, :projectId)
          ON CONFLICT DO NOTHING;`,
-        { replacements: { datasetId, projectId }, transaction }
+        { replacements: { organizationId, datasetId, projectId }, transaction }
       );
     }
 
     // 3. Store file blob
     const sanitizedName = sanitizeFilename(file.originalname);
     const fileResult = await sequelize.query(
-      `INSERT INTO ${schema}.files
-        (filename, type, data, uploaded_by, organization_id, source, created_at, updated_at)
-       VALUES (:filename, :type, :data, :uploaded_by, :organization_id, :source, NOW(), NOW())
+      `INSERT INTO files
+        (organization_id, filename, type, data, uploaded_by, source, created_at, updated_at)
+       VALUES (:organizationId, :filename, :type, :data, :uploaded_by, :source, NOW(), NOW())
        RETURNING id;`,
       {
         replacements: {
+          organizationId,
           filename: sanitizedName,
           type: file.mimetype,
           data: file.buffer,
           uploaded_by: userId,
-          organization_id: organizationId,
           source: "dataset_bulk_upload",
         },
         transaction,
@@ -255,11 +248,12 @@ async function handleUpload(ctx: PluginRouteContext): Promise<PluginRouteRespons
 
     // 4. Create file → dataset link
     await sequelize.query(
-      `INSERT INTO ${schema}.file_entity_links
-        (file_id, framework_type, entity_type, entity_id, link_type, created_by, created_at)
-       VALUES (:file_id, 'general', 'dataset', :entity_id, 'source_data', :created_by, NOW());`,
+      `INSERT INTO file_entity_links
+        (organization_id, file_id, framework_type, entity_type, entity_id, link_type, created_by, created_at)
+       VALUES (:organizationId, :file_id, 'general', 'dataset', :entity_id, 'source_data', :created_by, NOW());`,
       {
         replacements: {
+          organizationId,
           file_id: fileId,
           entity_id: datasetId,
           created_by: userId,
@@ -270,11 +264,12 @@ async function handleUpload(ctx: PluginRouteContext): Promise<PluginRouteRespons
 
     // 5. Record change history
     await sequelize.query(
-      `INSERT INTO ${schema}.dataset_change_histories
-        (dataset_id, change_type, changed_by, change_details, created_at)
-       VALUES (:dataset_id, 'created', :changed_by, :change_details, NOW());`,
+      `INSERT INTO dataset_change_histories
+        (organization_id, dataset_id, change_type, changed_by, change_details, created_at)
+       VALUES (:organizationId, :dataset_id, 'created', :changed_by, :change_details, NOW());`,
       {
         replacements: {
+          organizationId,
           dataset_id: datasetId,
           changed_by: userId,
           change_details: JSON.stringify({

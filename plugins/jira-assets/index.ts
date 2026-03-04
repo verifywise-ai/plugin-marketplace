@@ -324,17 +324,18 @@ class JiraAssetsClient {
 
 export async function install(
   _userId: number,
-  tenantId: string,
+  organizationId: number,
   _config: JiraAssetsConfig,
   context: PluginContext
 ): Promise<InstallResult> {
   try {
     const { sequelize } = context;
 
-    // Create jira_assets_config table
+    // Create jira_assets_config table (shared schema)
     await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS "${tenantId}".jira_assets_config (
+      CREATE TABLE IF NOT EXISTS jira_assets_config (
         id SERIAL PRIMARY KEY,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
         jira_base_url VARCHAR(500) NOT NULL,
         workspace_id VARCHAR(100) NOT NULL,
         email VARCHAR(255) NOT NULL,
@@ -352,21 +353,24 @@ export async function install(
         created_by INTEGER,
         updated_by INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT jira_assets_config_org_unique UNIQUE (organization_id)
       )
     `);
 
-    // Create jira_assets_use_cases table - links to native projects
+    // Create jira_assets_use_cases table - links to native projects (shared schema)
     await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS "${tenantId}".jira_assets_use_cases (
+      CREATE TABLE IF NOT EXISTS jira_assets_use_cases (
         id SERIAL PRIMARY KEY,
-        jira_object_id VARCHAR(100) NOT NULL UNIQUE,
-        project_id INTEGER REFERENCES "${tenantId}".projects(id) ON DELETE CASCADE,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        jira_object_id VARCHAR(100) NOT NULL,
+        project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
         data JSONB NOT NULL,
         last_synced_at TIMESTAMP,
         sync_status VARCHAR(50) DEFAULT 'synced',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT jira_assets_use_cases_org_object_unique UNIQUE (organization_id, jira_object_id)
       )
     `);
 
@@ -375,23 +379,28 @@ export async function install(
 
     // Create indexes for jira_assets_use_cases
     await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS idx_jira_use_cases_org_id
+      ON jira_assets_use_cases(organization_id)
+    `);
+    await sequelize.query(`
       CREATE INDEX IF NOT EXISTS idx_jira_use_cases_jira_object_id
-      ON "${tenantId}".jira_assets_use_cases(jira_object_id)
+      ON jira_assets_use_cases(organization_id, jira_object_id)
     `);
     await sequelize.query(`
       CREATE INDEX IF NOT EXISTS idx_jira_use_cases_sync_status
-      ON "${tenantId}".jira_assets_use_cases(sync_status)
+      ON jira_assets_use_cases(organization_id, sync_status)
     `);
 
-    // Create sequence for UC-ID generation
+    // Create sequence for UC-ID generation (global, with org prefix in generated value)
     await sequelize.query(`
-      CREATE SEQUENCE IF NOT EXISTS "${tenantId}".jira_use_case_uc_id_seq START 1
+      CREATE SEQUENCE IF NOT EXISTS jira_use_case_uc_id_seq START 1
     `);
 
-    // Create jira_assets_sync_history table
+    // Create jira_assets_sync_history table (shared schema)
     await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS "${tenantId}".jira_assets_sync_history (
+      CREATE TABLE IF NOT EXISTS jira_assets_sync_history (
         id SERIAL PRIMARY KEY,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
         sync_type VARCHAR(50) NOT NULL,
         status VARCHAR(50) NOT NULL,
         objects_fetched INTEGER DEFAULT 0,
@@ -405,6 +414,15 @@ export async function install(
       )
     `);
 
+    // Create index for organization_id on sync_history
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS idx_jira_sync_history_org_id ON jira_assets_sync_history(organization_id)
+    `);
+
+    // Create index for organization_id on config
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS idx_jira_assets_config_org_id ON jira_assets_config(organization_id)
+    `);
 
     return {
       success: true,
@@ -418,7 +436,7 @@ export async function install(
 
 export async function uninstall(
   _userId: number,
-  tenantId: string,
+  organizationId: number,
   context: PluginContext
 ): Promise<UninstallResult> {
   try {
@@ -427,23 +445,29 @@ export async function uninstall(
     // Count records before deletion
     let totalUseCases = 0;
     try {
-      // Delete all JIRA-imported projects (by UC-ID pattern)
+      // Delete all JIRA-imported projects for this organization (by UC-ID pattern)
       const deleteResult: any = await sequelize.query(
-        `DELETE FROM "${tenantId}".projects WHERE uc_id LIKE 'UC-J%' OR uc_id LIKE 'jira-assets-%' RETURNING id`,
-        { type: "SELECT" }
+        `DELETE FROM projects WHERE organization_id = :organizationId AND (uc_id LIKE 'UC-J%' OR uc_id LIKE 'jira-assets-%') RETURNING id`,
+        { replacements: { organizationId }, type: "SELECT" }
       );
       totalUseCases = deleteResult?.length || 0;
     } catch {
       // Table may not exist
     }
 
-    // Drop tables in correct order (dependent tables first)
-    await sequelize.query(`DROP TABLE IF EXISTS "${tenantId}".jira_assets_sync_history CASCADE`);
-    await sequelize.query(`DROP TABLE IF EXISTS "${tenantId}".jira_assets_use_cases CASCADE`);
-    await sequelize.query(`DROP TABLE IF EXISTS "${tenantId}".jira_assets_config CASCADE`);
-
-    // Drop sequence
-    await sequelize.query(`DROP SEQUENCE IF EXISTS "${tenantId}".jira_use_case_uc_id_seq`);
+    // Delete data for this organization (don't drop tables - they're shared)
+    await sequelize.query(
+      `DELETE FROM jira_assets_sync_history WHERE organization_id = :organizationId`,
+      { replacements: { organizationId } }
+    );
+    await sequelize.query(
+      `DELETE FROM jira_assets_use_cases WHERE organization_id = :organizationId`,
+      { replacements: { organizationId } }
+    );
+    await sequelize.query(
+      `DELETE FROM jira_assets_config WHERE organization_id = :organizationId`,
+      { replacements: { organizationId } }
+    );
 
     // Note: _source column is part of core schema, not removed on uninstall
     // JIRA-imported projects are deleted above, clearing their _source values
@@ -460,7 +484,7 @@ export async function uninstall(
 
 export async function configure(
   _userId: number,
-  _tenantId: string,
+  _organizationId: number,
   config: JiraAssetsConfig,
   _context: PluginContext
 ): Promise<ConfigureResult> {
@@ -525,16 +549,16 @@ export function validateConfig(config: JiraAssetsConfig): ValidationResult {
 
 // ========== INTEGRATION METHODS ==========
 
-export async function testConnection(config: JiraAssetsConfig, context?: { sequelize?: any; tenantId?: string }): Promise<TestConnectionResult> {
+export async function testConnection(config: JiraAssetsConfig, context?: { sequelize?: any; organizationId?: number }): Promise<TestConnectionResult> {
   try {
     let apiToken = config.api_token;
 
     // If no api_token provided but we have context, try to load from saved config
-    if (!apiToken && context?.sequelize && context?.tenantId) {
+    if (!apiToken && context?.sequelize && context?.organizationId) {
       try {
         const savedConfigs: any[] = await context.sequelize.query(
-          `SELECT api_token_encrypted FROM "${context.tenantId}".jira_assets_config LIMIT 1`,
-          { type: "SELECT" }
+          `SELECT api_token_encrypted FROM jira_assets_config WHERE organization_id = :organizationId LIMIT 1`,
+          { replacements: { organizationId: context.organizationId }, type: "SELECT" }
         );
         if (savedConfigs.length > 0 && savedConfigs[0].api_token_encrypted) {
           apiToken = Buffer.from(savedConfigs[0].api_token_encrypted, "base64").toString("utf-8");
@@ -578,7 +602,7 @@ export async function testConnection(config: JiraAssetsConfig, context?: { seque
 // ========== SYNC LOGIC ==========
 
 async function syncObjects(
-  tenantId: string,
+  organizationId: number,
   config: JiraAssetsConfig,
   context: PluginContext,
   syncType: "manual" | "scheduled",
@@ -599,12 +623,12 @@ async function syncObjects(
 
     // Create sync history record
     const historyResult: any = await sequelize.query(
-      `INSERT INTO "${tenantId}".jira_assets_sync_history
-       (sync_type, status, started_at, triggered_by)
-       VALUES (:syncType, 'started', :startedAt, :triggeredBy)
+      `INSERT INTO jira_assets_sync_history
+       (organization_id, sync_type, status, started_at, triggered_by)
+       VALUES (:organizationId, :syncType, 'started', :startedAt, :triggeredBy)
        RETURNING id`,
       {
-        replacements: { syncType, startedAt, triggeredBy },
+        replacements: { organizationId, syncType, startedAt, triggeredBy },
         type: "SELECT",
       }
     );
@@ -624,8 +648,8 @@ async function syncObjects(
 
     // Get existing records with project_id
     const existingRecords: any[] = await sequelize.query(
-      `SELECT jira_object_id, project_id, data FROM "${tenantId}".jira_assets_use_cases`,
-      { type: "SELECT" }
+      `SELECT jira_object_id, project_id, data FROM jira_assets_use_cases WHERE organization_id = :organizationId`,
+      { replacements: { organizationId }, type: "SELECT" }
     );
     const existingMap = new Map(existingRecords.map((r) => [r.jira_object_id, r]));
 
@@ -659,14 +683,15 @@ async function syncObjects(
 
       if (!existing) {
         // Create native project entry with _source for plugin identification
-        const ucId = await generateUcId(tenantId, sequelize);
+        const ucId = await generateUcId(organizationId, sequelize);
         const projectResult: any[] = await sequelize.query(
-          `INSERT INTO "${tenantId}".projects
-           (uc_id, project_title, owner, start_date, goal, geography, last_updated, created_at, _source, is_organizational)
-           VALUES (:ucId, :title, 1, :startDate, :goal, 1, :lastUpdated, :createdAt, 'jira-assets', false)
+          `INSERT INTO projects
+           (organization_id, uc_id, project_title, owner, start_date, goal, geography, last_updated, created_at, _source, is_organizational)
+           VALUES (:organizationId, :ucId, :title, 1, :startDate, :goal, 1, :lastUpdated, :createdAt, 'jira-assets', false)
            RETURNING id`,
           {
             replacements: {
+              organizationId,
               ucId,
               title: name,
               startDate: now,
@@ -681,11 +706,12 @@ async function syncObjects(
 
         // Create JIRA link record
         await sequelize.query(
-          `INSERT INTO "${tenantId}".jira_assets_use_cases
-           (jira_object_id, project_id, data, last_synced_at, sync_status)
-           VALUES (:jiraObjectId, :projectId, :data, :lastSyncedAt, 'synced')`,
+          `INSERT INTO jira_assets_use_cases
+           (organization_id, jira_object_id, project_id, data, last_synced_at, sync_status)
+           VALUES (:organizationId, :jiraObjectId, :projectId, :data, :lastSyncedAt, 'synced')`,
           {
             replacements: {
+              organizationId,
               jiraObjectId,
               projectId,
               data: JSON.stringify(data),
@@ -697,29 +723,31 @@ async function syncObjects(
       } else {
         // Update native project
         await sequelize.query(
-          `UPDATE "${tenantId}".projects
+          `UPDATE projects
            SET project_title = :title, goal = :goal, last_updated = :lastUpdated
-           WHERE id = :projectId`,
+           WHERE id = :projectId AND organization_id = :organizationId`,
           {
             replacements: {
               title: name,
               goal: description || "Imported from JIRA Assets",
               lastUpdated: now,
               projectId: existing.project_id,
+              organizationId,
             },
           }
         );
 
         // Update JIRA data
         await sequelize.query(
-          `UPDATE "${tenantId}".jira_assets_use_cases
+          `UPDATE jira_assets_use_cases
            SET data = :data, last_synced_at = :lastSyncedAt, sync_status = 'synced', updated_at = CURRENT_TIMESTAMP
-           WHERE jira_object_id = :jiraObjectId`,
+           WHERE jira_object_id = :jiraObjectId AND organization_id = :organizationId`,
           {
             replacements: {
               data: JSON.stringify(data),
               lastSyncedAt: now,
               jiraObjectId,
+              organizationId,
             },
           }
         );
@@ -735,8 +763,8 @@ async function syncObjects(
       // Delete native project (JIRA link deleted by CASCADE)
       if (record?.project_id) {
         await sequelize.query(
-          `DELETE FROM "${tenantId}".projects WHERE id = :projectId`,
-          { replacements: { projectId: record.project_id } }
+          `DELETE FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
+          { replacements: { projectId: record.project_id, organizationId } }
         );
       }
       objectsDeleted++;
@@ -745,10 +773,10 @@ async function syncObjects(
     // Update sync history
     if (syncHistoryId) {
       await sequelize.query(
-        `UPDATE "${tenantId}".jira_assets_sync_history
+        `UPDATE jira_assets_sync_history
          SET status = 'completed', objects_fetched = :objectsFetched, objects_created = :objectsCreated,
              objects_updated = :objectsUpdated, objects_deleted = :objectsDeleted, completed_at = :completedAt
-         WHERE id = :id`,
+         WHERE id = :id AND organization_id = :organizationId`,
         {
           replacements: {
             objectsFetched,
@@ -757,6 +785,7 @@ async function syncObjects(
             objectsDeleted,
             completedAt: new Date(),
             id: syncHistoryId,
+            organizationId,
           },
         }
       );
@@ -764,10 +793,10 @@ async function syncObjects(
 
     // Update config with last sync info
     await sequelize.query(
-      `UPDATE "${tenantId}".jira_assets_config
+      `UPDATE jira_assets_config
        SET last_sync_at = :lastSyncAt, last_sync_status = 'success', updated_at = CURRENT_TIMESTAMP
-       WHERE id = (SELECT id FROM "${tenantId}".jira_assets_config LIMIT 1)`,
-      { replacements: { lastSyncAt: now } }
+       WHERE organization_id = :organizationId`,
+      { replacements: { lastSyncAt: now, organizationId } }
     );
 
     return {
@@ -783,14 +812,15 @@ async function syncObjects(
     // Update sync history with error
     if (syncHistoryId) {
       await sequelize.query(
-        `UPDATE "${tenantId}".jira_assets_sync_history
+        `UPDATE jira_assets_sync_history
          SET status = 'failed', error_message = :errorMessage, completed_at = :completedAt
-         WHERE id = :id`,
+         WHERE id = :id AND organization_id = :organizationId`,
         {
           replacements: {
             errorMessage: error.message,
             completedAt: new Date(),
             id: syncHistoryId,
+            organizationId,
           },
         }
       );
@@ -798,10 +828,10 @@ async function syncObjects(
 
     // Update config with last sync error
     await sequelize.query(
-      `UPDATE "${tenantId}".jira_assets_config
+      `UPDATE jira_assets_config
        SET last_sync_at = :lastSyncAt, last_sync_status = 'failed', last_sync_message = :message, updated_at = CURRENT_TIMESTAMP
-       WHERE id = (SELECT id FROM "${tenantId}".jira_assets_config LIMIT 1)`,
-      { replacements: { lastSyncAt: new Date(), message: error.message } }
+       WHERE organization_id = :organizationId`,
+      { replacements: { lastSyncAt: new Date(), message: error.message, organizationId } }
     );
 
     return {
@@ -869,12 +899,12 @@ function applyAttributeMappings(
   return mapped;
 }
 
-async function generateUcId(tenantId: string, sequelize: any): Promise<string> {
+async function generateUcId(organizationId: number, sequelize: any): Promise<string> {
   const result: any = await sequelize.query(
-    `SELECT nextval('"${tenantId}".jira_use_case_uc_id_seq') as seq`
+    `SELECT nextval('jira_use_case_uc_id_seq') as seq`
   );
   const seq = result[0][0].seq;
-  return `UC-J${seq}`;
+  return `UC-J${organizationId}-${seq}`;
 }
 
 // ========== PLUGIN METADATA ==========
@@ -895,13 +925,13 @@ export const dataProviders = {
   "use-cases": {
     enabled: false,
     // Transform JIRA use cases to match the Project interface expected by the frontend
-    async getData(ctx: { sequelize: any; tenantId: string }): Promise<any[]> {
-      const { sequelize, tenantId } = ctx;
+    async getData(ctx: { sequelize: any; organizationId: number }): Promise<any[]> {
+      const { sequelize, organizationId } = ctx;
 
       try {
         const useCases: any[] = await sequelize.query(
-          `SELECT * FROM "${tenantId}".jira_assets_use_cases ORDER BY created_at DESC`,
-          { type: "SELECT" }
+          `SELECT * FROM jira_assets_use_cases WHERE organization_id = :organizationId ORDER BY created_at DESC`,
+          { replacements: { organizationId }, type: "SELECT" }
         );
 
         // Transform to match Project interface (with JIRA-specific handling)
@@ -947,11 +977,11 @@ export const dataProviders = {
  * Helper to load config from jira_assets_config table
  * Used when ctx.configuration doesn't have the JIRA config
  */
-async function loadConfigFromDb(sequelize: any, tenantId: string): Promise<any> {
+async function loadConfigFromDb(sequelize: any, organizationId: number): Promise<any> {
   try {
     const configs: any[] = await sequelize.query(
-      `SELECT * FROM "${tenantId}".jira_assets_config LIMIT 1`,
-      { type: "SELECT" }
+      `SELECT * FROM jira_assets_config WHERE organization_id = :organizationId LIMIT 1`,
+      { replacements: { organizationId }, type: "SELECT" }
     );
     return configs.length > 0 ? configs[0] : null;
   } catch {
@@ -963,12 +993,12 @@ async function loadConfigFromDb(sequelize: any, tenantId: string): Promise<any> 
  * GET /config - Get current configuration
  */
 async function handleGetConfig(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId } = ctx;
+  const { sequelize, organizationId } = ctx;
 
   // Migration: ensure deployment_type column exists
   try {
     await sequelize.query(
-      `ALTER TABLE "${tenantId}".jira_assets_config ADD COLUMN IF NOT EXISTS deployment_type VARCHAR(20) DEFAULT 'cloud'`
+      `ALTER TABLE jira_assets_config ADD COLUMN IF NOT EXISTS deployment_type VARCHAR(20) DEFAULT 'cloud'`
     );
   } catch {
     // Column might already exist
@@ -979,8 +1009,8 @@ async function handleGetConfig(ctx: PluginRouteContext): Promise<PluginRouteResp
       `SELECT id, jira_base_url, workspace_id, email, deployment_type, selected_schema_id, selected_object_type_id,
               sync_enabled, sync_interval_hours, last_sync_at, last_sync_status, last_sync_message,
               CASE WHEN api_token_encrypted IS NOT NULL AND api_token_encrypted != '' THEN true ELSE false END as has_api_token
-       FROM "${tenantId}".jira_assets_config LIMIT 1`,
-      { type: "SELECT" }
+       FROM jira_assets_config WHERE organization_id = :organizationId LIMIT 1`,
+      { replacements: { organizationId }, type: "SELECT" }
     );
 
     return {
@@ -999,12 +1029,12 @@ async function handleGetConfig(ctx: PluginRouteContext): Promise<PluginRouteResp
  * POST /config - Save configuration
  */
 async function handleSaveConfig(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, userId, body } = ctx;
+  const { sequelize, organizationId, userId, body } = ctx;
 
   // Migration: ensure deployment_type column exists
   try {
     await sequelize.query(
-      `ALTER TABLE "${tenantId}".jira_assets_config ADD COLUMN IF NOT EXISTS deployment_type VARCHAR(20) DEFAULT 'cloud'`
+      `ALTER TABLE jira_assets_config ADD COLUMN IF NOT EXISTS deployment_type VARCHAR(20) DEFAULT 'cloud'`
     );
   } catch {
     // Column might already exist or table structure different
@@ -1012,8 +1042,8 @@ async function handleSaveConfig(ctx: PluginRouteContext): Promise<PluginRouteRes
 
   // Check if config already exists
   const existing: any[] = await sequelize.query(
-    `SELECT id, api_token_encrypted FROM "${tenantId}".jira_assets_config LIMIT 1`,
-    { type: "SELECT" }
+    `SELECT id, api_token_encrypted FROM jira_assets_config WHERE organization_id = :organizationId LIMIT 1`,
+    { replacements: { organizationId }, type: "SELECT" }
   );
 
   const isUpdate = existing.length > 0;
@@ -1040,14 +1070,14 @@ async function handleSaveConfig(ctx: PluginRouteContext): Promise<PluginRouteRes
       const iv = Math.random().toString(36).substring(2, 15);
       const encryptedToken = Buffer.from(body.api_token).toString("base64");
       await sequelize.query(
-        `UPDATE "${tenantId}".jira_assets_config
+        `UPDATE jira_assets_config
          SET jira_base_url = :jiraBaseUrl, workspace_id = :workspaceId, email = :email,
              api_token_encrypted = :apiTokenEncrypted, api_token_iv = :apiTokenIv,
              deployment_type = :deploymentType,
              selected_schema_id = :selectedSchemaId, selected_object_type_id = :selectedObjectTypeId,
              sync_enabled = :syncEnabled, sync_interval_hours = :syncIntervalHours,
              updated_by = :updatedBy, updated_at = CURRENT_TIMESTAMP
-         WHERE id = :id`,
+         WHERE id = :id AND organization_id = :organizationId`,
         {
           replacements: {
             jiraBaseUrl: body.jira_base_url,
@@ -1062,19 +1092,20 @@ async function handleSaveConfig(ctx: PluginRouteContext): Promise<PluginRouteRes
             syncIntervalHours: body.sync_interval_hours || 24,
             updatedBy: userId,
             id: existing[0].id,
+            organizationId,
           },
         }
       );
     } else {
       // No new token - keep existing token
       await sequelize.query(
-        `UPDATE "${tenantId}".jira_assets_config
+        `UPDATE jira_assets_config
          SET jira_base_url = :jiraBaseUrl, workspace_id = :workspaceId, email = :email,
              deployment_type = :deploymentType,
              selected_schema_id = :selectedSchemaId, selected_object_type_id = :selectedObjectTypeId,
              sync_enabled = :syncEnabled, sync_interval_hours = :syncIntervalHours,
              updated_by = :updatedBy, updated_at = CURRENT_TIMESTAMP
-         WHERE id = :id`,
+         WHERE id = :id AND organization_id = :organizationId`,
         {
           replacements: {
             jiraBaseUrl: body.jira_base_url,
@@ -1087,6 +1118,7 @@ async function handleSaveConfig(ctx: PluginRouteContext): Promise<PluginRouteRes
             syncIntervalHours: body.sync_interval_hours || 24,
             updatedBy: userId,
             id: existing[0].id,
+            organizationId,
           },
         }
       );
@@ -1096,13 +1128,14 @@ async function handleSaveConfig(ctx: PluginRouteContext): Promise<PluginRouteRes
     const iv = Math.random().toString(36).substring(2, 15);
     const encryptedToken = Buffer.from(body.api_token).toString("base64");
     await sequelize.query(
-      `INSERT INTO "${tenantId}".jira_assets_config
-       (jira_base_url, workspace_id, email, api_token_encrypted, api_token_iv, deployment_type,
+      `INSERT INTO jira_assets_config
+       (organization_id, jira_base_url, workspace_id, email, api_token_encrypted, api_token_iv, deployment_type,
         selected_schema_id, selected_object_type_id, sync_enabled, sync_interval_hours, created_by)
-       VALUES (:jiraBaseUrl, :workspaceId, :email, :apiTokenEncrypted, :apiTokenIv, :deploymentType,
+       VALUES (:organizationId, :jiraBaseUrl, :workspaceId, :email, :apiTokenEncrypted, :apiTokenIv, :deploymentType,
                :selectedSchemaId, :selectedObjectTypeId, :syncEnabled, :syncIntervalHours, :createdBy)`,
       {
         replacements: {
+          organizationId,
           jiraBaseUrl: body.jira_base_url,
           workspaceId: body.workspace_id,
           email: body.email,
@@ -1142,15 +1175,15 @@ async function handleTestConnection(ctx: PluginRouteContext): Promise<PluginRout
  * GET /schemas - Get available schemas
  */
 async function handleGetSchemas(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { configuration, sequelize, tenantId } = ctx;
+  const { configuration, sequelize, organizationId } = ctx;
 
 
   // If configuration not provided via context, load from our own table
   let config = configuration;
   if (!config?.jira_base_url || !config?.workspace_id) {
     const configs: any[] = await sequelize.query(
-      `SELECT * FROM "${tenantId}".jira_assets_config LIMIT 1`,
-      { type: "SELECT" }
+      `SELECT * FROM jira_assets_config WHERE organization_id = :organizationId LIMIT 1`,
+      { replacements: { organizationId }, type: "SELECT" }
     );
     if (configs.length > 0) {
       config = configs[0];
@@ -1188,13 +1221,13 @@ async function handleGetSchemas(ctx: PluginRouteContext): Promise<PluginRouteRes
  * GET /schemas/:schemaId/object-types - Get object types for a schema
  */
 async function handleGetObjectTypes(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { configuration, params, sequelize, tenantId } = ctx;
+  const { configuration, params, sequelize, organizationId } = ctx;
   const schemaId = params.schemaId;
 
   // Load config from database if not in context
   let config = configuration;
   if (!config?.jira_base_url || !config?.workspace_id) {
-    config = await loadConfigFromDb(sequelize, tenantId);
+    config = await loadConfigFromDb(sequelize, organizationId);
   }
 
   if (!config?.jira_base_url || !config?.workspace_id) {
@@ -1225,13 +1258,13 @@ async function handleGetObjectTypes(ctx: PluginRouteContext): Promise<PluginRout
  * GET /object-types/:objectTypeId/attributes - Get attributes for an object type
  */
 async function handleGetAttributes(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { configuration, params, sequelize, tenantId } = ctx;
+  const { configuration, params, sequelize, organizationId } = ctx;
   const objectTypeId = params.objectTypeId;
 
   // Load config from database if not in context
   let config = configuration;
   if (!config?.jira_base_url || !config?.workspace_id) {
-    config = await loadConfigFromDb(sequelize, tenantId);
+    config = await loadConfigFromDb(sequelize, organizationId);
   }
 
   if (!config?.jira_base_url || !config?.workspace_id) {
@@ -1261,14 +1294,14 @@ async function handleGetAttributes(ctx: PluginRouteContext): Promise<PluginRoute
  * GET /object-types/:objectTypeId/objects - Get objects of a type
  */
 async function handleGetObjects(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { configuration, params, sequelize, tenantId } = ctx;
+  const { configuration, params, sequelize, organizationId } = ctx;
   const objectTypeId = params.objectTypeId;
 
 
   // Load config from database if not in context
   let config = configuration;
   if (!config?.jira_base_url || !config?.workspace_id) {
-    config = await loadConfigFromDb(sequelize, tenantId);
+    config = await loadConfigFromDb(sequelize, organizationId);
   }
 
   if (!config?.jira_base_url || !config?.workspace_id) {
@@ -1312,7 +1345,7 @@ async function handleGetObjects(ctx: PluginRouteContext): Promise<PluginRouteRes
  * POST /import - Import selected JIRA objects
  */
 async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, body, configuration } = ctx;
+  const { sequelize, organizationId, body, configuration } = ctx;
 
 
   const { object_ids } = body;
@@ -1325,7 +1358,7 @@ async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRoute
   // Load config from database if not in context
   let config = configuration;
   if (!config?.jira_base_url || !config?.workspace_id) {
-    config = await loadConfigFromDb(sequelize, tenantId);
+    config = await loadConfigFromDb(sequelize, organizationId);
   }
 
   if (!config?.jira_base_url || !config?.workspace_id) {
@@ -1362,8 +1395,8 @@ async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRoute
       try {
         // Check if already imported
         const existing: any[] = await sequelize.query(
-          `SELECT id FROM "${tenantId}".jira_assets_use_cases WHERE jira_object_id = :objectId`,
-          { replacements: { objectId }, type: "SELECT" }
+          `SELECT id FROM jira_assets_use_cases WHERE jira_object_id = :objectId AND organization_id = :organizationId`,
+          { replacements: { objectId, organizationId }, type: "SELECT" }
         );
 
         if (existing.length > 0) {
@@ -1381,16 +1414,17 @@ async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRoute
         const description = transformedAttrs["Description / Purpose"] || transformedAttrs["Description"] || "";
 
         // Generate UC-ID
-        const ucId = await generateUcId(tenantId, sequelize);
+        const ucId = await generateUcId(organizationId, sequelize);
 
         // Create native project entry with _source for plugin identification
         const projectResult: any[] = await sequelize.query(
-          `INSERT INTO "${tenantId}".projects
-           (uc_id, project_title, owner, start_date, goal, geography, last_updated, created_at, _source, is_organizational)
-           VALUES (:ucId, :title, 1, :startDate, :goal, 1, :lastUpdated, :createdAt, 'jira-assets', false)
+          `INSERT INTO projects
+           (organization_id, uc_id, project_title, owner, start_date, goal, geography, last_updated, created_at, _source, is_organizational)
+           VALUES (:organizationId, :ucId, :title, 1, :startDate, :goal, 1, :lastUpdated, :createdAt, 'jira-assets', false)
            RETURNING id`,
           {
             replacements: {
+              organizationId,
               ucId,
               title: name,
               startDate: now,
@@ -1415,11 +1449,12 @@ async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRoute
         };
 
         await sequelize.query(
-          `INSERT INTO "${tenantId}".jira_assets_use_cases
-           (jira_object_id, project_id, data, last_synced_at, sync_status)
-           VALUES (:jiraObjectId, :projectId, :data, :lastSyncedAt, 'synced')`,
+          `INSERT INTO jira_assets_use_cases
+           (organization_id, jira_object_id, project_id, data, last_synced_at, sync_status)
+           VALUES (:organizationId, :jiraObjectId, :projectId, :data, :lastSyncedAt, 'synced')`,
           {
             replacements: {
+              organizationId,
               jiraObjectId,
               projectId,
               data: JSON.stringify(data),
@@ -1452,12 +1487,12 @@ async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRoute
  * POST /sync - Manual sync
  */
 async function handleManualSync(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, userId, configuration } = ctx;
+  const { sequelize, organizationId, userId, configuration } = ctx;
 
   // Load config from database if not in context
   let dbConfig = configuration;
   if (!dbConfig?.jira_base_url || !dbConfig?.workspace_id) {
-    dbConfig = await loadConfigFromDb(sequelize, tenantId);
+    dbConfig = await loadConfigFromDb(sequelize, organizationId);
   }
 
   if (!dbConfig?.jira_base_url || !dbConfig?.workspace_id) {
@@ -1477,7 +1512,7 @@ async function handleManualSync(ctx: PluginRouteContext): Promise<PluginRouteRes
     selected_object_type_id: dbConfig.selected_object_type_id,
   };
 
-  const result = await syncObjects(tenantId, config, { sequelize }, "manual", userId);
+  const result = await syncObjects(organizationId, config, { sequelize }, "manual", userId);
 
   return {
     status: result.success ? 200 : 500,
@@ -1489,13 +1524,13 @@ async function handleManualSync(ctx: PluginRouteContext): Promise<PluginRouteRes
  * GET /sync/status - Get current sync status
  */
 async function handleGetSyncStatus(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId } = ctx;
+  const { sequelize, organizationId } = ctx;
 
   try {
     const configs: any[] = await sequelize.query(
       `SELECT last_sync_at, last_sync_status, last_sync_message, sync_enabled, sync_interval_hours
-       FROM "${tenantId}".jira_assets_config LIMIT 1`,
-      { type: "SELECT" }
+       FROM jira_assets_config WHERE organization_id = :organizationId LIMIT 1`,
+      { replacements: { organizationId }, type: "SELECT" }
     );
 
     if (configs.length === 0) {
@@ -1512,14 +1547,15 @@ async function handleGetSyncStatus(ctx: PluginRouteContext): Promise<PluginRoute
  * GET /sync/history - Get sync history
  */
 async function handleGetSyncHistory(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, query } = ctx;
+  const { sequelize, organizationId, query } = ctx;
   const limit = query.limit || 20;
 
   try {
     const history: any[] = await sequelize.query(
-      `SELECT * FROM "${tenantId}".jira_assets_sync_history
+      `SELECT * FROM jira_assets_sync_history
+       WHERE organization_id = :organizationId
        ORDER BY started_at DESC LIMIT :limit`,
-      { replacements: { limit }, type: "SELECT" }
+      { replacements: { organizationId, limit }, type: "SELECT" }
     );
 
     return { status: 200, data: history };
@@ -1532,15 +1568,16 @@ async function handleGetSyncHistory(ctx: PluginRouteContext): Promise<PluginRout
  * GET /use-cases - Get all imported use cases
  */
 async function handleGetUseCases(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId } = ctx;
+  const { sequelize, organizationId } = ctx;
 
   try {
     const useCases: any[] = await sequelize.query(
       `SELECT j.*, p.uc_id, p.project_title as name
-       FROM "${tenantId}".jira_assets_use_cases j
-       LEFT JOIN "${tenantId}".projects p ON j.project_id = p.id
+       FROM jira_assets_use_cases j
+       LEFT JOIN projects p ON j.project_id = p.id AND p.organization_id = :organizationId
+       WHERE j.organization_id = :organizationId
        ORDER BY j.created_at DESC`,
-      { type: "SELECT" }
+      { replacements: { organizationId }, type: "SELECT" }
     );
 
     return { status: 200, data: useCases };
@@ -1558,14 +1595,14 @@ async function handleGetUseCases(ctx: PluginRouteContext): Promise<PluginRouteRe
  * Returns data formatted for the frontend ProjectView
  */
 async function handleGetUseCase(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params } = ctx;
+  const { sequelize, organizationId, params } = ctx;
   const projectId = params.id; // This is projects.id
 
   try {
     // Look up by project_id (native project ID)
     const useCases: any[] = await sequelize.query(
-      `SELECT * FROM "${tenantId}".jira_assets_use_cases WHERE project_id = :projectId`,
-      { replacements: { projectId }, type: "SELECT" }
+      `SELECT * FROM jira_assets_use_cases WHERE project_id = :projectId AND organization_id = :organizationId`,
+      { replacements: { projectId, organizationId }, type: "SELECT" }
     );
 
     if (useCases.length === 0) {
@@ -1577,17 +1614,17 @@ async function handleGetUseCase(ctx: PluginRouteContext): Promise<PluginRouteRes
 
     // Fetch native project data for complete info
     const projects: any[] = await sequelize.query(
-      `SELECT * FROM "${tenantId}".projects WHERE id = :projectId`,
-      { replacements: { projectId }, type: "SELECT" }
+      `SELECT * FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
+      { replacements: { projectId, organizationId }, type: "SELECT" }
     );
     const nativeProject = projects[0] || {};
 
     // Fetch assigned frameworks from junction table
     const frameworkRows: any[] = await sequelize.query(
       `SELECT pf.id, pf.framework_id, pf.id as project_framework_id
-       FROM "${tenantId}".projects_frameworks pf
-       WHERE pf.project_id = :projectId`,
-      { replacements: { projectId }, type: "SELECT" }
+       FROM projects_frameworks pf
+       WHERE pf.project_id = :projectId AND pf.organization_id = :organizationId`,
+      { replacements: { projectId, organizationId }, type: "SELECT" }
     );
 
     // Transform to match Project interface expected by frontend
@@ -1626,14 +1663,14 @@ async function handleGetUseCase(ctx: PluginRouteContext): Promise<PluginRouteRes
  * Deletes the native project (cascades to jira_assets_use_cases via FK)
  */
 async function handleDeleteUseCase(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params } = ctx;
+  const { sequelize, organizationId, params } = ctx;
   const projectId = params.id; // This is projects.id
 
   try {
     // Delete the native project (cascades to jira_assets_use_cases via FK)
     await sequelize.query(
-      `DELETE FROM "${tenantId}".projects WHERE id = :projectId`,
-      { replacements: { projectId } }
+      `DELETE FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
+      { replacements: { projectId, organizationId } }
     );
 
     return { status: 200, data: { success: true } };
@@ -1656,12 +1693,12 @@ async function handleGetVWAttributes(_ctx: PluginRouteContext): Promise<PluginRo
  * GET /mappings - Get current attribute mappings
  */
 async function handleGetMappings(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId } = ctx;
+  const { sequelize, organizationId } = ctx;
 
   try {
     const configs: any[] = await sequelize.query(
-      `SELECT attribute_mappings FROM "${tenantId}".jira_assets_config LIMIT 1`,
-      { type: "SELECT" }
+      `SELECT attribute_mappings FROM jira_assets_config WHERE organization_id = :organizationId LIMIT 1`,
+      { replacements: { organizationId }, type: "SELECT" }
     );
 
     return {
@@ -1677,15 +1714,15 @@ async function handleGetMappings(ctx: PluginRouteContext): Promise<PluginRouteRe
  * POST /mappings - Save attribute mappings
  */
 async function handleSaveMappings(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, userId, body } = ctx;
+  const { sequelize, organizationId, userId, body } = ctx;
 
   const mappings = body.mappings || {};
 
   try {
     // Check if config exists
     const existing: any[] = await sequelize.query(
-      `SELECT id FROM "${tenantId}".jira_assets_config LIMIT 1`,
-      { type: "SELECT" }
+      `SELECT id FROM jira_assets_config WHERE organization_id = :organizationId LIMIT 1`,
+      { replacements: { organizationId }, type: "SELECT" }
     );
 
     if (existing.length === 0) {
@@ -1696,22 +1733,23 @@ async function handleSaveMappings(ctx: PluginRouteContext): Promise<PluginRouteR
     }
 
     await sequelize.query(
-      `UPDATE "${tenantId}".jira_assets_config
+      `UPDATE jira_assets_config
        SET attribute_mappings = :mappings, updated_by = :updatedBy, updated_at = CURRENT_TIMESTAMP
-       WHERE id = :id`,
+       WHERE id = :id AND organization_id = :organizationId`,
       {
         replacements: {
           mappings: JSON.stringify(mappings),
           updatedBy: userId,
           id: existing[0].id,
+          organizationId,
         },
       }
     );
 
     // Re-apply mappings to all existing use cases
     const useCases: any[] = await sequelize.query(
-      `SELECT id, attributes FROM "${tenantId}".jira_assets_use_cases WHERE is_active = true`,
-      { type: "SELECT" }
+      `SELECT id, attributes FROM jira_assets_use_cases WHERE organization_id = :organizationId AND is_active = true`,
+      { replacements: { organizationId }, type: "SELECT" }
     );
 
     for (const uc of useCases) {
@@ -1719,13 +1757,14 @@ async function handleSaveMappings(ctx: PluginRouteContext): Promise<PluginRouteR
       const mapped = applyAttributeMappings(attrs, mappings);
 
       await sequelize.query(
-        `UPDATE "${tenantId}".jira_assets_use_cases
+        `UPDATE jira_assets_use_cases
          SET mapped_attributes = :mappedAttributes, updated_at = CURRENT_TIMESTAMP
-         WHERE id = :id`,
+         WHERE id = :id AND organization_id = :organizationId`,
         {
           replacements: {
             mappedAttributes: JSON.stringify(mapped),
             id: uc.id,
+            organizationId,
           },
         }
       );
@@ -1747,15 +1786,15 @@ async function handleSaveMappings(ctx: PluginRouteContext): Promise<PluginRouteR
 async function handleGetCustomFrameworksProgress(
   ctx: PluginRouteContext
 ): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params } = ctx;
+  const { sequelize, organizationId, params } = ctx;
   const projectId = parseInt(params.projectId);
 
   try {
-    // Check if custom_frameworks table exists
+    // Check if custom_frameworks table exists (in public schema)
     const [tables] = await sequelize.query(`
       SELECT table_name FROM information_schema.tables
-      WHERE table_schema = :tenantId AND table_name = 'custom_frameworks'
-    `, { replacements: { tenantId } });
+      WHERE table_schema = 'public' AND table_name = 'custom_frameworks'
+    `);
 
     if (tables.length === 0) {
       // No custom frameworks table - return empty array
@@ -1766,11 +1805,11 @@ async function handleGetCustomFrameworksProgress(
     const [frameworks] = await sequelize.query(`
       SELECT cf.id, cf.name, cf.plugin_key, cf.hierarchy_type,
              cfp.id as project_framework_id
-      FROM "${tenantId}".custom_frameworks cf
-      JOIN "${tenantId}".custom_framework_projects cfp ON cf.id = cfp.framework_id
-      WHERE cfp.project_id = :projectId
+      FROM custom_frameworks cf
+      JOIN custom_framework_projects cfp ON cf.id = cfp.framework_id AND cfp.organization_id = :organizationId
+      WHERE cfp.project_id = :projectId AND cf.organization_id = :organizationId
       ORDER BY cf.name
-    `, { replacements: { projectId } });
+    `, { replacements: { projectId, organizationId } });
 
     // For each framework, calculate progress
     const frameworksWithProgress = await Promise.all(
@@ -1785,10 +1824,10 @@ async function handleGetCustomFrameworksProgress(
               SELECT
                 COUNT(*) as total,
                 SUM(CASE WHEN l3.status = 'Implemented' THEN 1 ELSE 0 END) as completed
-              FROM "${tenantId}".custom_framework_level3_impl l3
-              JOIN "${tenantId}".custom_framework_level2_impl l2 ON l3.level2_impl_id = l2.id
-              WHERE l2.project_framework_id = :projectFrameworkId
-            `, { replacements: { projectFrameworkId: fw.project_framework_id } });
+              FROM custom_framework_level3_impl l3
+              JOIN custom_framework_level2_impl l2 ON l3.level2_impl_id = l2.id AND l2.organization_id = :organizationId
+              WHERE l2.project_framework_id = :projectFrameworkId AND l3.organization_id = :organizationId
+            `, { replacements: { projectFrameworkId: fw.project_framework_id, organizationId } });
 
             total = parseInt(stats[0]?.total || '0');
             completed = parseInt(stats[0]?.completed || '0');
@@ -1798,9 +1837,9 @@ async function handleGetCustomFrameworksProgress(
               SELECT
                 COUNT(*) as total,
                 SUM(CASE WHEN status = 'Implemented' THEN 1 ELSE 0 END) as completed
-              FROM "${tenantId}".custom_framework_level2_impl
-              WHERE project_framework_id = :projectFrameworkId
-            `, { replacements: { projectFrameworkId: fw.project_framework_id } });
+              FROM custom_framework_level2_impl
+              WHERE project_framework_id = :projectFrameworkId AND organization_id = :organizationId
+            `, { replacements: { projectFrameworkId: fw.project_framework_id, organizationId } });
 
             total = parseInt(stats[0]?.total || '0');
             completed = parseInt(stats[0]?.completed || '0');

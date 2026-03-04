@@ -3,6 +3,9 @@
  *
  * Provides a factory function to create framework plugins with minimal configuration.
  * All framework plugins share the same database tables with a plugin_key column for isolation.
+ *
+ * MIGRATION NOTE: This package now uses shared-schema architecture.
+ * Tables are in the public schema with organization_id column for tenant isolation.
  */
 
 import * as ExcelJS from "exceljs";
@@ -14,7 +17,8 @@ export interface PluginContext {
 }
 
 export interface PluginRouteContext {
-  tenantId: string;
+  /** @deprecated Use organizationId instead. Kept for backward compatibility. */
+  tenantId?: string;
   userId: number;
   organizationId: number;
   method: string;
@@ -94,13 +98,14 @@ interface ValidationResult {
   errors: string[];
 }
 
-// ========== SHARED TABLE CREATION ==========
+// ========== SHARED TABLE CREATION (PUBLIC SCHEMA) ==========
 
-async function ensureSharedTables(sequelize: any, tenantId: string): Promise<void> {
-  // Framework definition table with plugin_key for isolation
+async function ensureSharedTables(sequelize: any, organizationId: number): Promise<void> {
+  // Framework definition table in public schema with organization_id for isolation
   await sequelize.query(`
-    CREATE TABLE IF NOT EXISTS "${tenantId}".custom_frameworks (
+    CREATE TABLE IF NOT EXISTS public.custom_frameworks (
       id SERIAL PRIMARY KEY,
+      organization_id INTEGER NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
       plugin_key VARCHAR(100),
       name VARCHAR(255) NOT NULL,
       description TEXT,
@@ -116,17 +121,32 @@ async function ensureSharedTables(sequelize: any, tenantId: string): Promise<voi
     )
   `);
 
+  // Add organization_id column if it doesn't exist (for migration from old schema)
+  await sequelize.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+        AND table_name = 'custom_frameworks'
+        AND column_name = 'organization_id'
+      ) THEN
+        ALTER TABLE public.custom_frameworks ADD COLUMN organization_id INTEGER REFERENCES public.organizations(id) ON DELETE CASCADE;
+      END IF;
+    END $$;
+  `);
+
   // Add plugin_key column if it doesn't exist (for migration from old schema)
   await sequelize.query(`
     DO $$
     BEGIN
       IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_schema = '${tenantId}'
+        WHERE table_schema = 'public'
         AND table_name = 'custom_frameworks'
         AND column_name = 'plugin_key'
       ) THEN
-        ALTER TABLE "${tenantId}".custom_frameworks ADD COLUMN plugin_key VARCHAR(100);
+        ALTER TABLE public.custom_frameworks ADD COLUMN plugin_key VARCHAR(100);
       END IF;
     END $$;
   `);
@@ -137,20 +157,21 @@ async function ensureSharedTables(sequelize: any, tenantId: string): Promise<voi
     BEGIN
       IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_schema = '${tenantId}'
+        WHERE table_schema = 'public'
         AND table_name = 'custom_frameworks'
         AND column_name = 'file_source'
       ) THEN
-        ALTER TABLE "${tenantId}".custom_frameworks ADD COLUMN file_source VARCHAR(100);
+        ALTER TABLE public.custom_frameworks ADD COLUMN file_source VARCHAR(100);
       END IF;
     END $$;
   `);
 
   // Level 1 structure
   await sequelize.query(`
-    CREATE TABLE IF NOT EXISTS "${tenantId}".custom_framework_level1 (
+    CREATE TABLE IF NOT EXISTS public.custom_framework_level1 (
       id SERIAL PRIMARY KEY,
-      framework_id INTEGER NOT NULL REFERENCES "${tenantId}".custom_frameworks(id) ON DELETE CASCADE,
+      organization_id INTEGER NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+      framework_id INTEGER NOT NULL REFERENCES public.custom_frameworks(id) ON DELETE CASCADE,
       title VARCHAR(500) NOT NULL,
       description TEXT,
       order_no INTEGER NOT NULL DEFAULT 1,
@@ -161,9 +182,10 @@ async function ensureSharedTables(sequelize: any, tenantId: string): Promise<voi
 
   // Level 2 structure
   await sequelize.query(`
-    CREATE TABLE IF NOT EXISTS "${tenantId}".custom_framework_level2 (
+    CREATE TABLE IF NOT EXISTS public.custom_framework_level2 (
       id SERIAL PRIMARY KEY,
-      level1_id INTEGER NOT NULL REFERENCES "${tenantId}".custom_framework_level1(id) ON DELETE CASCADE,
+      organization_id INTEGER NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+      level1_id INTEGER NOT NULL REFERENCES public.custom_framework_level1(id) ON DELETE CASCADE,
       title VARCHAR(500) NOT NULL,
       description TEXT,
       order_no INTEGER NOT NULL DEFAULT 1,
@@ -177,9 +199,10 @@ async function ensureSharedTables(sequelize: any, tenantId: string): Promise<voi
 
   // Level 3 structure
   await sequelize.query(`
-    CREATE TABLE IF NOT EXISTS "${tenantId}".custom_framework_level3 (
+    CREATE TABLE IF NOT EXISTS public.custom_framework_level3 (
       id SERIAL PRIMARY KEY,
-      level2_id INTEGER NOT NULL REFERENCES "${tenantId}".custom_framework_level2(id) ON DELETE CASCADE,
+      organization_id INTEGER NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+      level2_id INTEGER NOT NULL REFERENCES public.custom_framework_level2(id) ON DELETE CASCADE,
       title VARCHAR(500) NOT NULL,
       description TEXT,
       order_no INTEGER NOT NULL DEFAULT 1,
@@ -193,21 +216,23 @@ async function ensureSharedTables(sequelize: any, tenantId: string): Promise<voi
 
   // Project-framework association
   await sequelize.query(`
-    CREATE TABLE IF NOT EXISTS "${tenantId}".custom_framework_projects (
+    CREATE TABLE IF NOT EXISTS public.custom_framework_projects (
       id SERIAL PRIMARY KEY,
-      framework_id INTEGER NOT NULL REFERENCES "${tenantId}".custom_frameworks(id) ON DELETE CASCADE,
+      organization_id INTEGER NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+      framework_id INTEGER NOT NULL REFERENCES public.custom_frameworks(id) ON DELETE CASCADE,
       project_id INTEGER NOT NULL,
       created_at TIMESTAMP DEFAULT NOW(),
-      UNIQUE(framework_id, project_id)
+      UNIQUE(organization_id, framework_id, project_id)
     )
   `);
 
   // Level 2 implementation records
   await sequelize.query(`
-    CREATE TABLE IF NOT EXISTS "${tenantId}".custom_framework_level2_impl (
+    CREATE TABLE IF NOT EXISTS public.custom_framework_level2_impl (
       id SERIAL PRIMARY KEY,
-      level2_id INTEGER NOT NULL REFERENCES "${tenantId}".custom_framework_level2(id) ON DELETE CASCADE,
-      project_framework_id INTEGER NOT NULL REFERENCES "${tenantId}".custom_framework_projects(id) ON DELETE CASCADE,
+      organization_id INTEGER NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+      level2_id INTEGER NOT NULL REFERENCES public.custom_framework_level2(id) ON DELETE CASCADE,
+      project_framework_id INTEGER NOT NULL REFERENCES public.custom_framework_projects(id) ON DELETE CASCADE,
       status VARCHAR(50) DEFAULT 'Not started',
       owner INTEGER,
       reviewer INTEGER,
@@ -225,10 +250,11 @@ async function ensureSharedTables(sequelize: any, tenantId: string): Promise<voi
 
   // Level 3 implementation records
   await sequelize.query(`
-    CREATE TABLE IF NOT EXISTS "${tenantId}".custom_framework_level3_impl (
+    CREATE TABLE IF NOT EXISTS public.custom_framework_level3_impl (
       id SERIAL PRIMARY KEY,
-      level3_id INTEGER NOT NULL REFERENCES "${tenantId}".custom_framework_level3(id) ON DELETE CASCADE,
-      level2_impl_id INTEGER NOT NULL REFERENCES "${tenantId}".custom_framework_level2_impl(id) ON DELETE CASCADE,
+      organization_id INTEGER NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+      level3_id INTEGER NOT NULL REFERENCES public.custom_framework_level3(id) ON DELETE CASCADE,
+      level2_impl_id INTEGER NOT NULL REFERENCES public.custom_framework_level2_impl(id) ON DELETE CASCADE,
       status VARCHAR(50) DEFAULT 'Not started',
       owner INTEGER,
       reviewer INTEGER,
@@ -246,29 +272,38 @@ async function ensureSharedTables(sequelize: any, tenantId: string): Promise<voi
 
   // Risk linking tables
   await sequelize.query(`
-    CREATE TABLE IF NOT EXISTS "${tenantId}".custom_framework_level2_risks (
-      level2_impl_id INTEGER NOT NULL REFERENCES "${tenantId}".custom_framework_level2_impl(id) ON DELETE CASCADE,
+    CREATE TABLE IF NOT EXISTS public.custom_framework_level2_risks (
+      organization_id INTEGER NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+      level2_impl_id INTEGER NOT NULL REFERENCES public.custom_framework_level2_impl(id) ON DELETE CASCADE,
       risk_id INTEGER NOT NULL,
       PRIMARY KEY (level2_impl_id, risk_id)
     )
   `);
 
   await sequelize.query(`
-    CREATE TABLE IF NOT EXISTS "${tenantId}".custom_framework_level3_risks (
-      level3_impl_id INTEGER NOT NULL REFERENCES "${tenantId}".custom_framework_level3_impl(id) ON DELETE CASCADE,
+    CREATE TABLE IF NOT EXISTS public.custom_framework_level3_risks (
+      organization_id INTEGER NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+      level3_impl_id INTEGER NOT NULL REFERENCES public.custom_framework_level3_impl(id) ON DELETE CASCADE,
       risk_id INTEGER NOT NULL,
       PRIMARY KEY (level3_impl_id, risk_id)
     )
   `);
 
-  // Create indexes
+  // Create indexes for performance
   const indexes = [
-    `CREATE INDEX IF NOT EXISTS idx_cf_level1_framework ON "${tenantId}".custom_framework_level1(framework_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_cf_level2_level1 ON "${tenantId}".custom_framework_level2(level1_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_cf_level3_level2 ON "${tenantId}".custom_framework_level3(level2_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_cf_l2impl_pf ON "${tenantId}".custom_framework_level2_impl(project_framework_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_cf_l3impl_l2impl ON "${tenantId}".custom_framework_level3_impl(level2_impl_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_cf_plugin_key ON "${tenantId}".custom_frameworks(plugin_key)`,
+    `CREATE INDEX IF NOT EXISTS idx_cf_org_id ON public.custom_frameworks(organization_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_cf_level1_framework ON public.custom_framework_level1(framework_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_cf_level1_org ON public.custom_framework_level1(organization_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_cf_level2_level1 ON public.custom_framework_level2(level1_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_cf_level2_org ON public.custom_framework_level2(organization_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_cf_level3_level2 ON public.custom_framework_level3(level2_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_cf_level3_org ON public.custom_framework_level3(organization_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_cf_projects_org ON public.custom_framework_projects(organization_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_cf_l2impl_pf ON public.custom_framework_level2_impl(project_framework_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_cf_l2impl_org ON public.custom_framework_level2_impl(organization_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_cf_l3impl_l2impl ON public.custom_framework_level3_impl(level2_impl_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_cf_l3impl_org ON public.custom_framework_level3_impl(organization_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_cf_plugin_key ON public.custom_frameworks(plugin_key)`,
   ];
 
   for (const idx of indexes) {
@@ -354,7 +389,7 @@ function validateFrameworkImport(data: any): ValidationResult {
 
 async function importFramework(
   frameworkData: FrameworkTemplate,
-  tenantId: string,
+  organizationId: number,
   sequelize: any,
   pluginKey: string
 ): Promise<{ frameworkId: number; itemsCreated: number; fileSource: string }> {
@@ -365,12 +400,13 @@ async function importFramework(
 
   try {
     const [frameworkResult] = await sequelize.query(
-      `INSERT INTO "${tenantId}".custom_frameworks
-       (plugin_key, name, description, version, is_organizational, hierarchy_type, level_1_name, level_2_name, level_3_name, file_source, created_at)
-       VALUES (:plugin_key, :name, :description, :version, :is_organizational, :hierarchy_type, :level_1_name, :level_2_name, :level_3_name, :file_source, NOW())
+      `INSERT INTO public.custom_frameworks
+       (organization_id, plugin_key, name, description, version, is_organizational, hierarchy_type, level_1_name, level_2_name, level_3_name, file_source, created_at)
+       VALUES (:organization_id, :plugin_key, :name, :description, :version, :is_organizational, :hierarchy_type, :level_1_name, :level_2_name, :level_3_name, :file_source, NOW())
        RETURNING id`,
       {
         replacements: {
+          organization_id: organizationId,
           plugin_key: pluginKey,
           name: frameworkData.name,
           description: frameworkData.description,
@@ -391,12 +427,13 @@ async function importFramework(
 
     for (const level1 of frameworkData.structure) {
       const [level1Result] = await sequelize.query(
-        `INSERT INTO "${tenantId}".custom_framework_level1
-         (framework_id, title, description, order_no, metadata)
-         VALUES (:framework_id, :title, :description, :order_no, :metadata)
+        `INSERT INTO public.custom_framework_level1
+         (organization_id, framework_id, title, description, order_no, metadata)
+         VALUES (:organization_id, :framework_id, :title, :description, :order_no, :metadata)
          RETURNING id`,
         {
           replacements: {
+            organization_id: organizationId,
             framework_id: frameworkId,
             title: level1.title,
             description: level1.description || null,
@@ -411,12 +448,13 @@ async function importFramework(
 
       for (const level2 of level1.items || []) {
         const [level2Result] = await sequelize.query(
-          `INSERT INTO "${tenantId}".custom_framework_level2
-           (level1_id, title, description, order_no, summary, questions, evidence_examples, metadata)
-           VALUES (:level1_id, :title, :description, :order_no, :summary, :questions, :evidence_examples, :metadata)
+          `INSERT INTO public.custom_framework_level2
+           (organization_id, level1_id, title, description, order_no, summary, questions, evidence_examples, metadata)
+           VALUES (:organization_id, :level1_id, :title, :description, :order_no, :summary, :questions, :evidence_examples, :metadata)
            RETURNING id`,
           {
             replacements: {
+              organization_id: organizationId,
               level1_id: level1Id,
               title: level2.title,
               description: level2.description || null,
@@ -435,11 +473,12 @@ async function importFramework(
         if (frameworkData.hierarchy.type === "three_level" && level2.items) {
           for (const level3 of level2.items) {
             await sequelize.query(
-              `INSERT INTO "${tenantId}".custom_framework_level3
-               (level2_id, title, description, order_no, summary, questions, evidence_examples, metadata)
-               VALUES (:level2_id, :title, :description, :order_no, :summary, :questions, :evidence_examples, :metadata)`,
+              `INSERT INTO public.custom_framework_level3
+               (organization_id, level2_id, title, description, order_no, summary, questions, evidence_examples, metadata)
+               VALUES (:organization_id, :level2_id, :title, :description, :order_no, :summary, :questions, :evidence_examples, :metadata)`,
               {
                 replacements: {
+                  organization_id: organizationId,
                   level2_id: level2Id,
                   title: level3.title,
                   description: level3.description || null,
@@ -471,14 +510,14 @@ async function importFramework(
 function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
   // Handler: Get frameworks for this plugin (or all if ?all=true)
   async function handleGetFrameworks(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, query } = ctx;
+    const { sequelize, organizationId, query } = ctx;
     const showAll = query.all === "true";
 
     try {
       // If ?all=true, return all frameworks; otherwise filter by plugin_key
       const whereClause = showAll
-        ? "1=1"
-        : "cf.plugin_key = :pluginKey OR cf.plugin_key IS NULL";
+        ? "cf.organization_id = :organizationId"
+        : "(cf.plugin_key = :pluginKey OR cf.plugin_key IS NULL) AND cf.organization_id = :organizationId";
 
       const [frameworks] = await sequelize.query(
         `
@@ -495,19 +534,19 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
           cf.level_3_name,
           cf.file_source,
           cf.created_at,
-          (SELECT COUNT(*) FROM "${tenantId}".custom_framework_level1 WHERE framework_id = cf.id) as level1_count,
-          (SELECT COUNT(*) FROM "${tenantId}".custom_framework_level2 l2
-           JOIN "${tenantId}".custom_framework_level1 l1 ON l2.level1_id = l1.id
-           WHERE l1.framework_id = cf.id) as level2_count,
-          (SELECT COUNT(*) FROM "${tenantId}".custom_framework_level3 l3
-           JOIN "${tenantId}".custom_framework_level2 l2 ON l3.level2_id = l2.id
-           JOIN "${tenantId}".custom_framework_level1 l1 ON l2.level1_id = l1.id
-           WHERE l1.framework_id = cf.id) as level3_count
-        FROM "${tenantId}".custom_frameworks cf
+          (SELECT COUNT(*) FROM public.custom_framework_level1 WHERE framework_id = cf.id AND organization_id = :organizationId) as level1_count,
+          (SELECT COUNT(*) FROM public.custom_framework_level2 l2
+           JOIN public.custom_framework_level1 l1 ON l2.level1_id = l1.id
+           WHERE l1.framework_id = cf.id AND l2.organization_id = :organizationId) as level2_count,
+          (SELECT COUNT(*) FROM public.custom_framework_level3 l3
+           JOIN public.custom_framework_level2 l2 ON l3.level2_id = l2.id
+           JOIN public.custom_framework_level1 l1 ON l2.level1_id = l1.id
+           WHERE l1.framework_id = cf.id AND l3.organization_id = :organizationId) as level3_count
+        FROM public.custom_frameworks cf
         WHERE ${whereClause}
         ORDER BY cf.created_at DESC
       `,
-        { replacements: { pluginKey } }
+        { replacements: { pluginKey, organizationId } }
       );
 
       return { status: 200, data: frameworks };
@@ -518,13 +557,13 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Get framework by ID
   async function handleGetFrameworkById(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, params } = ctx;
+    const { sequelize, organizationId, params } = ctx;
     const frameworkId = parseInt(params.frameworkId);
 
     try {
       const [meta] = await sequelize.query(
-        `SELECT * FROM "${tenantId}".custom_frameworks WHERE id = :frameworkId`,
-        { replacements: { frameworkId } }
+        `SELECT * FROM public.custom_frameworks WHERE id = :frameworkId AND organization_id = :organizationId`,
+        { replacements: { frameworkId, organizationId } }
       );
 
       if (meta.length === 0) {
@@ -532,24 +571,24 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
       }
 
       const [level1Items] = await sequelize.query(
-        `SELECT * FROM "${tenantId}".custom_framework_level1
-         WHERE framework_id = :frameworkId ORDER BY order_no`,
-        { replacements: { frameworkId } }
+        `SELECT * FROM public.custom_framework_level1
+         WHERE framework_id = :frameworkId AND organization_id = :organizationId ORDER BY order_no`,
+        { replacements: { frameworkId, organizationId } }
       );
 
       for (const l1 of level1Items as any[]) {
         const [level2Items] = await sequelize.query(
-          `SELECT * FROM "${tenantId}".custom_framework_level2
-           WHERE level1_id = :level1Id ORDER BY order_no`,
-          { replacements: { level1Id: l1.id } }
+          `SELECT * FROM public.custom_framework_level2
+           WHERE level1_id = :level1Id AND organization_id = :organizationId ORDER BY order_no`,
+          { replacements: { level1Id: l1.id, organizationId } }
         );
 
         for (const l2 of level2Items as any[]) {
           if (meta[0].hierarchy_type === "three_level") {
             const [level3Items] = await sequelize.query(
-              `SELECT * FROM "${tenantId}".custom_framework_level3
-               WHERE level2_id = :level2Id ORDER BY order_no`,
-              { replacements: { level2Id: l2.id } }
+              `SELECT * FROM public.custom_framework_level3
+               WHERE level2_id = :level2Id AND organization_id = :organizationId ORDER BY order_no`,
+              { replacements: { level2Id: l2.id, organizationId } }
             );
             l2.items = level3Items;
           }
@@ -566,10 +605,10 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
           cfp.created_at as added_at,
           p.project_title,
           COALESCE(p.is_organizational, false) as is_organizational
-        FROM "${tenantId}".custom_framework_projects cfp
-        JOIN "${tenantId}".projects p ON cfp.project_id = p.id
-        WHERE cfp.framework_id = :frameworkId`,
-        { replacements: { frameworkId } }
+        FROM public.custom_framework_projects cfp
+        JOIN public.projects p ON cfp.project_id = p.id AND p.organization_id = :organizationId
+        WHERE cfp.framework_id = :frameworkId AND cfp.organization_id = :organizationId`,
+        { replacements: { frameworkId, organizationId } }
       );
 
       // Calculate progress for each linked project
@@ -585,10 +624,10 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
                 COUNT(*) as total,
                 SUM(CASE WHEN l3.status = 'Implemented' THEN 1 ELSE 0 END) as completed,
                 SUM(CASE WHEN l3.owner IS NOT NULL THEN 1 ELSE 0 END) as assigned
-              FROM "${tenantId}".custom_framework_level3_impl l3
-              JOIN "${tenantId}".custom_framework_level2_impl l2 ON l3.level2_impl_id = l2.id
-              WHERE l2.project_framework_id = :projectFrameworkId`,
-              { replacements: { projectFrameworkId: proj.project_framework_id } }
+              FROM public.custom_framework_level3_impl l3
+              JOIN public.custom_framework_level2_impl l2 ON l3.level2_impl_id = l2.id
+              WHERE l2.project_framework_id = :projectFrameworkId AND l3.organization_id = :organizationId`,
+              { replacements: { projectFrameworkId: proj.project_framework_id, organizationId } }
             );
           } else {
             [progressData] = await sequelize.query(
@@ -596,9 +635,9 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
                 COUNT(*) as total,
                 SUM(CASE WHEN status = 'Implemented' THEN 1 ELSE 0 END) as completed,
                 SUM(CASE WHEN owner IS NOT NULL THEN 1 ELSE 0 END) as assigned
-              FROM "${tenantId}".custom_framework_level2_impl
-              WHERE project_framework_id = :projectFrameworkId`,
-              { replacements: { projectFrameworkId: proj.project_framework_id } }
+              FROM public.custom_framework_level2_impl
+              WHERE project_framework_id = :projectFrameworkId AND organization_id = :organizationId`,
+              { replacements: { projectFrameworkId: proj.project_framework_id, organizationId } }
             );
           }
 
@@ -637,14 +676,14 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Delete framework
   async function handleDeleteFramework(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, params } = ctx;
+    const { sequelize, organizationId, params } = ctx;
     const frameworkId = parseInt(params.frameworkId);
 
     try {
       // Check if framework exists
       const [framework] = await sequelize.query(
-        `SELECT id FROM "${tenantId}".custom_frameworks WHERE id = :frameworkId`,
-        { replacements: { frameworkId } }
+        `SELECT id FROM public.custom_frameworks WHERE id = :frameworkId AND organization_id = :organizationId`,
+        { replacements: { frameworkId, organizationId } }
       );
 
       if (framework.length === 0) {
@@ -653,20 +692,20 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
       // Check if framework is in use
       const [projects] = await sequelize.query(
-        `SELECT COUNT(*) as count FROM "${tenantId}".custom_framework_projects WHERE framework_id = :frameworkId`,
-        { replacements: { frameworkId } }
+        `SELECT COUNT(*) as count FROM public.custom_framework_projects WHERE framework_id = :frameworkId AND organization_id = :organizationId`,
+        { replacements: { frameworkId, organizationId } }
       );
 
       if (parseInt(projects[0].count) > 0) {
         // Clean up orphaned project associations first
         await sequelize.query(
-          `DELETE FROM "${tenantId}".custom_framework_projects WHERE framework_id = :frameworkId`,
-          { replacements: { frameworkId } }
+          `DELETE FROM public.custom_framework_projects WHERE framework_id = :frameworkId AND organization_id = :organizationId`,
+          { replacements: { frameworkId, organizationId } }
         );
       }
 
-      await sequelize.query(`DELETE FROM "${tenantId}".custom_frameworks WHERE id = :frameworkId`, {
-        replacements: { frameworkId },
+      await sequelize.query(`DELETE FROM public.custom_frameworks WHERE id = :frameworkId AND organization_id = :organizationId`, {
+        replacements: { frameworkId, organizationId },
       });
 
       return { status: 200, data: { success: true, message: "Framework deleted" } };
@@ -677,7 +716,7 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Add to project
   async function handleAddToProject(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, body } = ctx;
+    const { sequelize, organizationId, body } = ctx;
     const { frameworkId, projectId } = body;
 
     if (!frameworkId || !projectId) {
@@ -687,8 +726,8 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
     try {
       // Get framework by ID (no plugin_key filter - frameworks can be added from any endpoint)
       const [framework] = await sequelize.query(
-        `SELECT id, hierarchy_type FROM "${tenantId}".custom_frameworks WHERE id = :frameworkId`,
-        { replacements: { frameworkId } }
+        `SELECT id, hierarchy_type FROM public.custom_frameworks WHERE id = :frameworkId AND organization_id = :organizationId`,
+        { replacements: { frameworkId, organizationId } }
       );
 
       if (framework.length === 0) {
@@ -699,9 +738,9 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
       // Check if already added
       const [existing] = await sequelize.query(
-        `SELECT id FROM "${tenantId}".custom_framework_projects
-         WHERE framework_id = :frameworkId AND project_id = :projectId`,
-        { replacements: { frameworkId, projectId } }
+        `SELECT id FROM public.custom_framework_projects
+         WHERE framework_id = :frameworkId AND project_id = :projectId AND organization_id = :organizationId`,
+        { replacements: { frameworkId, projectId, organizationId } }
       );
 
       if (existing.length > 0) {
@@ -710,42 +749,42 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
       // Create association
       const [insertResult] = await sequelize.query(
-        `INSERT INTO "${tenantId}".custom_framework_projects (framework_id, project_id, created_at)
-         VALUES (:frameworkId, :projectId, NOW())
+        `INSERT INTO public.custom_framework_projects (organization_id, framework_id, project_id, created_at)
+         VALUES (:organizationId, :frameworkId, :projectId, NOW())
          RETURNING id`,
-        { replacements: { frameworkId, projectId } }
+        { replacements: { organizationId, frameworkId, projectId } }
       );
       const projectFrameworkId = insertResult[0].id;
 
       // Create implementation records for all level2 items
       const [level2Items] = await sequelize.query(
-        `SELECT l2.id FROM "${tenantId}".custom_framework_level2 l2
-         JOIN "${tenantId}".custom_framework_level1 l1 ON l2.level1_id = l1.id
-         WHERE l1.framework_id = :frameworkId`,
-        { replacements: { frameworkId } }
+        `SELECT l2.id FROM public.custom_framework_level2 l2
+         JOIN public.custom_framework_level1 l1 ON l2.level1_id = l1.id
+         WHERE l1.framework_id = :frameworkId AND l2.organization_id = :organizationId`,
+        { replacements: { frameworkId, organizationId } }
       );
 
       for (const l2 of level2Items as any[]) {
         const [implResult] = await sequelize.query(
-          `INSERT INTO "${tenantId}".custom_framework_level2_impl
-           (level2_id, project_framework_id, status, created_at, updated_at)
-           VALUES (:level2_id, :project_framework_id, 'Not started', NOW(), NOW())
+          `INSERT INTO public.custom_framework_level2_impl
+           (organization_id, level2_id, project_framework_id, status, created_at, updated_at)
+           VALUES (:organizationId, :level2_id, :project_framework_id, 'Not started', NOW(), NOW())
            RETURNING id`,
-          { replacements: { level2_id: l2.id, project_framework_id: projectFrameworkId } }
+          { replacements: { organizationId, level2_id: l2.id, project_framework_id: projectFrameworkId } }
         );
 
         if (hierarchyType === "three_level") {
           const [level3Items] = await sequelize.query(
-            `SELECT id FROM "${tenantId}".custom_framework_level3 WHERE level2_id = :level2Id`,
-            { replacements: { level2Id: l2.id } }
+            `SELECT id FROM public.custom_framework_level3 WHERE level2_id = :level2Id AND organization_id = :organizationId`,
+            { replacements: { level2Id: l2.id, organizationId } }
           );
 
           for (const l3 of level3Items as any[]) {
             await sequelize.query(
-              `INSERT INTO "${tenantId}".custom_framework_level3_impl
-               (level3_id, level2_impl_id, status, created_at, updated_at)
-               VALUES (:level3_id, :level2_impl_id, 'Not started', NOW(), NOW())`,
-              { replacements: { level3_id: l3.id, level2_impl_id: implResult[0].id } }
+              `INSERT INTO public.custom_framework_level3_impl
+               (organization_id, level3_id, level2_impl_id, status, created_at, updated_at)
+               VALUES (:organizationId, :level3_id, :level2_impl_id, 'Not started', NOW(), NOW())`,
+              { replacements: { organizationId, level3_id: l3.id, level2_impl_id: implResult[0].id } }
             );
           }
         }
@@ -762,7 +801,7 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Remove from project
   async function handleRemoveFromProject(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, body } = ctx;
+    const { sequelize, organizationId, body } = ctx;
     const { frameworkId, projectId } = body;
 
     if (!frameworkId || !projectId) {
@@ -771,9 +810,9 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
     try {
       await sequelize.query(
-        `DELETE FROM "${tenantId}".custom_framework_projects
-         WHERE framework_id = :frameworkId AND project_id = :projectId`,
-        { replacements: { frameworkId, projectId } }
+        `DELETE FROM public.custom_framework_projects
+         WHERE framework_id = :frameworkId AND project_id = :projectId AND organization_id = :organizationId`,
+        { replacements: { frameworkId, projectId, organizationId } }
       );
 
       return { status: 200, data: { success: true, message: "Framework removed from project" } };
@@ -784,7 +823,7 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Get project frameworks
   async function handleGetProjectFrameworks(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, params, query } = ctx;
+    const { sequelize, organizationId, params, query } = ctx;
     const projectId = parseInt(params.projectId);
     const isOrganizational = query.is_organizational === "true";
 
@@ -793,12 +832,12 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
       const [frameworks] = await sequelize.query(
         `
         SELECT cf.*, cf.id as framework_id, cfp.id as project_framework_id, cfp.created_at as added_at
-        FROM "${tenantId}".custom_frameworks cf
-        JOIN "${tenantId}".custom_framework_projects cfp ON cf.id = cfp.framework_id
-        WHERE cfp.project_id = :projectId
+        FROM public.custom_frameworks cf
+        JOIN public.custom_framework_projects cfp ON cf.id = cfp.framework_id
+        WHERE cfp.project_id = :projectId AND cfp.organization_id = :organizationId
         ORDER BY cf.name
       `,
-        { replacements: { projectId } }
+        { replacements: { projectId, organizationId } }
       );
 
       return { status: 200, data: frameworks };
@@ -809,17 +848,17 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Get project framework with structure
   async function handleGetProjectFramework(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, params } = ctx;
+    const { sequelize, organizationId, params } = ctx;
     const projectId = parseInt(params.projectId);
     const frameworkId = parseInt(params.frameworkId);
 
     try {
       const [projectFramework] = await sequelize.query(
         `SELECT cfp.id as project_framework_id, cf.*
-         FROM "${tenantId}".custom_framework_projects cfp
-         JOIN "${tenantId}".custom_frameworks cf ON cfp.framework_id = cf.id
-         WHERE cfp.project_id = :projectId AND cfp.framework_id = :frameworkId`,
-        { replacements: { projectId, frameworkId } }
+         FROM public.custom_framework_projects cfp
+         JOIN public.custom_frameworks cf ON cfp.framework_id = cf.id
+         WHERE cfp.project_id = :projectId AND cfp.framework_id = :frameworkId AND cfp.organization_id = :organizationId`,
+        { replacements: { projectId, frameworkId, organizationId } }
       );
 
       if (projectFramework.length === 0) {
@@ -830,9 +869,9 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
       const projectFrameworkId = pf.project_framework_id;
 
       const [level1Items] = await sequelize.query(
-        `SELECT * FROM "${tenantId}".custom_framework_level1
-         WHERE framework_id = :frameworkId ORDER BY order_no`,
-        { replacements: { frameworkId } }
+        `SELECT * FROM public.custom_framework_level1
+         WHERE framework_id = :frameworkId AND organization_id = :organizationId ORDER BY order_no`,
+        { replacements: { frameworkId, organizationId } }
       );
 
       for (const l1 of level1Items as any[]) {
@@ -844,15 +883,15 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
                   u_owner.name as owner_name, u_owner.surname as owner_surname,
                   u_reviewer.name as reviewer_name, u_reviewer.surname as reviewer_surname,
                   u_approver.name as approver_name, u_approver.surname as approver_surname
-           FROM "${tenantId}".custom_framework_level2 l2
-           LEFT JOIN "${tenantId}".custom_framework_level2_impl impl
+           FROM public.custom_framework_level2 l2
+           LEFT JOIN public.custom_framework_level2_impl impl
              ON l2.id = impl.level2_id AND impl.project_framework_id = :projectFrameworkId
            LEFT JOIN public.users u_owner ON impl.owner = u_owner.id
            LEFT JOIN public.users u_reviewer ON impl.reviewer = u_reviewer.id
            LEFT JOIN public.users u_approver ON impl.approver = u_approver.id
-           WHERE l2.level1_id = :level1Id
+           WHERE l2.level1_id = :level1Id AND l2.organization_id = :organizationId
            ORDER BY l2.order_no`,
-          { replacements: { level1Id: l1.id, projectFrameworkId } }
+          { replacements: { level1Id: l1.id, projectFrameworkId, organizationId } }
         );
 
         for (const l2 of level2Items as any[]) {
@@ -860,10 +899,10 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
             // Fetch linked risks
             const [risks] = await sequelize.query(
               `SELECT r.id, r.risk_name, r.risk_description
-               FROM "${tenantId}".custom_framework_level2_risks lr
-               JOIN "${tenantId}".risks r ON lr.risk_id = r.id
-               WHERE lr.level2_impl_id = :implId`,
-              { replacements: { implId: l2.impl_id } }
+               FROM public.custom_framework_level2_risks lr
+               JOIN public.risks r ON lr.risk_id = r.id AND r.organization_id = :organizationId
+               WHERE lr.level2_impl_id = :implId AND lr.organization_id = :organizationId`,
+              { replacements: { implId: l2.impl_id, organizationId } }
             );
             l2.linked_risks = risks;
 
@@ -878,14 +917,15 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
                 u.name as uploader_name,
                 u.surname as uploader_surname,
                 fel.link_type
-              FROM "${tenantId}".file_entity_links fel
-              JOIN "${tenantId}".files f ON fel.file_id = f.id
+              FROM public.file_entity_links fel
+              JOIN public.files f ON fel.file_id = f.id AND f.organization_id = :organizationId
               LEFT JOIN public.users u ON f.uploaded_by = u.id
               WHERE fel.framework_type = :frameworkType
                 AND fel.entity_type = 'level2_impl'
                 AND fel.entity_id = :implId
+                AND fel.organization_id = :organizationId
               ORDER BY fel.created_at DESC`,
-              { replacements: { frameworkType: pluginKey, implId: l2.impl_id } }
+              { replacements: { frameworkType: pluginKey, implId: l2.impl_id, organizationId } }
             );
             l2.linked_files = linkedFiles;
           } else {
@@ -898,12 +938,12 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
               `SELECT l3.*,
                       impl.id as impl_id, impl.status, impl.owner, impl.reviewer, impl.approver,
                       impl.due_date, impl.implementation_details, impl.evidence_links
-               FROM "${tenantId}".custom_framework_level3 l3
-               LEFT JOIN "${tenantId}".custom_framework_level3_impl impl
+               FROM public.custom_framework_level3 l3
+               LEFT JOIN public.custom_framework_level3_impl impl
                  ON l3.id = impl.level3_id AND impl.level2_impl_id = :level2ImplId
-               WHERE l3.level2_id = :level2Id
+               WHERE l3.level2_id = :level2Id AND l3.organization_id = :organizationId
                ORDER BY l3.order_no`,
-              { replacements: { level2Id: l2.id, level2ImplId: l2.impl_id } }
+              { replacements: { level2Id: l2.id, level2ImplId: l2.impl_id, organizationId } }
             );
 
             // Fetch linked files for each level3 item
@@ -919,14 +959,15 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
                     u.name as uploader_name,
                     u.surname as uploader_surname,
                     fel.link_type
-                  FROM "${tenantId}".file_entity_links fel
-                  JOIN "${tenantId}".files f ON fel.file_id = f.id
+                  FROM public.file_entity_links fel
+                  JOIN public.files f ON fel.file_id = f.id AND f.organization_id = :organizationId
                   LEFT JOIN public.users u ON f.uploaded_by = u.id
                   WHERE fel.framework_type = :frameworkType
                     AND fel.entity_type = 'level3_impl'
                     AND fel.entity_id = :implId
+                    AND fel.organization_id = :organizationId
                   ORDER BY fel.created_at DESC`,
-                  { replacements: { frameworkType: pluginKey, implId: l3.impl_id } }
+                  { replacements: { frameworkType: pluginKey, implId: l3.impl_id, organizationId } }
                 );
                 l3.linked_files = l3Files;
               } else {
@@ -964,17 +1005,17 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Get progress
   async function handleGetProgress(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, params } = ctx;
+    const { sequelize, organizationId, params } = ctx;
     const projectId = parseInt(params.projectId);
     const frameworkId = parseInt(params.frameworkId);
 
     try {
       const [projectFramework] = await sequelize.query(
         `SELECT cfp.id as project_framework_id, cf.hierarchy_type
-         FROM "${tenantId}".custom_framework_projects cfp
-         JOIN "${tenantId}".custom_frameworks cf ON cfp.framework_id = cf.id
-         WHERE cfp.project_id = :projectId AND cfp.framework_id = :frameworkId`,
-        { replacements: { projectId, frameworkId } }
+         FROM public.custom_framework_projects cfp
+         JOIN public.custom_frameworks cf ON cfp.framework_id = cf.id
+         WHERE cfp.project_id = :projectId AND cfp.framework_id = :frameworkId AND cfp.organization_id = :organizationId`,
+        { replacements: { projectId, frameworkId, organizationId } }
       );
 
       if (projectFramework.length === 0) {
@@ -989,9 +1030,9 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
            COUNT(*) as total,
            COUNT(CASE WHEN status = 'Implemented' THEN 1 END) as completed,
            COUNT(CASE WHEN owner IS NOT NULL THEN 1 END) as assigned
-         FROM "${tenantId}".custom_framework_level2_impl
-         WHERE project_framework_id = :projectFrameworkId`,
-        { replacements: { projectFrameworkId } }
+         FROM public.custom_framework_level2_impl
+         WHERE project_framework_id = :projectFrameworkId AND organization_id = :organizationId`,
+        { replacements: { projectFrameworkId, organizationId } }
       );
 
       const result: any = {
@@ -1014,10 +1055,10 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
              COUNT(*) as total,
              COUNT(CASE WHEN l3.status = 'Implemented' THEN 1 END) as completed,
              COUNT(CASE WHEN l3.owner IS NOT NULL THEN 1 END) as assigned
-           FROM "${tenantId}".custom_framework_level3_impl l3
-           JOIN "${tenantId}".custom_framework_level2_impl l2 ON l3.level2_impl_id = l2.id
-           WHERE l2.project_framework_id = :projectFrameworkId`,
-          { replacements: { projectFrameworkId } }
+           FROM public.custom_framework_level3_impl l3
+           JOIN public.custom_framework_level2_impl l2 ON l3.level2_impl_id = l2.id
+           WHERE l2.project_framework_id = :projectFrameworkId AND l3.organization_id = :organizationId`,
+          { replacements: { projectFrameworkId, organizationId } }
         );
 
         result.level3 = {
@@ -1045,12 +1086,12 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Update level 2 implementation
   async function handleUpdateLevel2(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, params, body } = ctx;
+    const { sequelize, organizationId, params, body } = ctx;
     const implId = parseInt(params.level2Id);
 
     try {
       const updateFields: string[] = [];
-      const replacements: any = { id: implId };
+      const replacements: any = { id: implId, organizationId };
 
       const allowedFields = [
         "status",
@@ -1085,9 +1126,9 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
       updateFields.push("updated_at = NOW()");
 
       await sequelize.query(
-        `UPDATE "${tenantId}".custom_framework_level2_impl
+        `UPDATE public.custom_framework_level2_impl
          SET ${updateFields.join(", ")}
-         WHERE id = :id`,
+         WHERE id = :id AND organization_id = :organizationId`,
         { replacements }
       );
 
@@ -1095,19 +1136,19 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
       if (body.risks_to_add && Array.isArray(body.risks_to_add)) {
         for (const riskId of body.risks_to_add) {
           await sequelize.query(
-            `INSERT INTO "${tenantId}".custom_framework_level2_risks (level2_impl_id, risk_id)
-             VALUES (:implId, :riskId)
+            `INSERT INTO public.custom_framework_level2_risks (organization_id, level2_impl_id, risk_id)
+             VALUES (:organizationId, :implId, :riskId)
              ON CONFLICT DO NOTHING`,
-            { replacements: { implId, riskId } }
+            { replacements: { organizationId, implId, riskId } }
           );
         }
       }
 
       if (body.risks_to_remove && Array.isArray(body.risks_to_remove)) {
         await sequelize.query(
-          `DELETE FROM "${tenantId}".custom_framework_level2_risks
-           WHERE level2_impl_id = :implId AND risk_id = ANY(:risks)`,
-          { replacements: { implId, risks: body.risks_to_remove } }
+          `DELETE FROM public.custom_framework_level2_risks
+           WHERE level2_impl_id = :implId AND risk_id = ANY(:risks) AND organization_id = :organizationId`,
+          { replacements: { implId, risks: body.risks_to_remove, organizationId } }
         );
       }
 
@@ -1119,12 +1160,12 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Update level 3 implementation
   async function handleUpdateLevel3(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, params, body } = ctx;
+    const { sequelize, organizationId, params, body } = ctx;
     const implId = parseInt(params.level3Id);
 
     try {
       const updateFields: string[] = [];
-      const replacements: any = { id: implId };
+      const replacements: any = { id: implId, organizationId };
 
       const allowedFields = [
         "status",
@@ -1159,9 +1200,9 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
       updateFields.push("updated_at = NOW()");
 
       await sequelize.query(
-        `UPDATE "${tenantId}".custom_framework_level3_impl
+        `UPDATE public.custom_framework_level3_impl
          SET ${updateFields.join(", ")}
-         WHERE id = :id`,
+         WHERE id = :id AND organization_id = :organizationId`,
         { replacements }
       );
 
@@ -1175,7 +1216,7 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Attach files to level2 implementation
   async function handleAttachFilesToLevel2(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, userId, params, body } = ctx;
+    const { sequelize, organizationId, userId, params, body } = ctx;
     const implId = parseInt(params.level2Id);
     const { file_ids, link_type = "evidence" } = body;
 
@@ -1186,8 +1227,8 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
     try {
       // Verify the implementation record exists
       const [impl] = await sequelize.query(
-        `SELECT id FROM "${tenantId}".custom_framework_level2_impl WHERE id = :implId`,
-        { replacements: { implId } }
+        `SELECT id FROM public.custom_framework_level2_impl WHERE id = :implId AND organization_id = :organizationId`,
+        { replacements: { implId, organizationId } }
       );
 
       if (impl.length === 0) {
@@ -1199,12 +1240,13 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
       for (const fileId of file_ids) {
         try {
           await sequelize.query(
-            `INSERT INTO "${tenantId}".file_entity_links
-             (file_id, framework_type, entity_type, entity_id, link_type, created_by, created_at)
-             VALUES (:fileId, :frameworkType, 'level2_impl', :entityId, :linkType, :userId, NOW())
+            `INSERT INTO public.file_entity_links
+             (organization_id, file_id, framework_type, entity_type, entity_id, link_type, created_by, created_at)
+             VALUES (:organizationId, :fileId, :frameworkType, 'level2_impl', :entityId, :linkType, :userId, NOW())
              ON CONFLICT (file_id, framework_type, entity_type, entity_id) DO NOTHING`,
             {
               replacements: {
+                organizationId,
                 fileId,
                 frameworkType: pluginKey,
                 entityId: implId,
@@ -1227,7 +1269,7 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Get files attached to level2 implementation
   async function handleGetLevel2Files(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, params } = ctx;
+    const { sequelize, organizationId, params } = ctx;
     const implId = parseInt(params.level2Id);
 
     try {
@@ -1243,17 +1285,19 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
           u.surname as uploader_surname,
           fel.link_type,
           fel.created_at as linked_at
-        FROM "${tenantId}".file_entity_links fel
-        JOIN "${tenantId}".files f ON fel.file_id = f.id
+        FROM public.file_entity_links fel
+        JOIN public.files f ON fel.file_id = f.id AND f.organization_id = :organizationId
         LEFT JOIN public.users u ON f.uploaded_by = u.id
         WHERE fel.framework_type = :frameworkType
           AND fel.entity_type = 'level2_impl'
           AND fel.entity_id = :entityId
+          AND fel.organization_id = :organizationId
         ORDER BY fel.created_at DESC`,
         {
           replacements: {
             frameworkType: pluginKey,
             entityId: implId,
+            organizationId,
           },
         }
       );
@@ -1266,22 +1310,24 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Detach file from level2 implementation
   async function handleDetachFileFromLevel2(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, params } = ctx;
+    const { sequelize, organizationId, params } = ctx;
     const implId = parseInt(params.level2Id);
     const fileId = parseInt(params.fileId);
 
     try {
       await sequelize.query(
-        `DELETE FROM "${tenantId}".file_entity_links
+        `DELETE FROM public.file_entity_links
          WHERE file_id = :fileId
            AND framework_type = :frameworkType
            AND entity_type = 'level2_impl'
-           AND entity_id = :entityId`,
+           AND entity_id = :entityId
+           AND organization_id = :organizationId`,
         {
           replacements: {
             fileId,
             frameworkType: pluginKey,
             entityId: implId,
+            organizationId,
           },
         }
       );
@@ -1294,7 +1340,7 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Attach files to level3 implementation
   async function handleAttachFilesToLevel3(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, userId, params, body } = ctx;
+    const { sequelize, organizationId, userId, params, body } = ctx;
     const implId = parseInt(params.level3Id);
     const { file_ids, link_type = "evidence" } = body;
 
@@ -1305,8 +1351,8 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
     try {
       // Verify the implementation record exists
       const [impl] = await sequelize.query(
-        `SELECT id FROM "${tenantId}".custom_framework_level3_impl WHERE id = :implId`,
-        { replacements: { implId } }
+        `SELECT id FROM public.custom_framework_level3_impl WHERE id = :implId AND organization_id = :organizationId`,
+        { replacements: { implId, organizationId } }
       );
 
       if (impl.length === 0) {
@@ -1318,12 +1364,13 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
       for (const fileId of file_ids) {
         try {
           await sequelize.query(
-            `INSERT INTO "${tenantId}".file_entity_links
-             (file_id, framework_type, entity_type, entity_id, link_type, created_by, created_at)
-             VALUES (:fileId, :frameworkType, 'level3_impl', :entityId, :linkType, :userId, NOW())
+            `INSERT INTO public.file_entity_links
+             (organization_id, file_id, framework_type, entity_type, entity_id, link_type, created_by, created_at)
+             VALUES (:organizationId, :fileId, :frameworkType, 'level3_impl', :entityId, :linkType, :userId, NOW())
              ON CONFLICT (file_id, framework_type, entity_type, entity_id) DO NOTHING`,
             {
               replacements: {
+                organizationId,
                 fileId,
                 frameworkType: pluginKey,
                 entityId: implId,
@@ -1346,7 +1393,7 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Get files attached to level3 implementation
   async function handleGetLevel3Files(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, params } = ctx;
+    const { sequelize, organizationId, params } = ctx;
     const implId = parseInt(params.level3Id);
 
     try {
@@ -1362,17 +1409,19 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
           u.surname as uploader_surname,
           fel.link_type,
           fel.created_at as linked_at
-        FROM "${tenantId}".file_entity_links fel
-        JOIN "${tenantId}".files f ON fel.file_id = f.id
+        FROM public.file_entity_links fel
+        JOIN public.files f ON fel.file_id = f.id AND f.organization_id = :organizationId
         LEFT JOIN public.users u ON f.uploaded_by = u.id
         WHERE fel.framework_type = :frameworkType
           AND fel.entity_type = 'level3_impl'
           AND fel.entity_id = :entityId
+          AND fel.organization_id = :organizationId
         ORDER BY fel.created_at DESC`,
         {
           replacements: {
             frameworkType: pluginKey,
             entityId: implId,
+            organizationId,
           },
         }
       );
@@ -1385,22 +1434,24 @@ function createRouteHandlers(pluginKey: string, config: FrameworkPluginConfig) {
 
   // Handler: Detach file from level3 implementation
   async function handleDetachFileFromLevel3(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-    const { sequelize, tenantId, params } = ctx;
+    const { sequelize, organizationId, params } = ctx;
     const implId = parseInt(params.level3Id);
     const fileId = parseInt(params.fileId);
 
     try {
       await sequelize.query(
-        `DELETE FROM "${tenantId}".file_entity_links
+        `DELETE FROM public.file_entity_links
          WHERE file_id = :fileId
            AND framework_type = :frameworkType
            AND entity_type = 'level3_impl'
-           AND entity_id = :entityId`,
+           AND entity_id = :entityId
+           AND organization_id = :organizationId`,
         {
           replacements: {
             fileId,
             frameworkType: pluginKey,
             entityId: implId,
+            organizationId,
           },
         }
       );
@@ -1448,7 +1499,7 @@ export function createFrameworkPlugin(config: FrameworkPluginConfig) {
   // Install function
   async function install(
     _userId: number,
-    tenantId: string,
+    organizationId: number,
     _config: any,
     context: PluginContext
   ): Promise<{ success: boolean; message: string; installedAt: string }> {
@@ -1456,18 +1507,18 @@ export function createFrameworkPlugin(config: FrameworkPluginConfig) {
 
     try {
       // Ensure shared tables exist
-      await ensureSharedTables(sequelize, tenantId);
+      await ensureSharedTables(sequelize, organizationId);
 
       // Auto-import template if configured
       if (config.autoImport !== false && config.template) {
         // Check if already imported
         const [existing] = await sequelize.query(
-          `SELECT id FROM "${tenantId}".custom_frameworks WHERE plugin_key = :pluginKey`,
-          { replacements: { pluginKey } }
+          `SELECT id FROM public.custom_frameworks WHERE plugin_key = :pluginKey AND organization_id = :organizationId`,
+          { replacements: { pluginKey, organizationId } }
         );
 
         if (existing.length === 0) {
-          const result = await importFramework(config.template, tenantId, sequelize, pluginKey);
+          const result = await importFramework(config.template, organizationId, sequelize, pluginKey);
           console.log(
             `[${config.name}] Auto-imported framework with ${result.itemsCreated} items`
           );
@@ -1487,7 +1538,7 @@ export function createFrameworkPlugin(config: FrameworkPluginConfig) {
   // Uninstall function
   async function uninstall(
     _userId: number,
-    tenantId: string,
+    organizationId: number,
     context: PluginContext
   ): Promise<{ success: boolean; message: string; uninstalledAt: string }> {
     const { sequelize } = context;
@@ -1495,8 +1546,8 @@ export function createFrameworkPlugin(config: FrameworkPluginConfig) {
     try {
       // Get framework IDs for this plugin
       const [frameworks] = await sequelize.query(
-        `SELECT id FROM "${tenantId}".custom_frameworks WHERE plugin_key = :pluginKey`,
-        { replacements: { pluginKey } }
+        `SELECT id FROM public.custom_frameworks WHERE plugin_key = :pluginKey AND organization_id = :organizationId`,
+        { replacements: { pluginKey, organizationId } }
       );
 
       const frameworkIds = (frameworks as any[]).map((f) => f.id);
@@ -1505,20 +1556,20 @@ export function createFrameworkPlugin(config: FrameworkPluginConfig) {
         // Clean up file_entity_links for this plugin's framework
         // This removes all file links associated with this plugin
         await sequelize.query(
-          `DELETE FROM "${tenantId}".file_entity_links WHERE framework_type = :pluginKey`,
-          { replacements: { pluginKey } }
+          `DELETE FROM public.file_entity_links WHERE framework_type = :pluginKey AND organization_id = :organizationId`,
+          { replacements: { pluginKey, organizationId } }
         );
 
         // Delete project associations and implementations (cascade will handle related records)
         await sequelize.query(
-          `DELETE FROM "${tenantId}".custom_framework_projects WHERE framework_id IN (:ids)`,
-          { replacements: { ids: frameworkIds } }
+          `DELETE FROM public.custom_framework_projects WHERE framework_id IN (:ids) AND organization_id = :organizationId`,
+          { replacements: { ids: frameworkIds, organizationId } }
         );
 
         // Delete frameworks
         await sequelize.query(
-          `DELETE FROM "${tenantId}".custom_frameworks WHERE plugin_key = :pluginKey`,
-          { replacements: { pluginKey } }
+          `DELETE FROM public.custom_frameworks WHERE plugin_key = :pluginKey AND organization_id = :organizationId`,
+          { replacements: { pluginKey, organizationId } }
         );
       }
 

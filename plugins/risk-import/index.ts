@@ -695,7 +695,7 @@ function parseRiskRow(row: Partial<RiskCSVRow>): any {
  */
 export async function importRisks(
   csvData: Partial<RiskCSVRow>[],
-  tenantId: string,
+  organizationId: number,
   context: PluginContext
 ): Promise<ImportResult> {
   const { sequelize } = context;
@@ -731,8 +731,8 @@ export async function importRisks(
 
         // Insert into risks table
         await sequelize.query(
-          `INSERT INTO "${tenantId}".risks (
-            risk_name, risk_owner, ai_lifecycle_phase, risk_description,
+          `INSERT INTO risks (
+            organization_id, risk_name, risk_owner, ai_lifecycle_phase, risk_description,
             risk_category, impact, assessment_mapping, controls_mapping,
             likelihood, severity, risk_level_autocalculated, review_notes,
             mitigation_status, current_risk_level, deadline, mitigation_plan,
@@ -741,7 +741,7 @@ export async function importRisks(
             risk_approval, approval_status, date_of_assessment,
             is_demo, created_at, updated_at
           ) VALUES (
-            :risk_name, :risk_owner, :ai_lifecycle_phase, :risk_description,
+            :organizationId, :risk_name, :risk_owner, :ai_lifecycle_phase, :risk_description,
             ARRAY[:risk_category]::enum_projectrisks_risk_category[], :impact, :assessment_mapping, :controls_mapping,
             :likelihood, :severity, :risk_level_autocalculated, :review_notes,
             :mitigation_status, :current_risk_level, :deadline, :mitigation_plan,
@@ -752,6 +752,7 @@ export async function importRisks(
           )`,
           {
             replacements: {
+              organizationId,
               risk_name: riskData.risk_name,
               risk_owner: riskData.risk_owner,
               ai_lifecycle_phase: riskData.ai_lifecycle_phase || null,
@@ -843,7 +844,7 @@ async function handleGetTemplate(ctx: PluginRouteContext): Promise<PluginRouteRe
  * POST /import - Import risks from CSV/Excel data
  */
 async function handleImportRisks(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, body } = ctx;
+  const { sequelize, organizationId, body } = ctx;
   const { csvData } = body;
 
   if (!csvData || !Array.isArray(csvData)) {
@@ -854,7 +855,7 @@ async function handleImportRisks(ctx: PluginRouteContext): Promise<PluginRouteRe
   }
 
   try {
-    const result = await importRisks(csvData, tenantId, { sequelize });
+    const result = await importRisks(csvData, organizationId, { sequelize });
 
     return {
       status: 200,
