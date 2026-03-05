@@ -133,7 +133,7 @@ export async function uninstall(
 
     // Delete webhook configuration from slack_webhooks table
     const result: any = await sequelize.query(
-      `DELETE FROM public.slack_webhooks WHERE user_id = :userId`,
+      `DELETE FROM slack_webhooks WHERE user_id = :userId`,
       { replacements: { userId } }
     );
 
@@ -167,7 +167,7 @@ export async function configure(
       const routingTypeArray = `{${config.routing_type.map((t: string) => `"${t}"`).join(',')}}`;
 
       const result: any = await sequelize.query(
-        `UPDATE public.slack_webhooks
+        `UPDATE slack_webhooks
          SET routing_type = :routing_type,
              updated_at = NOW()
          WHERE user_id = :userId`,
@@ -268,7 +268,7 @@ export async function testConnection(
 
     // Check for OAuth-connected workspaces
     const webhooks: any = await sequelize.query(
-      `SELECT COUNT(*) as count FROM public.slack_webhooks
+      `SELECT COUNT(*) as count FROM slack_webhooks
        WHERE user_id = :userId AND is_active = true`,
       { replacements: { userId } }
     );
@@ -391,7 +391,7 @@ export async function sendNotificationByRoutingType(
   try {
     // Get all active webhooks for this user with this routing type
     const webhooks: any = await sequelize.query(
-      `SELECT * FROM public.slack_webhooks
+      `SELECT * FROM slack_webhooks
        WHERE user_id = :userId
        AND is_active = true
        AND routing_type && :routing_type`,
@@ -596,7 +596,7 @@ async function handleOAuthConnect(ctx: PluginRouteContext): Promise<PluginRouteR
 
     // Create slack_webhooks entry
     const result: any = await sequelize.query(
-      `INSERT INTO public.slack_webhooks
+      `INSERT INTO slack_webhooks
        (access_token, scope, team_name, team_id, channel, channel_id,
         configuration_url, url, user_id, is_active, created_at, updated_at)
        VALUES (:access_token, :scope, :team_name, :team_id, :channel, :channel_id,
@@ -659,7 +659,7 @@ async function handleGetWorkspaces(ctx: PluginRouteContext): Promise<PluginRoute
   try {
     const result: any = await sequelize.query(
       `SELECT id, team_name, channel, channel_id, is_active, routing_type, created_at
-       FROM public.slack_webhooks
+       FROM slack_webhooks
        WHERE user_id = :userId
        ORDER BY created_at DESC`,
       { replacements: { userId } }
@@ -698,7 +698,7 @@ async function handleUpdateWorkspace(ctx: PluginRouteContext): Promise<PluginRou
   try {
     // Verify webhook belongs to user
     const checkResult: any = await sequelize.query(
-      `SELECT id FROM public.slack_webhooks WHERE id = :webhookId AND user_id = :userId`,
+      `SELECT id FROM slack_webhooks WHERE id = :webhookId AND user_id = :userId`,
       { replacements: { webhookId, userId } }
     );
 
@@ -734,7 +734,7 @@ async function handleUpdateWorkspace(ctx: PluginRouteContext): Promise<PluginRou
     updates.push("updated_at = NOW()");
 
     const result: any = await sequelize.query(
-      `UPDATE public.slack_webhooks
+      `UPDATE slack_webhooks
        SET ${updates.join(", ")}
        WHERE id = :webhookId AND user_id = :userId
        RETURNING id, team_name, channel, is_active, routing_type`,
@@ -770,7 +770,7 @@ async function handleDisconnectWorkspace(ctx: PluginRouteContext): Promise<Plugi
   try {
     // Verify webhook belongs to user
     const checkResult: any = await sequelize.query(
-      `SELECT id FROM public.slack_webhooks WHERE id = :webhookId AND user_id = :userId`,
+      `SELECT id FROM slack_webhooks WHERE id = :webhookId AND user_id = :userId`,
       { replacements: { webhookId, userId } }
     );
 
@@ -783,7 +783,7 @@ async function handleDisconnectWorkspace(ctx: PluginRouteContext): Promise<Plugi
 
     // Delete webhook
     await sequelize.query(
-      `DELETE FROM public.slack_webhooks WHERE id = :webhookId AND user_id = :userId`,
+      `DELETE FROM slack_webhooks WHERE id = :webhookId AND user_id = :userId`,
       { replacements: { webhookId, userId } }
     );
 

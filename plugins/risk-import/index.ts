@@ -244,7 +244,7 @@ export async function getExcelTemplate(
   let users: Array<{ id: number; name: string; surname: string; email: string }> = [];
   try {
     const usersResult = await context.sequelize.query(
-      "SELECT id, name, surname, email FROM public.users WHERE organization_id = :organizationId ORDER BY surname, name",
+      "SELECT id, name, surname, email FROM users WHERE organization_id = :organizationId ORDER BY surname, name",
       {
         replacements: { organizationId },
         type: context.sequelize.QueryTypes.SELECT,
