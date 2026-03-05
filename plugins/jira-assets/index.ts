@@ -1793,7 +1793,7 @@ async function handleGetCustomFrameworksProgress(
     // Check if custom_frameworks table exists (in public schema)
     const [tables] = await sequelize.query(`
       SELECT table_name FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name = 'custom_frameworks'
+      WHERE table_schema = 'verifywise' AND table_name = 'custom_frameworks'
     `);
 
     if (tables.length === 0) {

@@ -115,7 +115,7 @@ async function ensureSharedTables(sequelize) {
     BEGIN
       IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public'
+        WHERE table_schema = 'verifywise'
         AND table_name = 'custom_frameworks'
         AND column_name = 'definition_id'
       ) THEN
@@ -128,7 +128,7 @@ async function ensureSharedTables(sequelize) {
     BEGIN
       IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public'
+        WHERE table_schema = 'verifywise'
         AND table_name = 'custom_frameworks'
         AND column_name = 'organization_id'
       ) THEN
@@ -141,7 +141,7 @@ async function ensureSharedTables(sequelize) {
     BEGIN
       IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public'
+        WHERE table_schema = 'verifywise'
         AND table_name = 'custom_frameworks'
         AND column_name = 'plugin_key'
       ) THEN
@@ -154,7 +154,7 @@ async function ensureSharedTables(sequelize) {
     BEGIN
       IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public'
+        WHERE table_schema = 'verifywise'
         AND table_name = 'custom_frameworks'
         AND column_name = 'file_source'
       ) THEN
