@@ -141,17 +141,18 @@ interface AzureARMDeployment {
  */
 export async function install(
   _userId: number,
-  tenantId: string,
+  organizationId: number,
   config: AzureAIFoundryConfig,
   context: PluginContext
 ): Promise<InstallResult> {
   try {
     const { sequelize } = context;
 
-    // Create azure_ai_model_records table for storing synced models
+    // Create azure_ai_model_records table for storing synced models (shared schema)
     await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS "${tenantId}".azure_ai_model_records (
+      CREATE TABLE IF NOT EXISTS azure_ai_model_records (
         id SERIAL PRIMARY KEY,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
         deployment_name VARCHAR(255) NOT NULL,
         model_name VARCHAR(255) NOT NULL,
         model_format VARCHAR(255),
@@ -168,8 +169,13 @@ export async function install(
         last_synced_at TIMESTAMP,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT azure_ai_model_records_deployment_unique UNIQUE (deployment_name)
+        CONSTRAINT azure_ai_model_records_org_deployment_unique UNIQUE (organization_id, deployment_name)
       )
+    `);
+
+    // Create index for organization_id
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS idx_azure_ai_model_records_org_id ON azure_ai_model_records(organization_id)
     `);
 
     // Test connection and perform initial sync if config provided
@@ -179,7 +185,7 @@ export async function install(
         throw new Error(`Initial connection test failed: ${testResult.message}`);
       }
 
-      const syncResult = await syncModels(tenantId, config, context);
+      const syncResult = await syncModels(organizationId, config, context);
       if (!syncResult.success) {
         throw new Error(`Initial sync failed: ${syncResult.status}`);
       }
@@ -207,7 +213,7 @@ export async function install(
  */
 export async function uninstall(
   _userId: number,
-  tenantId: string,
+  organizationId: number,
   context: PluginContext
 ): Promise<UninstallResult> {
   try {
@@ -215,13 +221,17 @@ export async function uninstall(
 
     // Count records before deletion
     const modelsCount: any = await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".azure_ai_model_records`
+      `SELECT COUNT(*) as count FROM azure_ai_model_records WHERE organization_id = :organizationId`,
+      { replacements: { organizationId } }
     );
 
     const totalRecords = parseInt(modelsCount[0][0].count);
 
-    // Drop azure_ai_model_records table
-    await sequelize.query(`DROP TABLE IF EXISTS "${tenantId}".azure_ai_model_records CASCADE`);
+    // Delete records for this organization (don't drop table - it's shared)
+    await sequelize.query(
+      `DELETE FROM azure_ai_model_records WHERE organization_id = :organizationId`,
+      { replacements: { organizationId } }
+    );
 
     return {
       success: true,
@@ -239,7 +249,7 @@ export async function uninstall(
  */
 export async function configure(
   _userId: number,
-  tenantId: string,
+  organizationId: number,
   config: AzureAIFoundryConfig,
   context: PluginContext
 ): Promise<ConfigureResult> {
@@ -257,7 +267,7 @@ export async function configure(
     }
 
     // Trigger sync with the new configuration
-    const syncResult = await syncModels(tenantId, config, context);
+    const syncResult = await syncModels(organizationId, config, context);
     if (!syncResult.success) {
       throw new Error(`Sync failed: ${syncResult.status}`);
     }
@@ -359,7 +369,7 @@ export async function testConnection(
  * Called via the generic execute endpoint
  */
 export async function getModels(
-  tenantId: string,
+  organizationId: number,
   _config: AzureAIFoundryConfig,
   context: PluginContext
 ): Promise<{ configured: boolean; models: any[] }> {
@@ -368,8 +378,9 @@ export async function getModels(
 
     // Query azure_ai_model_records table
     const models = await sequelize.query(
-      `SELECT * FROM "${tenantId}".azure_ai_model_records ORDER BY created_at DESC`,
+      `SELECT * FROM azure_ai_model_records WHERE organization_id = :organizationId ORDER BY created_at DESC`,
       {
+        replacements: { organizationId },
         type: "SELECT",
       }
     );
@@ -395,7 +406,7 @@ export async function getModels(
  * Uses the Project Deployments API
  */
 export async function syncModels(
-  tenantId: string,
+  organizationId: number,
   config: AzureAIFoundryConfig,
   context: PluginContext
 ): Promise<SyncResult> {
@@ -436,7 +447,7 @@ export async function syncModels(
     }
 
     // Transform and persist deployments
-    await persistProjectDeployments(deployments, tenantId, sequelize);
+    await persistProjectDeployments(deployments, organizationId, sequelize);
 
     return {
       success: true,
@@ -459,7 +470,7 @@ export async function syncModels(
  * This is used when subscription_id, resource_group, and resource_name are provided
  */
 export async function syncModelsViaARM(
-  tenantId: string,
+  organizationId: number,
   config: AzureAIFoundryConfig,
   accessToken: string,
   context: PluginContext
@@ -498,7 +509,7 @@ export async function syncModelsViaARM(
     }
 
     // Transform and persist deployments
-    await persistARMDeployments(deployments, tenantId, sequelize);
+    await persistARMDeployments(deployments, organizationId, sequelize);
 
     return {
       success: true,
@@ -523,7 +534,7 @@ export async function syncModelsViaARM(
  */
 async function persistProjectDeployments(
   deployments: AzureProjectDeployment[],
-  tenantId: string,
+  organizationId: number,
   sequelize: any
 ): Promise<void> {
   if (!deployments.length) {
@@ -532,6 +543,7 @@ async function persistProjectDeployments(
 
   const now = new Date();
   const records = deployments.map((deployment) => ({
+    organization_id: organizationId,
     deployment_name: deployment.name,
     model_name: deployment.modelName || deployment.name,
     model_format: deployment.modelPublisher || null,
@@ -567,12 +579,12 @@ async function persistProjectDeployments(
     });
   });
 
-  const updateColumns = keys.filter((k) => k !== "deployment_name");
+  const updateColumns = keys.filter((k) => k !== "organization_id" && k !== "deployment_name");
 
   await sequelize.query(
-    `INSERT INTO "${tenantId}".azure_ai_model_records (${keys.join(", ")})
+    `INSERT INTO azure_ai_model_records (${keys.join(", ")})
      VALUES ${placeholders.join(", ")}
-     ON CONFLICT (deployment_name) DO UPDATE
+     ON CONFLICT (organization_id, deployment_name) DO UPDATE
      SET ${updateColumns.map((k) => `${k} = EXCLUDED.${k}`).join(", ")}`,
     { replacements }
   );
@@ -583,7 +595,7 @@ async function persistProjectDeployments(
  */
 async function persistARMDeployments(
   deployments: AzureARMDeployment[],
-  tenantId: string,
+  organizationId: number,
   sequelize: any
 ): Promise<void> {
   if (!deployments.length) {
@@ -592,6 +604,7 @@ async function persistARMDeployments(
 
   const now = new Date();
   const records = deployments.map((deployment) => ({
+    organization_id: organizationId,
     deployment_name: deployment.name,
     model_name: deployment.properties?.model?.name || deployment.name,
     model_format: deployment.properties?.model?.format || null,
@@ -627,12 +640,12 @@ async function persistARMDeployments(
     });
   });
 
-  const updateColumns = keys.filter((k) => k !== "deployment_name");
+  const updateColumns = keys.filter((k) => k !== "organization_id" && k !== "deployment_name");
 
   await sequelize.query(
-    `INSERT INTO "${tenantId}".azure_ai_model_records (${keys.join(", ")})
+    `INSERT INTO azure_ai_model_records (${keys.join(", ")})
      VALUES ${placeholders.join(", ")}
-     ON CONFLICT (deployment_name) DO UPDATE
+     ON CONFLICT (organization_id, deployment_name) DO UPDATE
      SET ${updateColumns.map((k) => `${k} = EXCLUDED.${k}`).join(", ")}`,
     { replacements }
   );
@@ -655,10 +668,10 @@ export const metadata: PluginMetadata = {
  * GET /models - Get all synced Azure AI model deployments
  */
 async function handleGetModels(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, configuration } = ctx;
+  const { sequelize, organizationId, configuration } = ctx;
 
   try {
-    const result = await getModels(tenantId, configuration as AzureAIFoundryConfig, { sequelize });
+    const result = await getModels(organizationId, configuration as AzureAIFoundryConfig, { sequelize });
 
     return {
       status: 200,
@@ -683,7 +696,7 @@ async function handleGetModels(ctx: PluginRouteContext): Promise<PluginRouteResp
  * POST /sync - Sync models from Azure AI Foundry
  */
 async function handleSyncModels(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, configuration } = ctx;
+  const { sequelize, organizationId, configuration } = ctx;
 
   if (!configuration || !configuration.project_endpoint || !configuration.api_key) {
     return {
@@ -695,7 +708,7 @@ async function handleSyncModels(ctx: PluginRouteContext): Promise<PluginRouteRes
     };
   }
 
-  const result = await syncModels(tenantId, configuration as AzureAIFoundryConfig, { sequelize });
+  const result = await syncModels(organizationId, configuration as AzureAIFoundryConfig, { sequelize });
 
   return {
     status: result.success ? 200 : 500,
@@ -707,14 +720,14 @@ async function handleSyncModels(ctx: PluginRouteContext): Promise<PluginRouteRes
  * GET /models/:deploymentId - Get a specific model by deployment ID
  */
 async function handleGetModelById(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params } = ctx;
+  const { sequelize, organizationId, params } = ctx;
   const deploymentId = params.deploymentId;
 
   try {
     const models = await sequelize.query(
-      `SELECT * FROM "${tenantId}".azure_ai_model_records WHERE id = :deploymentId`,
+      `SELECT * FROM azure_ai_model_records WHERE id = :deploymentId AND organization_id = :organizationId`,
       {
-        replacements: { deploymentId },
+        replacements: { deploymentId, organizationId },
         type: "SELECT",
       }
     );

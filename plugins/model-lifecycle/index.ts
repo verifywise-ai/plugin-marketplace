@@ -142,35 +142,26 @@ const DEFAULT_PHASES = [
   },
 ];
 
-// ========== HELPERS ==========
-
-function escapePgIdentifier(ident: string): string {
-  if (!/^[A-Za-z0-9_]{1,30}$/.test(ident)) {
-    throw new Error("Invalid tenant identifier");
-  }
-  return '"' + ident.replace(/"/g, '""') + '"';
-}
-
 // ========== PLUGIN LIFECYCLE METHODS ==========
 
 /**
  * Install the Model Lifecycle plugin.
- * Creates 5 tables and seeds default phases/items.
+ * Creates 7 tables in public schema with organization_id and seeds default phases/items.
  */
 export async function install(
   _userId: number,
-  tenantId: string,
+  organizationId: number,
   _config: any,
   context: PluginContext
 ): Promise<InstallResult> {
   try {
     const { sequelize } = context;
-    const schema = escapePgIdentifier(tenantId);
 
     // 1. model_lifecycle_phases
     await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS ${schema}.model_lifecycle_phases (
+      CREATE TABLE IF NOT EXISTS model_lifecycle_phases (
         id SERIAL PRIMARY KEY,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         description TEXT,
         display_order INTEGER NOT NULL DEFAULT 0,
@@ -180,16 +171,21 @@ export async function install(
       );
     `);
     await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS idx_model_lifecycle_phases_org_id
+      ON model_lifecycle_phases(organization_id);
+    `);
+    await sequelize.query(`
       CREATE INDEX IF NOT EXISTS idx_model_lifecycle_phases_display_order
-      ON ${schema}.model_lifecycle_phases(display_order);
+      ON model_lifecycle_phases(organization_id, display_order);
     `);
 
     // 2. model_lifecycle_items
     await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS ${schema}.model_lifecycle_items (
+      CREATE TABLE IF NOT EXISTS model_lifecycle_items (
         id SERIAL PRIMARY KEY,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
         phase_id INTEGER NOT NULL
-          REFERENCES ${schema}.model_lifecycle_phases(id) ON DELETE CASCADE,
+          REFERENCES model_lifecycle_phases(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         description TEXT,
         item_type VARCHAR(50) NOT NULL DEFAULT 'text',
@@ -202,94 +198,107 @@ export async function install(
       );
     `);
     await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS idx_model_lifecycle_items_org_id
+      ON model_lifecycle_items(organization_id);
+    `);
+    await sequelize.query(`
       CREATE INDEX IF NOT EXISTS idx_model_lifecycle_items_phase_id
-      ON ${schema}.model_lifecycle_items(phase_id);
+      ON model_lifecycle_items(organization_id, phase_id);
     `);
 
     // 3. model_lifecycle_values
     await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS ${schema}.model_lifecycle_values (
+      CREATE TABLE IF NOT EXISTS model_lifecycle_values (
         id SERIAL PRIMARY KEY,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
         model_inventory_id INTEGER NOT NULL
-          REFERENCES ${schema}.model_inventories(id) ON DELETE CASCADE,
+          REFERENCES model_inventories(id) ON DELETE CASCADE,
         item_id INTEGER NOT NULL
-          REFERENCES ${schema}.model_lifecycle_items(id) ON DELETE CASCADE,
+          REFERENCES model_lifecycle_items(id) ON DELETE CASCADE,
         value_text TEXT,
         value_json JSONB,
-        updated_by INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
+        updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        UNIQUE(model_inventory_id, item_id)
+        CONSTRAINT model_lifecycle_values_org_model_item_unique UNIQUE(organization_id, model_inventory_id, item_id)
       );
     `);
     await sequelize.query(`
-      CREATE INDEX IF NOT EXISTS idx_model_lifecycle_values_model_id
-      ON ${schema}.model_lifecycle_values(model_inventory_id);
+      CREATE INDEX IF NOT EXISTS idx_model_lifecycle_values_org_id
+      ON model_lifecycle_values(organization_id);
     `);
     await sequelize.query(`
-      CREATE INDEX IF NOT EXISTS idx_model_lifecycle_values_model_item
-      ON ${schema}.model_lifecycle_values(model_inventory_id, item_id);
+      CREATE INDEX IF NOT EXISTS idx_model_lifecycle_values_model_id
+      ON model_lifecycle_values(organization_id, model_inventory_id);
     `);
 
     // 4. model_lifecycle_item_files
     await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS ${schema}.model_lifecycle_item_files (
+      CREATE TABLE IF NOT EXISTS model_lifecycle_item_files (
         id SERIAL PRIMARY KEY,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
         value_id INTEGER NOT NULL
-          REFERENCES ${schema}.model_lifecycle_values(id) ON DELETE CASCADE,
+          REFERENCES model_lifecycle_values(id) ON DELETE CASCADE,
         file_id INTEGER NOT NULL
-          REFERENCES ${schema}.files(id) ON DELETE CASCADE,
+          REFERENCES files(id) ON DELETE CASCADE,
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        UNIQUE(value_id, file_id)
+        CONSTRAINT model_lifecycle_item_files_org_value_file_unique UNIQUE(organization_id, value_id, file_id)
       );
     `);
 
     // 5. model_lifecycle_item_people (for "people" field type)
     await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS ${schema}.model_lifecycle_item_people (
+      CREATE TABLE IF NOT EXISTS model_lifecycle_item_people (
         id SERIAL PRIMARY KEY,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
         value_id INTEGER NOT NULL
-          REFERENCES ${schema}.model_lifecycle_values(id) ON DELETE CASCADE,
+          REFERENCES model_lifecycle_values(id) ON DELETE CASCADE,
         user_id INTEGER NOT NULL
-          REFERENCES public.users(id) ON DELETE CASCADE,
+          REFERENCES users(id) ON DELETE CASCADE,
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        UNIQUE(value_id, user_id)
+        CONSTRAINT model_lifecycle_item_people_org_value_user_unique UNIQUE(organization_id, value_id, user_id)
       );
     `);
 
     // 6. model_lifecycle_item_approvals (for "approval" field type)
     await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS ${schema}.model_lifecycle_item_approvals (
+      CREATE TABLE IF NOT EXISTS model_lifecycle_item_approvals (
         id SERIAL PRIMARY KEY,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
         value_id INTEGER NOT NULL
-          REFERENCES ${schema}.model_lifecycle_values(id) ON DELETE CASCADE,
+          REFERENCES model_lifecycle_values(id) ON DELETE CASCADE,
         user_id INTEGER NOT NULL
-          REFERENCES public.users(id) ON DELETE CASCADE,
+          REFERENCES users(id) ON DELETE CASCADE,
         status VARCHAR(20) NOT NULL DEFAULT 'pending',
         decided_at TIMESTAMP,
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        UNIQUE(value_id, user_id)
+        CONSTRAINT model_lifecycle_item_approvals_org_value_user_unique UNIQUE(organization_id, value_id, user_id)
       );
     `);
 
     // 7. model_lifecycle_change_history
     await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS ${schema}.model_lifecycle_change_history (
+      CREATE TABLE IF NOT EXISTS model_lifecycle_change_history (
         id SERIAL PRIMARY KEY,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
         model_inventory_id INTEGER NOT NULL,
         item_id INTEGER,
         change_type VARCHAR(50) NOT NULL,
-        changed_by INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
+        changed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
         old_value JSONB,
         new_value JSONB,
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
     `);
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS idx_model_lifecycle_change_history_org_id
+      ON model_lifecycle_change_history(organization_id);
+    `);
 
-    // Seed default phases and items (only if no phases exist yet)
+    // Seed default phases and items (only if no phases exist yet for this org)
     const existingPhases = await sequelize.query(
-      `SELECT COUNT(*) as count FROM ${schema}.model_lifecycle_phases;`,
-      { type: sequelize.QueryTypes?.SELECT || "SELECT" }
+      `SELECT COUNT(*) as count FROM model_lifecycle_phases WHERE organization_id = :organizationId;`,
+      { replacements: { organizationId }, type: sequelize.QueryTypes?.SELECT || "SELECT" }
     );
 
     const phaseCount = Array.isArray(existingPhases)
@@ -299,11 +308,12 @@ export async function install(
     if (phaseCount === 0) {
       for (const phase of DEFAULT_PHASES) {
         const phaseResult = await sequelize.query(
-          `INSERT INTO ${schema}.model_lifecycle_phases (name, description, display_order, is_active)
-           VALUES (:name, :description, :display_order, true)
+          `INSERT INTO model_lifecycle_phases (organization_id, name, description, display_order, is_active)
+           VALUES (:organizationId, :name, :description, :display_order, true)
            RETURNING id;`,
           {
             replacements: {
+              organizationId,
               name: phase.name,
               description: phase.description,
               display_order: phase.display_order,
@@ -317,11 +327,12 @@ export async function install(
 
         for (const item of phase.items) {
           await sequelize.query(
-            `INSERT INTO ${schema}.model_lifecycle_items
-              (phase_id, name, item_type, is_required, display_order, config, is_active)
-             VALUES (:phase_id, :name, :item_type, :is_required, :display_order, :config, true);`,
+            `INSERT INTO model_lifecycle_items
+              (organization_id, phase_id, name, item_type, is_required, display_order, config, is_active)
+             VALUES (:organizationId, :phase_id, :name, :item_type, :is_required, :display_order, :config, true);`,
             {
               replacements: {
+                organizationId,
                 phase_id: phaseId,
                 name: item.name,
                 item_type: item.item_type,
@@ -347,44 +358,63 @@ export async function install(
 
 /**
  * Uninstall the Model Lifecycle plugin.
- * Deletes associated files, then drops all 5 custom tables with CASCADE.
+ * Deletes associated files and all organization's data (tables remain shared).
  */
 export async function uninstall(
   _userId: number,
-  tenantId: string,
+  organizationId: number,
   context: PluginContext
 ): Promise<UninstallResult> {
   try {
     const { sequelize } = context;
-    const schema = escapePgIdentifier(tenantId);
 
     // First, delete actual files that were linked to lifecycle items
-    // Get all file IDs from the link table before dropping it
     const linkedFiles = await sequelize.query(
-      `SELECT DISTINCT file_id FROM ${schema}.model_lifecycle_item_files;`,
-      { type: sequelize.QueryTypes?.SELECT || "SELECT" }
+      `SELECT DISTINCT file_id FROM model_lifecycle_item_files WHERE organization_id = :organizationId;`,
+      { replacements: { organizationId }, type: sequelize.QueryTypes?.SELECT || "SELECT" }
     ) as { file_id: number }[];
 
     if (linkedFiles.length > 0) {
       const fileIds = linkedFiles.map((f) => f.file_id);
       await sequelize.query(
-        `DELETE FROM ${schema}.files WHERE id IN (:fileIds);`,
-        { replacements: { fileIds } }
+        `DELETE FROM files WHERE id IN (:fileIds) AND organization_id = :organizationId;`,
+        { replacements: { fileIds, organizationId } }
       );
     }
 
-    // Now drop the plugin tables (order matters - drop dependent tables first)
-    await sequelize.query(`DROP TABLE IF EXISTS ${schema}.model_lifecycle_change_history CASCADE;`);
-    await sequelize.query(`DROP TABLE IF EXISTS ${schema}.model_lifecycle_item_approvals CASCADE;`);
-    await sequelize.query(`DROP TABLE IF EXISTS ${schema}.model_lifecycle_item_people CASCADE;`);
-    await sequelize.query(`DROP TABLE IF EXISTS ${schema}.model_lifecycle_item_files CASCADE;`);
-    await sequelize.query(`DROP TABLE IF EXISTS ${schema}.model_lifecycle_values CASCADE;`);
-    await sequelize.query(`DROP TABLE IF EXISTS ${schema}.model_lifecycle_items CASCADE;`);
-    await sequelize.query(`DROP TABLE IF EXISTS ${schema}.model_lifecycle_phases CASCADE;`);
+    // Delete organization's data from plugin tables (order matters due to FK constraints)
+    await sequelize.query(
+      `DELETE FROM model_lifecycle_change_history WHERE organization_id = :organizationId;`,
+      { replacements: { organizationId } }
+    );
+    await sequelize.query(
+      `DELETE FROM model_lifecycle_item_approvals WHERE organization_id = :organizationId;`,
+      { replacements: { organizationId } }
+    );
+    await sequelize.query(
+      `DELETE FROM model_lifecycle_item_people WHERE organization_id = :organizationId;`,
+      { replacements: { organizationId } }
+    );
+    await sequelize.query(
+      `DELETE FROM model_lifecycle_item_files WHERE organization_id = :organizationId;`,
+      { replacements: { organizationId } }
+    );
+    await sequelize.query(
+      `DELETE FROM model_lifecycle_values WHERE organization_id = :organizationId;`,
+      { replacements: { organizationId } }
+    );
+    await sequelize.query(
+      `DELETE FROM model_lifecycle_items WHERE organization_id = :organizationId;`,
+      { replacements: { organizationId } }
+    );
+    await sequelize.query(
+      `DELETE FROM model_lifecycle_phases WHERE organization_id = :organizationId;`,
+      { replacements: { organizationId } }
+    );
 
     return {
       success: true,
-      message: `Model Lifecycle plugin uninstalled successfully. ${linkedFiles.length} files and all lifecycle tables removed.`,
+      message: `Model Lifecycle plugin uninstalled successfully. ${linkedFiles.length} files and all lifecycle data removed.`,
       uninstalledAt: new Date().toISOString(),
     };
   } catch (error: any) {
@@ -402,30 +432,32 @@ export function validateConfig(_config: any): ValidationResult {
 // ========== ROUTE HANDLERS: CONFIG ==========
 
 async function handleGetConfig(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, query } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, query } = ctx;
   const includeInactive = query.includeInactive === "true";
-  const activeFilter = includeInactive ? "" : "WHERE is_active = true";
+  const activeFilter = includeInactive ? "" : "AND is_active = true";
 
   const phases = await sequelize.query(
     `SELECT id, name, description, display_order, is_active, created_at, updated_at
-     FROM ${schema}.model_lifecycle_phases
-     ${activeFilter}
+     FROM model_lifecycle_phases
+     WHERE organization_id = :organizationId ${activeFilter}
      ORDER BY display_order ASC;`,
-    { type: sequelize.QueryTypes?.SELECT || "SELECT" }
+    {
+      type: sequelize.QueryTypes?.SELECT || "SELECT",
+      replacements: { organizationId },
+    }
   );
 
   for (const phase of (phases as any[])) {
-    const itemFilter = includeInactive ? "" : "AND is_active = true";
+    const itemActiveFilter = includeInactive ? "" : "AND is_active = true";
     phase.items = await sequelize.query(
       `SELECT id, phase_id, name, description, item_type, is_required,
               display_order, config, is_active, created_at, updated_at
-       FROM ${schema}.model_lifecycle_items
-       WHERE phase_id = :phaseId ${itemFilter}
+       FROM model_lifecycle_items
+       WHERE organization_id = :organizationId AND phase_id = :phaseId ${itemActiveFilter}
        ORDER BY display_order ASC;`,
       {
         type: sequelize.QueryTypes?.SELECT || "SELECT",
-        replacements: { phaseId: phase.id },
+        replacements: { organizationId, phaseId: phase.id },
       }
     );
   }
@@ -434,25 +466,30 @@ async function handleGetConfig(ctx: PluginRouteContext): Promise<PluginRouteResp
 }
 
 async function handleCreatePhase(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, body } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, body } = ctx;
 
   let displayOrder = body.display_order;
   if (displayOrder === undefined) {
     const maxResult = await sequelize.query(
-      `SELECT COALESCE(MAX(display_order), 0) + 1 AS next_order FROM ${schema}.model_lifecycle_phases;`,
-      { type: sequelize.QueryTypes?.SELECT || "SELECT" }
+      `SELECT COALESCE(MAX(display_order), 0) + 1 AS next_order
+       FROM model_lifecycle_phases
+       WHERE organization_id = :organizationId;`,
+      {
+        type: sequelize.QueryTypes?.SELECT || "SELECT",
+        replacements: { organizationId },
+      }
     );
     displayOrder = (maxResult[0] as any)?.next_order ?? 1;
   }
 
   const results = await sequelize.query(
-    `INSERT INTO ${schema}.model_lifecycle_phases (name, description, display_order)
-     VALUES (:name, :description, :display_order)
+    `INSERT INTO model_lifecycle_phases (organization_id, name, description, display_order)
+     VALUES (:organizationId, :name, :description, :display_order)
      RETURNING *;`,
     {
       type: sequelize.QueryTypes?.SELECT || "SELECT",
       replacements: {
+        organizationId,
         name: body.name,
         description: body.description || null,
         display_order: displayOrder,
@@ -464,12 +501,11 @@ async function handleCreatePhase(ctx: PluginRouteContext): Promise<PluginRouteRe
 }
 
 async function handleUpdatePhase(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params, body } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params, body } = ctx;
   const phaseId = params.id;
 
   const setClauses: string[] = [];
-  const replacements: Record<string, unknown> = { phaseId };
+  const replacements: Record<string, unknown> = { organizationId, phaseId };
 
   if (body.name !== undefined) { setClauses.push("name = :name"); replacements.name = body.name; }
   if (body.description !== undefined) { setClauses.push("description = :description"); replacements.description = body.description; }
@@ -483,7 +519,9 @@ async function handleUpdatePhase(ctx: PluginRouteContext): Promise<PluginRouteRe
   setClauses.push("updated_at = NOW()");
 
   const results = await sequelize.query(
-    `UPDATE ${schema}.model_lifecycle_phases SET ${setClauses.join(", ")} WHERE id = :phaseId RETURNING *;`,
+    `UPDATE model_lifecycle_phases SET ${setClauses.join(", ")}
+     WHERE organization_id = :organizationId AND id = :phaseId
+     RETURNING *;`,
     { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements }
   );
 
@@ -495,46 +533,45 @@ async function handleUpdatePhase(ctx: PluginRouteContext): Promise<PluginRouteRe
 }
 
 async function handleDeletePhase(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params } = ctx;
   const phaseId = params.id;
 
   // First, find and delete all files linked to items in this phase
   const linkedFiles = await sequelize.query(
     `SELECT DISTINCT lf.file_id
-     FROM ${schema}.model_lifecycle_item_files lf
-     INNER JOIN ${schema}.model_lifecycle_values v ON lf.value_id = v.id
-     INNER JOIN ${schema}.model_lifecycle_items i ON v.item_id = i.id
-     WHERE i.phase_id = :phaseId;`,
-    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { phaseId } }
+     FROM model_lifecycle_item_files lf
+     INNER JOIN model_lifecycle_values v ON lf.value_id = v.id
+     INNER JOIN model_lifecycle_items i ON v.item_id = i.id
+     WHERE i.organization_id = :organizationId AND i.phase_id = :phaseId;`,
+    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, phaseId } }
   ) as { file_id: number }[];
 
   if (linkedFiles.length > 0) {
     const fileIds = linkedFiles.map((f) => f.file_id);
     await sequelize.query(
-      `DELETE FROM ${schema}.files WHERE id IN (:fileIds);`,
-      { replacements: { fileIds } }
+      `DELETE FROM files WHERE organization_id = :organizationId AND id IN (:fileIds);`,
+      { replacements: { organizationId, fileIds } }
     );
   }
 
   // Now delete the phase (items, values, file links cascade)
   await sequelize.query(
-    `DELETE FROM ${schema}.model_lifecycle_phases WHERE id = :phaseId;`,
-    { replacements: { phaseId } }
+    `DELETE FROM model_lifecycle_phases WHERE organization_id = :organizationId AND id = :phaseId;`,
+    { replacements: { organizationId, phaseId } }
   );
 
   return { status: 200, data: { success: true } };
 }
 
 async function handleReorderPhases(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, body } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, body } = ctx;
   const orderedIds: number[] = body.orderedIds || [];
 
   for (let i = 0; i < orderedIds.length; i++) {
     await sequelize.query(
-      `UPDATE ${schema}.model_lifecycle_phases SET display_order = :order, updated_at = NOW() WHERE id = :id;`,
-      { replacements: { order: i + 1, id: orderedIds[i] } }
+      `UPDATE model_lifecycle_phases SET display_order = :order, updated_at = NOW()
+       WHERE organization_id = :organizationId AND id = :id;`,
+      { replacements: { organizationId, order: i + 1, id: orderedIds[i] } }
     );
   }
 
@@ -542,27 +579,29 @@ async function handleReorderPhases(ctx: PluginRouteContext): Promise<PluginRoute
 }
 
 async function handleCreateItem(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params, body } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params, body } = ctx;
   const phaseId = params.phaseId;
 
   let displayOrder = body.display_order;
   if (displayOrder === undefined) {
     const maxResult = await sequelize.query(
-      `SELECT COALESCE(MAX(display_order), 0) + 1 AS next_order FROM ${schema}.model_lifecycle_items WHERE phase_id = :phaseId;`,
-      { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { phaseId } }
+      `SELECT COALESCE(MAX(display_order), 0) + 1 AS next_order
+       FROM model_lifecycle_items
+       WHERE organization_id = :organizationId AND phase_id = :phaseId;`,
+      { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, phaseId } }
     );
     displayOrder = (maxResult[0] as any)?.next_order ?? 1;
   }
 
   const results = await sequelize.query(
-    `INSERT INTO ${schema}.model_lifecycle_items
-       (phase_id, name, description, item_type, is_required, display_order, config)
-     VALUES (:phase_id, :name, :description, :item_type, :is_required, :display_order, :config)
+    `INSERT INTO model_lifecycle_items
+       (organization_id, phase_id, name, description, item_type, is_required, display_order, config)
+     VALUES (:organizationId, :phase_id, :name, :description, :item_type, :is_required, :display_order, :config)
      RETURNING *;`,
     {
       type: sequelize.QueryTypes?.SELECT || "SELECT",
       replacements: {
+        organizationId,
         phase_id: phaseId,
         name: body.name,
         description: body.description || null,
@@ -578,12 +617,11 @@ async function handleCreateItem(ctx: PluginRouteContext): Promise<PluginRouteRes
 }
 
 async function handleUpdateItem(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params, body } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params, body } = ctx;
   const itemId = params.id;
 
   const setClauses: string[] = [];
-  const replacements: Record<string, unknown> = { itemId };
+  const replacements: Record<string, unknown> = { organizationId, itemId };
 
   if (body.name !== undefined) { setClauses.push("name = :name"); replacements.name = body.name; }
   if (body.description !== undefined) { setClauses.push("description = :description"); replacements.description = body.description; }
@@ -600,7 +638,9 @@ async function handleUpdateItem(ctx: PluginRouteContext): Promise<PluginRouteRes
   setClauses.push("updated_at = NOW()");
 
   const results = await sequelize.query(
-    `UPDATE ${schema}.model_lifecycle_items SET ${setClauses.join(", ")} WHERE id = :itemId RETURNING *;`,
+    `UPDATE model_lifecycle_items SET ${setClauses.join(", ")}
+     WHERE organization_id = :organizationId AND id = :itemId
+     RETURNING *;`,
     { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements }
   );
 
@@ -608,46 +648,45 @@ async function handleUpdateItem(ctx: PluginRouteContext): Promise<PluginRouteRes
 }
 
 async function handleDeleteItem(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params } = ctx;
   const itemId = params.id;
 
   // First, find and delete all files linked to this item
   const linkedFiles = await sequelize.query(
     `SELECT DISTINCT lf.file_id
-     FROM ${schema}.model_lifecycle_item_files lf
-     INNER JOIN ${schema}.model_lifecycle_values v ON lf.value_id = v.id
-     WHERE v.item_id = :itemId;`,
-    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { itemId } }
+     FROM model_lifecycle_item_files lf
+     INNER JOIN model_lifecycle_values v ON lf.value_id = v.id
+     WHERE v.organization_id = :organizationId AND v.item_id = :itemId;`,
+    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, itemId } }
   ) as { file_id: number }[];
 
   if (linkedFiles.length > 0) {
     const fileIds = linkedFiles.map((f) => f.file_id);
     await sequelize.query(
-      `DELETE FROM ${schema}.files WHERE id IN (:fileIds);`,
-      { replacements: { fileIds } }
+      `DELETE FROM files WHERE organization_id = :organizationId AND id IN (:fileIds);`,
+      { replacements: { organizationId, fileIds } }
     );
   }
 
   // Now delete the item (values and file links cascade)
   await sequelize.query(
-    `DELETE FROM ${schema}.model_lifecycle_items WHERE id = :itemId;`,
-    { replacements: { itemId } }
+    `DELETE FROM model_lifecycle_items WHERE organization_id = :organizationId AND id = :itemId;`,
+    { replacements: { organizationId, itemId } }
   );
 
   return { status: 200, data: { success: true } };
 }
 
 async function handleReorderItems(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params, body } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params, body } = ctx;
   const phaseId = params.phaseId;
   const orderedIds: number[] = body.orderedIds || [];
 
   for (let i = 0; i < orderedIds.length; i++) {
     await sequelize.query(
-      `UPDATE ${schema}.model_lifecycle_items SET display_order = :order, updated_at = NOW() WHERE id = :id AND phase_id = :phaseId;`,
-      { replacements: { order: i + 1, id: orderedIds[i], phaseId } }
+      `UPDATE model_lifecycle_items SET display_order = :order, updated_at = NOW()
+       WHERE organization_id = :organizationId AND id = :id AND phase_id = :phaseId;`,
+      { replacements: { organizationId, order: i + 1, id: orderedIds[i], phaseId } }
     );
   }
 
@@ -657,33 +696,34 @@ async function handleReorderItems(ctx: PluginRouteContext): Promise<PluginRouteR
 // ========== ROUTE HANDLERS: VALUES ==========
 
 async function handleGetModelLifecycle(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params } = ctx;
   const modelId = params.id;
 
   const phases = await sequelize.query(
     `SELECT id, name, description, display_order, is_active
-     FROM ${schema}.model_lifecycle_phases WHERE is_active = true ORDER BY display_order ASC;`,
-    { type: sequelize.QueryTypes?.SELECT || "SELECT" }
+     FROM model_lifecycle_phases
+     WHERE organization_id = :organizationId AND is_active = true
+     ORDER BY display_order ASC;`,
+    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId } }
   );
 
   for (const phase of (phases as any[])) {
     const items = await sequelize.query(
       `SELECT i.id, i.phase_id, i.name, i.description, i.item_type, i.is_required,
               i.display_order, i.config, i.is_active
-       FROM ${schema}.model_lifecycle_items i
-       WHERE i.phase_id = :phaseId AND i.is_active = true
+       FROM model_lifecycle_items i
+       WHERE i.organization_id = :organizationId AND i.phase_id = :phaseId AND i.is_active = true
        ORDER BY i.display_order ASC;`,
-      { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { phaseId: phase.id } }
+      { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, phaseId: phase.id } }
     );
 
     const values = await sequelize.query(
       `SELECT v.id, v.model_inventory_id, v.item_id, v.value_text, v.value_json,
               v.updated_by, v.created_at, v.updated_at
-       FROM ${schema}.model_lifecycle_values v
-       INNER JOIN ${schema}.model_lifecycle_items i ON v.item_id = i.id
-       WHERE v.model_inventory_id = :modelId AND i.phase_id = :phaseId;`,
-      { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { modelId, phaseId: phase.id } }
+       FROM model_lifecycle_values v
+       INNER JOIN model_lifecycle_items i ON v.item_id = i.id
+       WHERE v.organization_id = :organizationId AND v.model_inventory_id = :modelId AND i.phase_id = :phaseId;`,
+      { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, modelId, phaseId: phase.id } }
     );
 
     // Get files, people, and approvals for values
@@ -697,10 +737,10 @@ async function handleGetModelLifecycle(ctx: PluginRouteContext): Promise<PluginR
       const files = await sequelize.query(
         `SELECT lf.id, lf.value_id, lf.file_id, lf.created_at,
                 f.filename, f.type AS mimetype
-         FROM ${schema}.model_lifecycle_item_files lf
-         INNER JOIN ${schema}.files f ON lf.file_id = f.id
-         WHERE lf.value_id IN (:valueIds);`,
-        { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { valueIds } }
+         FROM model_lifecycle_item_files lf
+         INNER JOIN files f ON lf.file_id = f.id
+         WHERE lf.organization_id = :organizationId AND lf.value_id IN (:valueIds);`,
+        { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, valueIds } }
       );
       for (const file of (files as any[])) {
         if (!filesByValue[file.value_id]) filesByValue[file.value_id] = [];
@@ -711,10 +751,10 @@ async function handleGetModelLifecycle(ctx: PluginRouteContext): Promise<PluginR
       const people = await sequelize.query(
         `SELECT lp.id, lp.value_id, lp.user_id, lp.created_at,
                 u.name, u.surname, u.email
-         FROM ${schema}.model_lifecycle_item_people lp
-         INNER JOIN public.users u ON lp.user_id = u.id
-         WHERE lp.value_id IN (:valueIds);`,
-        { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { valueIds } }
+         FROM model_lifecycle_item_people lp
+         INNER JOIN users u ON lp.user_id = u.id
+         WHERE lp.organization_id = :organizationId AND lp.value_id IN (:valueIds);`,
+        { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, valueIds } }
       );
       for (const person of (people as any[])) {
         if (!peopleByValue[person.value_id]) peopleByValue[person.value_id] = [];
@@ -725,10 +765,10 @@ async function handleGetModelLifecycle(ctx: PluginRouteContext): Promise<PluginR
       const approvals = await sequelize.query(
         `SELECT la.id, la.value_id, la.user_id, la.status, la.decided_at, la.created_at,
                 u.name, u.surname, u.email
-         FROM ${schema}.model_lifecycle_item_approvals la
-         INNER JOIN public.users u ON la.user_id = u.id
-         WHERE la.value_id IN (:valueIds);`,
-        { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { valueIds } }
+         FROM model_lifecycle_item_approvals la
+         INNER JOIN users u ON la.user_id = u.id
+         WHERE la.organization_id = :organizationId AND la.value_id IN (:valueIds);`,
+        { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, valueIds } }
       );
       for (const approval of (approvals as any[])) {
         if (!approvalsByValue[approval.value_id]) approvalsByValue[approval.value_id] = [];
@@ -756,8 +796,7 @@ async function handleGetModelLifecycle(ctx: PluginRouteContext): Promise<PluginR
 }
 
 async function handleGetProgress(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params } = ctx;
   const modelId = params.id;
 
   const phaseProgress = await sequelize.query(
@@ -768,28 +807,28 @@ async function handleGetProgress(ctx: PluginRouteContext): Promise<PluginRouteRe
        COUNT(v.id)::int AS filled_items,
        COUNT(CASE WHEN i.is_required = true THEN 1 END)::int AS required_items,
        COUNT(CASE WHEN i.is_required = true AND v.id IS NOT NULL THEN 1 END)::int AS filled_required_items
-     FROM ${schema}.model_lifecycle_phases p
-     INNER JOIN ${schema}.model_lifecycle_items i
-       ON i.phase_id = p.id AND i.is_active = true
-     LEFT JOIN ${schema}.model_lifecycle_values v
-       ON v.item_id = i.id AND v.model_inventory_id = :modelId
+     FROM model_lifecycle_phases p
+     INNER JOIN model_lifecycle_items i
+       ON i.phase_id = p.id AND i.is_active = true AND i.organization_id = :organizationId
+     LEFT JOIN model_lifecycle_values v
+       ON v.item_id = i.id AND v.model_inventory_id = :modelId AND v.organization_id = :organizationId
        AND (v.value_text IS NOT NULL OR v.value_json IS NOT NULL
             OR EXISTS (
-              SELECT 1 FROM ${schema}.model_lifecycle_item_files lf
-              WHERE lf.value_id = v.id
+              SELECT 1 FROM model_lifecycle_item_files lf
+              WHERE lf.value_id = v.id AND lf.organization_id = :organizationId
             )
             OR EXISTS (
-              SELECT 1 FROM ${schema}.model_lifecycle_item_people lp
-              WHERE lp.value_id = v.id
+              SELECT 1 FROM model_lifecycle_item_people lp
+              WHERE lp.value_id = v.id AND lp.organization_id = :organizationId
             )
             OR EXISTS (
-              SELECT 1 FROM ${schema}.model_lifecycle_item_approvals la
-              WHERE la.value_id = v.id
+              SELECT 1 FROM model_lifecycle_item_approvals la
+              WHERE la.value_id = v.id AND la.organization_id = :organizationId
             ))
-     WHERE p.is_active = true
+     WHERE p.organization_id = :organizationId AND p.is_active = true
      GROUP BY p.id, p.name, p.display_order
      ORDER BY p.display_order ASC;`,
-    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { modelId } }
+    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, modelId } }
   );
 
   const totals = (phaseProgress as any[]).reduce(
@@ -816,16 +855,15 @@ async function handleGetProgress(ctx: PluginRouteContext): Promise<PluginRouteRe
 }
 
 async function handleUpsertValue(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params, body, userId } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params, body, userId } = ctx;
   const modelId = params.id;
   const itemId = params.itemId;
 
   const results = await sequelize.query(
-    `INSERT INTO ${schema}.model_lifecycle_values
-       (model_inventory_id, item_id, value_text, value_json, updated_by)
-     VALUES (:modelId, :itemId, :value_text, :value_json, :userId)
-     ON CONFLICT (model_inventory_id, item_id)
+    `INSERT INTO model_lifecycle_values
+       (organization_id, model_inventory_id, item_id, value_text, value_json, updated_by)
+     VALUES (:organizationId, :modelId, :itemId, :value_text, :value_json, :userId)
+     ON CONFLICT (organization_id, model_inventory_id, item_id)
      DO UPDATE SET
        value_text = :value_text,
        value_json = :value_json,
@@ -835,6 +873,7 @@ async function handleUpsertValue(ctx: PluginRouteContext): Promise<PluginRouteRe
     {
       type: sequelize.QueryTypes?.SELECT || "SELECT",
       replacements: {
+        organizationId,
         modelId,
         itemId,
         value_text: body.value_text ?? null,
@@ -848,8 +887,7 @@ async function handleUpsertValue(ctx: PluginRouteContext): Promise<PluginRouteRe
 }
 
 async function handleAddFile(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params, body, userId } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params, body, userId } = ctx;
   const modelId = params.id;
   const itemId = params.itemId;
   const fileId = body.fileId;
@@ -860,54 +898,53 @@ async function handleAddFile(ctx: PluginRouteContext): Promise<PluginRouteRespon
 
   // Ensure a value row exists
   await sequelize.query(
-    `INSERT INTO ${schema}.model_lifecycle_values
-       (model_inventory_id, item_id, updated_by)
-     VALUES (:modelId, :itemId, :userId)
-     ON CONFLICT (model_inventory_id, item_id) DO NOTHING;`,
-    { replacements: { modelId, itemId, userId } }
+    `INSERT INTO model_lifecycle_values
+       (organization_id, model_inventory_id, item_id, updated_by)
+     VALUES (:organizationId, :modelId, :itemId, :userId)
+     ON CONFLICT (organization_id, model_inventory_id, item_id) DO NOTHING;`,
+    { replacements: { organizationId, modelId, itemId, userId } }
   );
 
   const valueResult = await sequelize.query(
-    `SELECT id FROM ${schema}.model_lifecycle_values
-     WHERE model_inventory_id = :modelId AND item_id = :itemId;`,
-    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { modelId, itemId } }
+    `SELECT id FROM model_lifecycle_values
+     WHERE organization_id = :organizationId AND model_inventory_id = :modelId AND item_id = :itemId;`,
+    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, modelId, itemId } }
   );
 
   const valueId = (valueResult[0] as any)?.id;
 
   const results = await sequelize.query(
-    `INSERT INTO ${schema}.model_lifecycle_item_files (value_id, file_id)
-     VALUES (:valueId, :fileId)
-     ON CONFLICT (value_id, file_id) DO NOTHING
+    `INSERT INTO model_lifecycle_item_files (organization_id, value_id, file_id)
+     VALUES (:organizationId, :valueId, :fileId)
+     ON CONFLICT (organization_id, value_id, file_id) DO NOTHING
      RETURNING *;`,
-    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { valueId, fileId } }
+    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, valueId, fileId } }
   );
 
   return { status: 201, data: results[0] || { value_id: valueId, file_id: fileId } };
 }
 
 async function handleRemoveFile(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params } = ctx;
   const modelId = params.id;
   const itemId = params.itemId;
   const fileId = params.fileId;
 
   // Remove link record
   await sequelize.query(
-    `DELETE FROM ${schema}.model_lifecycle_item_files
-     WHERE file_id = :fileId
+    `DELETE FROM model_lifecycle_item_files
+     WHERE organization_id = :organizationId AND file_id = :fileId
      AND value_id = (
-       SELECT id FROM ${schema}.model_lifecycle_values
-       WHERE model_inventory_id = :modelId AND item_id = :itemId
+       SELECT id FROM model_lifecycle_values
+       WHERE organization_id = :organizationId AND model_inventory_id = :modelId AND item_id = :itemId
      );`,
-    { replacements: { fileId, modelId, itemId } }
+    { replacements: { organizationId, fileId, modelId, itemId } }
   );
 
   // Also delete the actual file to prevent orphans
   await sequelize.query(
-    `DELETE FROM ${schema}.files WHERE id = :fileId;`,
-    { replacements: { fileId } }
+    `DELETE FROM files WHERE organization_id = :organizationId AND id = :fileId;`,
+    { replacements: { organizationId, fileId } }
   );
 
   return { status: 200, data: { success: true } };
@@ -916,8 +953,7 @@ async function handleRemoveFile(ctx: PluginRouteContext): Promise<PluginRouteRes
 // ========== ROUTE HANDLERS: PEOPLE ==========
 
 async function handleAddPerson(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params, body, userId } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params, body, userId } = ctx;
   const modelId = params.id;
   const itemId = params.itemId;
   const personUserId = body.userId;
@@ -928,47 +964,46 @@ async function handleAddPerson(ctx: PluginRouteContext): Promise<PluginRouteResp
 
   // Ensure a value row exists
   await sequelize.query(
-    `INSERT INTO ${schema}.model_lifecycle_values
-       (model_inventory_id, item_id, updated_by)
-     VALUES (:modelId, :itemId, :userId)
-     ON CONFLICT (model_inventory_id, item_id) DO NOTHING;`,
-    { replacements: { modelId, itemId, userId } }
+    `INSERT INTO model_lifecycle_values
+       (organization_id, model_inventory_id, item_id, updated_by)
+     VALUES (:organizationId, :modelId, :itemId, :userId)
+     ON CONFLICT (organization_id, model_inventory_id, item_id) DO NOTHING;`,
+    { replacements: { organizationId, modelId, itemId, userId } }
   );
 
   const valueResult = await sequelize.query(
-    `SELECT id FROM ${schema}.model_lifecycle_values
-     WHERE model_inventory_id = :modelId AND item_id = :itemId;`,
-    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { modelId, itemId } }
+    `SELECT id FROM model_lifecycle_values
+     WHERE organization_id = :organizationId AND model_inventory_id = :modelId AND item_id = :itemId;`,
+    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, modelId, itemId } }
   );
 
   const valueId = (valueResult[0] as any)?.id;
 
   const results = await sequelize.query(
-    `INSERT INTO ${schema}.model_lifecycle_item_people (value_id, user_id)
-     VALUES (:valueId, :personUserId)
-     ON CONFLICT (value_id, user_id) DO NOTHING
+    `INSERT INTO model_lifecycle_item_people (organization_id, value_id, user_id)
+     VALUES (:organizationId, :valueId, :personUserId)
+     ON CONFLICT (organization_id, value_id, user_id) DO NOTHING
      RETURNING *;`,
-    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { valueId, personUserId } }
+    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, valueId, personUserId } }
   );
 
   return { status: 201, data: results[0] || { value_id: valueId, user_id: personUserId } };
 }
 
 async function handleRemovePerson(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params } = ctx;
   const modelId = params.id;
   const itemId = params.itemId;
   const personUserId = params.userId;
 
   await sequelize.query(
-    `DELETE FROM ${schema}.model_lifecycle_item_people
-     WHERE user_id = :personUserId
+    `DELETE FROM model_lifecycle_item_people
+     WHERE organization_id = :organizationId AND user_id = :personUserId
      AND value_id = (
-       SELECT id FROM ${schema}.model_lifecycle_values
-       WHERE model_inventory_id = :modelId AND item_id = :itemId
+       SELECT id FROM model_lifecycle_values
+       WHERE organization_id = :organizationId AND model_inventory_id = :modelId AND item_id = :itemId
      );`,
-    { replacements: { personUserId, modelId, itemId } }
+    { replacements: { organizationId, personUserId, modelId, itemId } }
   );
 
   return { status: 200, data: { success: true } };
@@ -977,8 +1012,7 @@ async function handleRemovePerson(ctx: PluginRouteContext): Promise<PluginRouteR
 // ========== ROUTE HANDLERS: APPROVALS ==========
 
 async function handleAddApprover(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params, body, userId } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params, body, userId } = ctx;
   const modelId = params.id;
   const itemId = params.itemId;
   const approverUserId = body.userId;
@@ -989,55 +1023,53 @@ async function handleAddApprover(ctx: PluginRouteContext): Promise<PluginRouteRe
 
   // Ensure a value row exists
   await sequelize.query(
-    `INSERT INTO ${schema}.model_lifecycle_values
-       (model_inventory_id, item_id, updated_by)
-     VALUES (:modelId, :itemId, :userId)
-     ON CONFLICT (model_inventory_id, item_id) DO NOTHING;`,
-    { replacements: { modelId, itemId, userId } }
+    `INSERT INTO model_lifecycle_values
+       (organization_id, model_inventory_id, item_id, updated_by)
+     VALUES (:organizationId, :modelId, :itemId, :userId)
+     ON CONFLICT (organization_id, model_inventory_id, item_id) DO NOTHING;`,
+    { replacements: { organizationId, modelId, itemId, userId } }
   );
 
   const valueResult = await sequelize.query(
-    `SELECT id FROM ${schema}.model_lifecycle_values
-     WHERE model_inventory_id = :modelId AND item_id = :itemId;`,
-    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { modelId, itemId } }
+    `SELECT id FROM model_lifecycle_values
+     WHERE organization_id = :organizationId AND model_inventory_id = :modelId AND item_id = :itemId;`,
+    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, modelId, itemId } }
   );
 
   const valueId = (valueResult[0] as any)?.id;
 
   const results = await sequelize.query(
-    `INSERT INTO ${schema}.model_lifecycle_item_approvals (value_id, user_id, status)
-     VALUES (:valueId, :approverUserId, 'pending')
-     ON CONFLICT (value_id, user_id) DO NOTHING
+    `INSERT INTO model_lifecycle_item_approvals (organization_id, value_id, user_id, status)
+     VALUES (:organizationId, :valueId, :approverUserId, 'pending')
+     ON CONFLICT (organization_id, value_id, user_id) DO NOTHING
      RETURNING *;`,
-    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { valueId, approverUserId } }
+    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, valueId, approverUserId } }
   );
 
   return { status: 201, data: results[0] || { value_id: valueId, user_id: approverUserId, status: "pending" } };
 }
 
 async function handleRemoveApprover(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params } = ctx;
   const modelId = params.id;
   const itemId = params.itemId;
   const approverUserId = params.userId;
 
   await sequelize.query(
-    `DELETE FROM ${schema}.model_lifecycle_item_approvals
-     WHERE user_id = :approverUserId
+    `DELETE FROM model_lifecycle_item_approvals
+     WHERE organization_id = :organizationId AND user_id = :approverUserId
      AND value_id = (
-       SELECT id FROM ${schema}.model_lifecycle_values
-       WHERE model_inventory_id = :modelId AND item_id = :itemId
+       SELECT id FROM model_lifecycle_values
+       WHERE organization_id = :organizationId AND model_inventory_id = :modelId AND item_id = :itemId
      );`,
-    { replacements: { approverUserId, modelId, itemId } }
+    { replacements: { organizationId, approverUserId, modelId, itemId } }
   );
 
   return { status: 200, data: { success: true } };
 }
 
 async function handleUpdateApprovalStatus(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params, body } = ctx;
-  const schema = escapePgIdentifier(tenantId);
+  const { sequelize, organizationId, params, body } = ctx;
   const modelId = params.id;
   const itemId = params.itemId;
   const approverUserId = params.userId;
@@ -1048,15 +1080,15 @@ async function handleUpdateApprovalStatus(ctx: PluginRouteContext): Promise<Plug
   }
 
   const results = await sequelize.query(
-    `UPDATE ${schema}.model_lifecycle_item_approvals
+    `UPDATE model_lifecycle_item_approvals
      SET status = :status, decided_at = ${status === "pending" ? "NULL" : "NOW()"}
-     WHERE user_id = :approverUserId
+     WHERE organization_id = :organizationId AND user_id = :approverUserId
      AND value_id = (
-       SELECT id FROM ${schema}.model_lifecycle_values
-       WHERE model_inventory_id = :modelId AND item_id = :itemId
+       SELECT id FROM model_lifecycle_values
+       WHERE organization_id = :organizationId AND model_inventory_id = :modelId AND item_id = :itemId
      )
      RETURNING *;`,
-    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { status, approverUserId, modelId, itemId } }
+    { type: sequelize.QueryTypes?.SELECT || "SELECT", replacements: { organizationId, status, approverUserId, modelId, itemId } }
   );
 
   if (!results || results.length === 0) {

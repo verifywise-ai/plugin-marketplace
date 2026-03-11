@@ -107,17 +107,18 @@ interface MLflowConfig {
  */
 export async function install(
   _userId: number,
-  tenantId: string,
+  organizationId: number,
   config: MLflowConfig,
   context: PluginContext
 ): Promise<InstallResult> {
   try {
     const { sequelize } = context;
 
-    // Create mlflow_model_records table for storing synced models
+    // Create mlflow_model_records table for storing synced models (shared schema)
     await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS "${tenantId}".mlflow_model_records (
+      CREATE TABLE IF NOT EXISTS mlflow_model_records (
         id SERIAL PRIMARY KEY,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
         model_name VARCHAR(255) NOT NULL,
         version VARCHAR(255) NOT NULL,
         lifecycle_stage VARCHAR(255),
@@ -140,8 +141,13 @@ export async function install(
         last_synced_at TIMESTAMP,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT mlflow_model_records_org_model_version_unique UNIQUE (model_name, version)
+        CONSTRAINT mlflow_model_records_org_model_version_unique UNIQUE (organization_id, model_name, version)
       )
+    `);
+
+    // Create index for organization_id
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS idx_mlflow_model_records_org_id ON mlflow_model_records(organization_id)
     `);
 
     // Test connection and perform initial sync if config provided
@@ -151,7 +157,7 @@ export async function install(
         throw new Error(`Initial connection test failed: ${testResult.message}`);
       }
 
-      const syncResult = await syncModels(tenantId, config, context);
+      const syncResult = await syncModels(organizationId, config, context);
       if (!syncResult.success) {
         throw new Error(`Initial sync failed: ${syncResult.status}`);
       }
@@ -180,7 +186,7 @@ export async function install(
  */
 export async function uninstall(
   _userId: number,
-  tenantId: string,
+  organizationId: number,
   context: PluginContext
 ): Promise<UninstallResult> {
   try {
@@ -188,13 +194,17 @@ export async function uninstall(
 
     // Count records before deletion
     const modelsCount: any = await sequelize.query(
-      `SELECT COUNT(*) as count FROM "${tenantId}".mlflow_model_records`
+      `SELECT COUNT(*) as count FROM mlflow_model_records WHERE organization_id = :organizationId`,
+      { replacements: { organizationId } }
     );
 
     const totalRecords = parseInt(modelsCount[0][0].count);
 
-    // Drop mlflow_model_records table
-    await sequelize.query(`DROP TABLE IF EXISTS "${tenantId}".mlflow_model_records CASCADE`);
+    // Delete records for this organization (don't drop table - it's shared)
+    await sequelize.query(
+      `DELETE FROM mlflow_model_records WHERE organization_id = :organizationId`,
+      { replacements: { organizationId } }
+    );
 
     return {
       success: true,
@@ -213,7 +223,7 @@ export async function uninstall(
  */
 export async function configure(
   _userId: number,
-  tenantId: string,
+  organizationId: number,
   config: MLflowConfig,
   context: PluginContext
 ): Promise<ConfigureResult> {
@@ -231,7 +241,7 @@ export async function configure(
     }
 
     // Trigger sync with the new configuration
-    const syncResult = await syncModels(tenantId, config, context);
+    const syncResult = await syncModels(organizationId, config, context);
     if (!syncResult.success) {
       throw new Error(`Sync failed: ${syncResult.status}`);
     }
@@ -347,7 +357,7 @@ export async function testConnection(
  * Fetches experiments and runs, transforms runs into models
  */
 export async function syncModels(
-  tenantId: string,
+  organizationId: number,
   config: MLflowConfig,
   context: PluginContext
 ): Promise<SyncResult> {
@@ -441,7 +451,7 @@ export async function syncModels(
     }
 
     // 4. Persist to mlflow_model_records
-    await persistModelRecords(models, tenantId, sequelize);
+    await persistModelRecords(models, organizationId, sequelize);
 
     return {
       success: true,
@@ -550,7 +560,7 @@ function transformRunToModel(
  */
 async function persistModelRecords(
   models: any[],
-  tenantId: string,
+  organizationId: number,
   sequelize: any
 ): Promise<void> {
   if (!models.length) {
@@ -570,6 +580,7 @@ async function persistModelRecords(
     }
 
     return {
+      organization_id: organizationId,
       model_name: model.name,
       version: model.version,
       lifecycle_stage: model.lifecycle_stage || null,
@@ -612,12 +623,12 @@ async function persistModelRecords(
     });
   });
 
-  const updateColumns = keys.filter((k) => k !== "model_name" && k !== "version");
+  const updateColumns = keys.filter((k) => k !== "organization_id" && k !== "model_name" && k !== "version");
 
   await sequelize.query(
-    `INSERT INTO "${tenantId}".mlflow_model_records (${keys.join(", ")})
+    `INSERT INTO mlflow_model_records (${keys.join(", ")})
      VALUES ${placeholders.join(", ")}
-     ON CONFLICT (model_name, version) DO UPDATE
+     ON CONFLICT (organization_id, model_name, version) DO UPDATE
      SET ${updateColumns.map((k) => `${k} = EXCLUDED.${k}`).join(", ")}`,
     { replacements }
   );
@@ -659,13 +670,13 @@ export const metadata: PluginMetadata = {
  * GET /models - Get all synced MLflow models
  */
 async function handleGetModels(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId } = ctx;
+  const { sequelize, organizationId } = ctx;
 
   try {
     // Query mlflow_model_records table
     const models = await sequelize.query(
-      `SELECT * FROM "${tenantId}".mlflow_model_records ORDER BY created_at DESC`,
-      { type: sequelize.QueryTypes?.SELECT || "SELECT" }
+      `SELECT * FROM mlflow_model_records WHERE organization_id = :organizationId ORDER BY created_at DESC`,
+      { replacements: { organizationId }, type: sequelize.QueryTypes?.SELECT || "SELECT" }
     );
 
     return {
@@ -694,7 +705,7 @@ async function handleGetModels(ctx: PluginRouteContext): Promise<PluginRouteResp
  * POST /sync - Sync models from MLflow tracking server
  */
 async function handleSyncModels(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, configuration } = ctx;
+  const { sequelize, organizationId, configuration } = ctx;
 
   if (!configuration || !configuration.tracking_server_url) {
     return {
@@ -706,7 +717,7 @@ async function handleSyncModels(ctx: PluginRouteContext): Promise<PluginRouteRes
     };
   }
 
-  const result = await syncModels(tenantId, configuration as MLflowConfig, { sequelize });
+  const result = await syncModels(organizationId, configuration as MLflowConfig, { sequelize });
 
   return {
     status: result.success ? 200 : 500,
@@ -718,14 +729,14 @@ async function handleSyncModels(ctx: PluginRouteContext): Promise<PluginRouteRes
  * GET /models/:modelId - Get a specific model by ID
  */
 async function handleGetModelById(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, tenantId, params } = ctx;
+  const { sequelize, organizationId, params } = ctx;
   const modelId = params.modelId;
 
   try {
     const models = await sequelize.query(
-      `SELECT * FROM "${tenantId}".mlflow_model_records WHERE id = :modelId`,
+      `SELECT * FROM mlflow_model_records WHERE id = :modelId AND organization_id = :organizationId`,
       {
-        replacements: { modelId },
+        replacements: { modelId, organizationId },
         type: sequelize.QueryTypes?.SELECT || "SELECT",
       }
     );

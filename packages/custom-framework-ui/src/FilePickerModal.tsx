@@ -115,22 +115,13 @@ export const FilePickerModal: React.FC<FilePickerModalProps> = ({
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const [fileManagerResponse, filesResponse] = await Promise.all([
-        fetch("/api/file-manager", { headers }),
-        fetch("/api/files", { headers }),
-      ]);
+      const fileManagerResponse = await fetch("/api/file-manager", { headers });
 
       let allFiles: any[] = [];
 
       if (fileManagerResponse.ok) {
         const result = await fileManagerResponse.json();
         const f = result.data?.files || result.files || [];
-        allFiles = [...allFiles, ...f];
-      }
-
-      if (filesResponse.ok) {
-        const result = await filesResponse.json();
-        const f = Array.isArray(result) ? result : (result.data || []);
         allFiles = [...allFiles, ...f];
       }
 
