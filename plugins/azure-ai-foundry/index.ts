@@ -417,7 +417,6 @@ export async function syncModels(
 
     const { sequelize } = context;
 
-    // Use the project deployments API
     const baseEndpoint = config.project_endpoint.replace(/\/+$/, "");
     const url = `${baseEndpoint}/deployments?api-version=v1`;
 
@@ -749,10 +748,94 @@ async function handleGetModelById(ctx: PluginRouteContext): Promise<PluginRouteR
 }
 
 /**
+ * GET /discover - Agent Discovery endpoint
+ *
+ * Returns AI agents (assistants) from Azure AI Foundry as agent primitives.
+ * Called by the VerifyWise Agent Discovery sync service.
+ * Uses the same project endpoint and API key already configured for this plugin.
+ */
+async function handleDiscover(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
+  const { configuration } = ctx;
+  const config = configuration as AzureAIFoundryConfig;
+
+  if (!config.project_endpoint || !config.api_key) {
+    return {
+      status: 200,
+      data: [],
+    };
+  }
+
+  try {
+    const baseEndpoint = config.project_endpoint.replace(/\/+$/, "");
+    const url = `${baseEndpoint}/assistants?api-version=v1&limit=100`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "api-key": config.api_key,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Azure AI Foundry returned ${response.status}: ${errorText}`);
+    }
+
+    const result = await response.json();
+    const assistants = result.data || [];
+
+    // Map Azure assistants to VerifyWise agent primitive format
+    const primitives = assistants.map((agent: any) => {
+      const permissions: string[] = (agent.tools || []).map((tool: any) =>
+        tool.type === "function" ? `function:${tool.function?.name || "unknown"}` : tool.type
+      );
+
+      const createdAt = agent.created_at
+        ? new Date(agent.created_at * 1000).toISOString()
+        : null;
+
+      return {
+        external_id: agent.id,
+        display_name: agent.name || agent.id,
+        primitive_type: "ai_agent",
+        owner_id: agent.metadata?.owner || null,
+        permissions,
+        last_activity: createdAt,
+        metadata: {
+          source: "azure_ai_foundry",
+          model: agent.model || null,
+          instructions_preview: agent.instructions ? agent.instructions.substring(0, 200) : null,
+          tools_count: agent.tools?.length || 0,
+          file_ids_count: agent.file_ids?.length || 0,
+        },
+      };
+    });
+
+    return {
+      status: 200,
+      data: primitives,
+    };
+  } catch (error: any) {
+    // Return empty array on failure so sync continues for other plugins.
+    // The error is logged server-side by the sync service.
+    console.warn(`[azure-ai-foundry] Agent discovery failed: ${error.message}`);
+    return {
+      status: 200,
+      data: [],
+    };
+  }
+}
+
+/**
  * Plugin router - maps routes to handler functions
  */
 export const router: Record<string, (ctx: PluginRouteContext) => Promise<PluginRouteResponse>> = {
   "GET /models": handleGetModels,
   "POST /sync": handleSyncModels,
   "GET /models/:deploymentId": handleGetModelById,
+  "GET /discover": handleDiscover,
+  // Legacy routes used by the plugin UI (/execute/<functionName> format)
+  "POST /execute/getModels": handleGetModels,
+  "POST /execute/syncModels": handleSyncModels,
 };
