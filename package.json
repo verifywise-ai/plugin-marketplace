@@ -7,11 +7,15 @@
     "build:custom-framework-ui": "cd packages/custom-framework-ui && npm install && npm run build",
     "build:framework-plugins": "node scripts/build-framework-plugins.js",
     "build:all": "npm run build:mlflow && npm run build:risk-import && npm run build:jira-assets && npm run build:custom-framework-ui && npm run build:framework-plugins && npm run build:model-lifecycle && npm run build:dataset-bulk-upload",
-    "add:framework": "node scripts/add-framework.js"
+    "add:framework": "node scripts/add-framework.js",
+    "test": "jest --detectOpenHandles --forceExit"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^25.0.3",
     "esbuild": "^0.27.2",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.9",
     "typescript": "^5.9.3"
   }
 }
