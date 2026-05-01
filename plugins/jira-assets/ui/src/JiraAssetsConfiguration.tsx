@@ -409,13 +409,55 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
     }
   };
 
-  // Handle schema selection
+  // Persist a partial config update to the plugin's /config endpoint
+  // without requiring the user to click "Save Configuration". We send
+  // only what changed alongside the previously-saved connection fields,
+  // so the existing api_token (already encrypted in the DB) is preserved
+  // by the backend's `hasExistingToken` branch.
+  const persistConfigPatch = useCallback(
+    async (patch: Record<string, any>) => {
+      if (!hasApiAccess || !localConfig.has_api_token) return;
+      try {
+        await pluginApiCall("POST", "/config", {
+          jira_base_url: localConfig.jira_base_url,
+          workspace_id: localConfig.workspace_id,
+          email: localConfig.email,
+          deployment_type: localConfig.deployment_type || "cloud",
+          // Defaults so the backend doesn't null these out on partial saves
+          selected_schema_id: localConfig.selected_schema_id || undefined,
+          selected_object_type_id: localConfig.selected_object_type_id || undefined,
+          sync_enabled: localConfig.sync_enabled || false,
+          sync_interval_hours: localConfig.sync_interval_hours || 24,
+          ...patch,
+        });
+      } catch (err) {
+        // Best-effort; user can still hit the Save button explicitly.
+        console.warn("[JiraConfig] auto-save failed:", err);
+      }
+    },
+    [hasApiAccess, pluginApiCall, localConfig],
+  );
+
+  // Handle schema selection. Auto-persist so users don't have to click
+  // Save Configuration just to remember their picks across reloads.
   const handleSchemaChange = (schemaId: string) => {
     handleChange("selected_schema_id", schemaId);
     handleChange("selected_object_type_id", "");
     setObjectTypes([]);
     if (schemaId) {
       loadObjectTypes(schemaId);
+      void persistConfigPatch({
+        selected_schema_id: schemaId,
+        selected_object_type_id: undefined,
+      });
+    }
+  };
+
+  // Handle object type selection. Auto-persist for the same reason.
+  const handleObjectTypeChange = (objectTypeId: string) => {
+    handleChange("selected_object_type_id", objectTypeId);
+    if (objectTypeId) {
+      void persistConfigPatch({ selected_object_type_id: objectTypeId });
     }
   };
 
@@ -657,7 +699,7 @@ export const JiraAssetsConfiguration: React.FC<JiraAssetsConfigurationProps> = (
             label="Object Type (AI Systems)"
             placeholder={isLoadingObjectTypes ? "Loading object types..." : "Select an object type"}
             value={localConfig.selected_object_type_id || ""}
-            onChange={(e) => handleChange("selected_object_type_id", e.target.value)}
+            onChange={(e) => handleObjectTypeChange(String(e.target.value))}
             disabled={isLoadingObjectTypes || objectTypes.length === 0 || !localConfig.selected_schema_id}
             items={objectTypes.map((ot) => ({
               _id: ot.id,
