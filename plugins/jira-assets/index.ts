@@ -1040,10 +1040,53 @@ async function handleGetConfig(ctx: PluginRouteContext): Promise<PluginRouteResp
       { replacements: { organizationId }, type: "SELECT" }
     );
 
-    return {
-      status: 200,
-      data: configs.length > 0 ? configs[0] : null,
-    };
+    if (configs.length === 0) {
+      return { status: 200, data: null };
+    }
+
+    const config = configs[0];
+
+    // Self-heal a config row that's missing selected_schema_id /
+    // selected_object_type_id but already has imported objects. Earlier
+    // versions of this plugin let users Import without forcing a
+    // Save Configuration, so those IDs were never persisted. Derive them
+    // from the most recent import's stored JIRA blob and write them back
+    // so the dropdowns populate, sync works, and the user doesn't have to
+    // re-pick anything.
+    if (!config.selected_object_type_id || !config.selected_schema_id) {
+      const recovered: any[] = await sequelize.query(
+        `SELECT data FROM jira_assets_use_cases
+         WHERE organization_id = :organizationId
+         ORDER BY last_synced_at DESC NULLS LAST LIMIT 1`,
+        { replacements: { organizationId }, type: "SELECT" },
+      );
+      const ot = recovered[0]?.data?.objectType;
+      const recoveredOtId = ot?.id ? String(ot.id) : null;
+      const recoveredSchemaId = ot?.objectSchemaId ? String(ot.objectSchemaId) : null;
+
+      if (recoveredOtId || recoveredSchemaId) {
+        const newOtId = config.selected_object_type_id || recoveredOtId;
+        const newSchemaId = config.selected_schema_id || recoveredSchemaId;
+        await sequelize.query(
+          `UPDATE jira_assets_config
+             SET selected_object_type_id = :otId,
+                 selected_schema_id = :schemaId,
+                 updated_at = CURRENT_TIMESTAMP
+           WHERE organization_id = :organizationId`,
+          {
+            replacements: {
+              otId: newOtId,
+              schemaId: newSchemaId,
+              organizationId,
+            },
+          },
+        );
+        config.selected_object_type_id = newOtId;
+        config.selected_schema_id = newSchemaId;
+      }
+    }
+
+    return { status: 200, data: config };
   } catch (error: any) {
     if (error.message?.includes("does not exist")) {
       return { status: 200, data: null };
