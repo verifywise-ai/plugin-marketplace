@@ -25,6 +25,14 @@ interface JiraUseCaseSettingsProps {
   apiServices?: ApiServices;
 }
 
+interface JiraAttributeSchema {
+  id: string;
+  name: string;
+  position?: number;
+  type?: number;
+  description?: string;
+}
+
 const formatValue = (value: any): string => {
   if (value === null || value === undefined) return "-";
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -110,6 +118,7 @@ const useStyles = () => {
 export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ project, apiServices }) => {
   const styles = useStyles();
   const [jiraData, setJiraData] = useState<Record<string, any> | null>(null);
+  const [schema, setSchema] = useState<JiraAttributeSchema[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,20 +131,53 @@ export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ projec
     const fetchJiraData = async () => {
       try {
         setLoading(true);
+
+        // 1. Fetch this use case's stored JIRA blob
+        let jd: Record<string, any> | null = null;
         if (apiServices) {
           const response = await apiServices.get(`/plugins/jira-assets/use-cases/${project.id}`);
           const data = response.data?.data || response.data;
-          // Only use the _jira_data field - the raw JIRA object
-          setJiraData(data?._jira_data || null);
+          jd = data?._jira_data || null;
         } else {
           const response = await fetch(`/api/plugins/jira-assets/use-cases/${project.id}`);
           if (!response.ok) {
             throw new Error("Failed to fetch JIRA data");
           }
           const data = await response.json();
-          // Only use the _jira_data field - the raw JIRA object
-          setJiraData(data?._jira_data || null);
+          jd = data?._jira_data || null;
         }
+        setJiraData(jd);
+
+        // 2. Fetch the object type's full attribute schema so we can render
+        // every attribute defined on the type, not just the ones JIRA
+        // returned a value for. JIRA's GET /object/{id} omits unset
+        // attributes — driving rendering off the schema gives users the
+        // full governance picture with placeholders for unfilled fields.
+        const otId = jd?.objectType?.id;
+        if (otId) {
+          try {
+            let schemaList: JiraAttributeSchema[] = [];
+            if (apiServices) {
+              const r = await apiServices.get(`/plugins/jira-assets/object-types/${otId}/attributes`);
+              schemaList = (r.data?.data ?? r.data) || [];
+            } else {
+              const r = await fetch(`/api/plugins/jira-assets/object-types/${otId}/attributes`);
+              if (r.ok) schemaList = await r.json();
+            }
+            // Sort by JIRA's display position so the order matches the
+            // JIRA UI rather than insertion order.
+            schemaList = [...schemaList].sort(
+              (a, b) => (a.position ?? 0) - (b.position ?? 0),
+            );
+            setSchema(schemaList);
+          } catch {
+            // Schema fetch is best-effort. On failure we fall back to
+            // rendering only the attributes that have stored values
+            // (i.e., the previous behaviour) so the page still works.
+            setSchema([]);
+          }
+        }
+
         setError(null);
       } catch (err: any) {
         setError(err.message);
@@ -163,13 +205,36 @@ export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ projec
     return <Typography color="error">Error loading JIRA data: {error}</Typography>;
   }
 
-  // Just use the attributes object - the actual JIRA custom fields
   const attributes = jiraData?.attributes || {};
-  const allFields = Object.entries(attributes).map(([key, value]) => ({ key, value }));
 
-  // Render a row in the two-column grid (label left, value right)
-  const renderRow = (label: string, value: any) => {
-    const formattedValue = formatValue(value);
+  // Schema-driven rendering: iterate the object type's full attribute list
+  // so every defined attribute shows up, with a placeholder when the
+  // current object hasn't filled it. Orphans (stored attributes that are
+  // no longer in the schema — renamed/deleted on JIRA's side) are appended
+  // at the end so we never silently drop persisted data. If the schema
+  // fetch failed, fall back to the legacy value-only rendering so the
+  // tab still works.
+  const schemaRows = schema.map((s) => ({
+    key: s.name,
+    value: attributes[s.name],
+    hasValue: s.name in attributes,
+  }));
+  const orphanRows = Object.entries(attributes)
+    .filter(([k]) => !schema.some((s) => s.name === k))
+    .map(([key, value]) => ({ key, value, hasValue: true }));
+  const fallbackRows = Object.entries(attributes).map(([key, value]) => ({
+    key,
+    value,
+    hasValue: true,
+  }));
+  const rows = schema.length > 0 ? [...schemaRows, ...orphanRows] : fallbackRows;
+  const setCount = rows.filter((r) => r.hasValue).length;
+
+  // Render a row in the two-column grid (label left, value right). Missing
+  // values render as a dim italic em-dash so they read as "intentionally
+  // empty" rather than "broken".
+  const renderRow = (label: string, value: any, hasValue: boolean) => {
+    const formattedValue = hasValue ? formatValue(value) : "—";
     const isMultiline = formattedValue.length > 80;
 
     return (
@@ -179,7 +244,13 @@ export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ projec
           <Typography sx={styles.labelCell}>{label}</Typography>
         </Box>
         {/* Value cell */}
-        <Box sx={isMultiline ? styles.valueBoxMultiline : styles.valueBox}>
+        <Box
+          sx={{
+            ...(isMultiline ? styles.valueBoxMultiline : styles.valueBox),
+            opacity: hasValue ? 1 : 0.55,
+            fontStyle: hasValue ? "normal" : "italic",
+          }}
+        >
           {formattedValue}
         </Box>
       </React.Fragment>
@@ -208,11 +279,14 @@ export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ projec
       {/* All Attributes - Two Column Grid */}
       <Box sx={styles.card}>
         <Typography sx={styles.sectionTitle}>
-          JIRA Attributes ({allFields.length})
+          JIRA Attributes ({rows.length}
+          {schema.length > 0 ? ` — ${setCount} set` : ""})
         </Typography>
-        {allFields.length > 0 ? (
+        {rows.length > 0 ? (
           <Box sx={styles.gridContainer}>
-            {allFields.map(({ key, value }) => renderRow(key, value))}
+            {rows.map(({ key, value, hasValue }) =>
+              renderRow(key, value, hasValue),
+            )}
           </Box>
         ) : (
           <Typography sx={{ color: "#6B7280", fontStyle: "italic" }}>
