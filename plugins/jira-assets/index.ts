@@ -617,8 +617,32 @@ async function syncObjects(
       throw new Error("JIRA connection not configured");
     }
 
+    // Recover object type from existing imports if config wasn't saved.
+    // The Configuration UI lets users Import before clicking Save, so the
+    // selection lives only in React state and never reaches `jira_assets_config`.
+    // If we have imported use cases, infer the object type from one of them
+    // — they all came from the same type — so re-sync works without forcing
+    // the user to re-pick. Also persist the recovered id so future calls
+    // don't need to look it up again.
     if (!config.selected_object_type_id) {
-      throw new Error("No object type selected for sync");
+      const recovered: any[] = await sequelize.query(
+        `SELECT data FROM jira_assets_use_cases
+         WHERE organization_id = :organizationId
+         ORDER BY last_synced_at DESC NULLS LAST LIMIT 1`,
+        { replacements: { organizationId }, type: "SELECT" },
+      );
+      const recoveredOtId = recovered[0]?.data?.objectType?.id;
+      if (recoveredOtId) {
+        await sequelize.query(
+          `UPDATE jira_assets_config
+             SET selected_object_type_id = :otId, updated_at = CURRENT_TIMESTAMP
+           WHERE organization_id = :organizationId`,
+          { replacements: { otId: String(recoveredOtId), organizationId } },
+        );
+        config.selected_object_type_id = String(recoveredOtId);
+      } else {
+        throw new Error("No object type selected for sync");
+      }
     }
 
     // Create sync history record
