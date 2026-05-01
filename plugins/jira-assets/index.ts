@@ -324,7 +324,7 @@ class JiraAssetsClient {
 
 export async function install(
   _userId: number,
-  organizationId: number,
+  _organizationId: number,
   _config: JiraAssetsConfig,
   context: PluginContext
 ): Promise<InstallResult> {
@@ -682,18 +682,21 @@ async function syncObjects(
       };
 
       if (!existing) {
-        // Create native project entry with _source for plugin identification
+        // Create native project entry with _source for plugin identification.
+        // owner: use the user who triggered the sync. For scheduled syncs
+        // without a triggering user the FK accepts NULL (ON DELETE SET NULL).
         const ucId = await generateUcId(organizationId, sequelize);
         const projectResult: any[] = await sequelize.query(
           `INSERT INTO projects
            (organization_id, uc_id, project_title, owner, start_date, goal, geography, last_updated, created_at, _source, is_organizational)
-           VALUES (:organizationId, :ucId, :title, 1, :startDate, :goal, 1, :lastUpdated, :createdAt, 'jira-assets', false)
+           VALUES (:organizationId, :ucId, :title, :owner, :startDate, :goal, 1, :lastUpdated, :createdAt, 'jira-assets', false)
            RETURNING id`,
           {
             replacements: {
               organizationId,
               ucId,
               title: name,
+              owner: triggeredBy ?? null,
               startDate: now,
               goal: description || "Imported from JIRA Assets",
               lastUpdated: now,
@@ -1345,7 +1348,7 @@ async function handleGetObjects(ctx: PluginRouteContext): Promise<PluginRouteRes
  * POST /import - Import selected JIRA objects
  */
 async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRouteResponse> {
-  const { sequelize, organizationId, body, configuration } = ctx;
+  const { sequelize, organizationId, userId, body, configuration } = ctx;
 
 
   const { object_ids } = body;
@@ -1416,17 +1419,19 @@ async function handleImportObjects(ctx: PluginRouteContext): Promise<PluginRoute
         // Generate UC-ID
         const ucId = await generateUcId(organizationId, sequelize);
 
-        // Create native project entry with _source for plugin identification
+        // Create native project entry with _source for plugin identification.
+        // owner: the user who initiated the import (always present on a route).
         const projectResult: any[] = await sequelize.query(
           `INSERT INTO projects
            (organization_id, uc_id, project_title, owner, start_date, goal, geography, last_updated, created_at, _source, is_organizational)
-           VALUES (:organizationId, :ucId, :title, 1, :startDate, :goal, 1, :lastUpdated, :createdAt, 'jira-assets', false)
+           VALUES (:organizationId, :ucId, :title, :owner, :startDate, :goal, 1, :lastUpdated, :createdAt, 'jira-assets', false)
            RETURNING id`,
           {
             replacements: {
               organizationId,
               ucId,
               title: name,
+              owner: userId ?? null,
               startDate: now,
               goal: description || "Imported from JIRA Assets",
               lastUpdated: now,
