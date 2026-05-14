@@ -52,6 +52,7 @@ import {
   Search as SearchIcon,
 } from "lucide-react";
 import FilePickerModal from "./FilePickerModal";
+import RichTextEditor from "./RichTextEditor";
 import {
   colors,
   textColors,
@@ -186,7 +187,8 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
     implementation_details: "",
     auditor_feedback: "",
   });
-  const [users, setUsers] = useState<User[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_users, setUsers] = useState<User[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -947,31 +949,20 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                   </Stack>
                 )}
 
-                {/* Implementation Description */}
+                {/* Answer (Rich Text Editor) — mirrors EUAIActQuestionDrawerDialog */}
                 <Stack>
                   <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
-                    Implementation Description:
+                    Answer:
                   </Typography>
-                  <TextField
-                    multiline
-                    rows={3}
-                    value={formData.implementation_details}
-                    onChange={(e) => handleFieldChange("implementation_details", e.target.value)}
-                    placeholder="Describe how this requirement is implemented"
-                    size="small"
-                    fullWidth
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        fontSize: 13,
-                      },
-                    }}
+                  <RichTextEditor
+                    initialContent={formData.implementation_details}
+                    onContentChange={(html) => handleFieldChange("implementation_details", html)}
+                    placeholder="Type your answer..."
                   />
                 </Stack>
 
-                <Divider sx={{ my: 1 }} />
-
                 {/* Status */}
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size="small" sx={{ mt: "8px" }}>
                   <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
                     Status:
                   </Typography>
@@ -997,114 +988,6 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                     ))}
                   </Select>
                 </FormControl>
-
-                {/* Owner */}
-                <FormControl fullWidth size="small">
-                  <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
-                    Owner:
-                  </Typography>
-                  <Select
-                    value={formData.owner}
-                    onChange={handleSelectChange("owner")}
-                    displayEmpty
-                    sx={{ height: 34, fontSize: 13 }}
-                  >
-                    <MenuItem value="">
-                      <em style={{ color: "#9ca3af" }}>Select owner</em>
-                    </MenuItem>
-                    {users.map((user) => (
-                      <MenuItem key={user.id} value={user.id.toString()}>
-                        {user.name} {user.surname}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                {/* Reviewer */}
-                <FormControl fullWidth size="small">
-                  <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
-                    Reviewer:
-                  </Typography>
-                  <Select
-                    value={formData.reviewer}
-                    onChange={handleSelectChange("reviewer")}
-                    displayEmpty
-                    sx={{ height: 34, fontSize: 13 }}
-                  >
-                    <MenuItem value="">
-                      <em style={{ color: "#9ca3af" }}>Select reviewer</em>
-                    </MenuItem>
-                    {users.map((user) => (
-                      <MenuItem key={user.id} value={user.id.toString()}>
-                        {user.name} {user.surname}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                {/* Approver */}
-                <FormControl fullWidth size="small">
-                  <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
-                    Approver:
-                  </Typography>
-                  <Select
-                    value={formData.approver}
-                    onChange={handleSelectChange("approver")}
-                    displayEmpty
-                    sx={{ height: 34, fontSize: 13 }}
-                  >
-                    <MenuItem value="">
-                      <em style={{ color: "#9ca3af" }}>Select approver</em>
-                    </MenuItem>
-                    {users.map((user) => (
-                      <MenuItem key={user.id} value={user.id.toString()}>
-                        {user.name} {user.surname}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                {/* Due Date */}
-                <Stack>
-                  <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
-                    Due date:
-                  </Typography>
-                  <TextField
-                    type="date"
-                    size="small"
-                    fullWidth
-                    value={formData.due_date}
-                    onChange={(e) => handleFieldChange("due_date", e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        height: 34,
-                        fontSize: 13,
-                      },
-                    }}
-                  />
-                </Stack>
-
-                {/* Auditor Feedback */}
-                <Stack>
-                  <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
-                    Auditor Feedback:
-                  </Typography>
-                  <TextField
-                    multiline
-                    rows={3}
-                    value={formData.auditor_feedback}
-                    onChange={(e) => handleFieldChange("auditor_feedback", e.target.value)}
-                    placeholder="Enter any feedback from internal or external audits..."
-                    size="small"
-                    fullWidth
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        fontSize: 13,
-                      },
-                    }}
-                  />
-                </Stack>
             </Stack>
           )}
 
