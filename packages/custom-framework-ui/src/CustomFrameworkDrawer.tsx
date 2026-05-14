@@ -669,6 +669,19 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
 
   if (!item) return null;
 
+  // eslint-disable-next-line no-console
+  console.debug("[CustomFrameworkDrawer] render", {
+    drawerVersion: "system-match-850",
+    open,
+    saving,
+    activeTab,
+    level,
+    itemId: item.id,
+    itemTitle: item.title,
+    pluginKey,
+    width: 850,
+  });
+
   // ========================================================================
   // RENDER
   // ========================================================================

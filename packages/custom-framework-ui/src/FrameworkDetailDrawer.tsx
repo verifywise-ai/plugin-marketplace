@@ -198,6 +198,15 @@ export const FrameworkDetailDrawer: React.FC<FrameworkDetailDrawerProps> = ({
     return "#94A3B8";
   };
 
+  // eslint-disable-next-line no-console
+  console.debug("[FrameworkDetailDrawer] render", {
+    drawerVersion: "system-match-850",
+    open,
+    loading,
+    activeTab,
+    width: 850,
+  });
+
   return (
     <Drawer
       anchor="right"

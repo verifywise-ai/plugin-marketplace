@@ -619,6 +619,17 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
 
   if (!item) return null;
 
+  // eslint-disable-next-line no-console
+  console.debug("[ControlItemDrawer] render", {
+    drawerVersion: "system-match-850",
+    open,
+    loading,
+    itemId: item.id,
+    itemOrder: item.order_no,
+    itemTitle: item.title,
+    width: 850,
+  });
+
   // Loading state
   if (loading) {
     return (
