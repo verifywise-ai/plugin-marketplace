@@ -622,17 +622,10 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
   // Loading state
   if (loading) {
     return (
-      <Drawer
-        open={open}
-        onClose={onClose}
-        anchor="right"
-        PaperProps={{
-          sx: { width: 600, margin: 0, borderRadius: 0 },
-        }}
-      >
+      <Drawer open={open} onClose={onClose} anchor="right">
         <Stack
           sx={{
-            width: 600,
+            width: 850,
             height: "100%",
             display: "flex",
             justifyContent: "center",
@@ -652,10 +645,10 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
       onClose={onClose}
       anchor="right"
       sx={{
-        width: 600,
-        margin: 0,
+        "width": 850,
+        "margin": 0,
         "& .MuiDrawer-paper": {
-          width: 600,
+          width: 850,
           margin: 0,
           borderRadius: 0,
           overflowX: "hidden",
@@ -666,58 +659,44 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
         },
       }}
     >
-      {/* DRAWER HEADER - matches NewControlPane exactly */}
-      <Box
-        sx={{
-          padding: "16px 20px",
-          borderBottom: "1px solid #eaecf0",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-        }}
+      {/* DRAWER HEADER */}
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        padding="15px 20px"
       >
-        <Box sx={{ flex: 1 }}>
-          <Typography
-            variant="h6"
+        <Typography fontSize={15} fontWeight={700}>
+          {item.order_no ? `${item.order_no} ` : ""}
+          {item.title}
+        </Typography>
+        <Button onClick={onClose} sx={{ minWidth: "0", padding: "5px" }}>
+          <CloseIcon size={20} color="#475467" />
+        </Button>
+      </Stack>
+
+      <Divider />
+
+      {/* Control Description Panel (moved out of header to match system drawer) */}
+      {item.description && (
+        <Box sx={{ padding: "15px 20px 0 20px" }}>
+          <Stack
             sx={{
-              fontSize: "16px",
-              fontWeight: 600,
-              color: "#1c2130",
-              mb: item.description ? 1.5 : 0,
+              border: "1px solid #eee",
+              padding: "12px",
+              backgroundColor: "#f8f9fa",
+              borderRadius: "4px",
             }}
           >
-            {item.order_no ? `${item.order_no} ` : ""}{item.title}
-          </Typography>
-          {/* Control Description Panel */}
-          {item.description && (
-            <Stack
-              sx={{
-                border: "1px solid #eee",
-                padding: "12px",
-                backgroundColor: "#f8f9fa",
-                borderRadius: "4px",
-              }}
-            >
-              <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
-                <strong>Description:</strong>
-              </Typography>
-              <Typography fontSize={13} color="#666">
-                {item.description}
-              </Typography>
-            </Stack>
-          )}
+            <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
+              <strong>Description:</strong>
+            </Typography>
+            <Typography fontSize={13} color="#666">
+              {item.description}
+            </Typography>
+          </Stack>
         </Box>
-        <Button
-          onClick={onClose}
-          sx={{
-            minWidth: "auto",
-            padding: 0,
-            color: "#475467",
-          }}
-        >
-          <CloseIcon size={20} />
-        </Button>
-      </Box>
+      )}
 
       {/* OUTER TABS - LEVEL 3 ITEMS (like Subcontrols) */}
       {item.items && item.items.length > 0 && (
@@ -1647,19 +1626,22 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
             flexDirection: "row",
             justifyContent: "flex-end",
             padding: "15px 20px",
+            marginTop: "auto",
           }}
         >
           <Button
             variant="contained"
             onClick={handleSave}
             disabled={saving}
-            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon size={16} />}
+            startIcon={
+              saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon size={16} />
+            }
             sx={{
-              backgroundColor: colors.primary,
-              border: `1px solid ${colors.primary}`,
-              gap: 1,
-              fontSize: 13,
-              height: 32,
+              "backgroundColor": colors.primary,
+              "border": `1px solid ${colors.primary}`,
+              "gap": 2,
+              "minWidth": "120px",
+              "height": "36px",
               "&:hover": {
                 backgroundColor: colors.primaryHover,
               },

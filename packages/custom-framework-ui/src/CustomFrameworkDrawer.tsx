@@ -303,7 +303,6 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
   onClose,
   item,
   level,
-  frameworkMeta,
   users = [],
   apiServices,
   onSave,
@@ -670,8 +669,6 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
 
   if (!item) return null;
 
-  const levelName = level === 2 ? frameworkMeta.level_2_name : frameworkMeta.level_3_name;
-
   // ========================================================================
   // RENDER
   // ========================================================================
@@ -692,10 +689,10 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
         open={open}
         onClose={onClose}
         sx={{
-          width: 600,
-          margin: 0,
+          "width": 850,
+          "margin": 0,
           "& .MuiDrawer-paper": {
-            width: 600,
+            width: 850,
             margin: 0,
             borderRadius: 0,
             overflowX: "hidden",
@@ -707,65 +704,42 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
         }}
       >
         {/* DRAWER HEADER */}
-        <Box
-          sx={{
-            padding: "16px 20px",
-            borderBottom: `1px solid ${borderColors.light}`,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-          }}
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          padding="15px 20px"
         >
-          <Box sx={{ flex: 1 }}>
-            <Typography
-              sx={{
-                fontSize: "12px",
-                color: textColors.muted,
-                mb: 0.5,
-              }}
-            >
-              {levelName} Details
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: "16px",
-                fontWeight: 600,
-                color: "#1c2130",
-                mb: item.description ? 1.5 : 0,
-              }}
-            >
-              {item.title}
-            </Typography>
-            {/* Description Panel */}
-            {item.description && (
-              <Stack
-                sx={{
-                  border: "1px solid #eee",
-                  padding: "12px",
-                  backgroundColor: "#f8f9fa",
-                  borderRadius: "4px",
-                }}
-              >
-                <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
-                  <strong>Description:</strong>
-                </Typography>
-                <Typography fontSize={13} color="#666">
-                  {item.description}
-                </Typography>
-              </Stack>
-            )}
-          </Box>
-          <Button
-            onClick={onClose}
-            sx={{
-              minWidth: "auto",
-              padding: 0,
-              color: "#475467",
-            }}
-          >
-            <CloseIcon size={20} />
+          <Typography fontSize={15} fontWeight={700}>
+            {item.title}
+          </Typography>
+          <Button onClick={onClose} sx={{ minWidth: "0", padding: "5px" }}>
+            <CloseIcon size={20} color="#475467" />
           </Button>
-        </Box>
+        </Stack>
+
+        <Divider />
+
+        {/* Description Panel (moved out of header to match system drawer) */}
+        {item.description && (
+          <Box sx={{ padding: "15px 20px 0 20px" }}>
+            <Stack
+              sx={{
+                border: "1px solid #eee",
+                padding: "12px",
+                backgroundColor: "#f8f9fa",
+                borderRadius: "4px",
+              }}
+            >
+              <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
+                <strong>Description:</strong>
+              </Typography>
+              <Typography fontSize={13} color="#666">
+                {item.description}
+              </Typography>
+            </Stack>
+          </Box>
+        )}
 
         {/* DRAWER CONTENT */}
         <Box
@@ -1385,42 +1359,35 @@ export const CustomFrameworkDrawer: React.FC<CustomFrameworkDrawerProps> = ({
           </Stack>
         </Box>
 
+        <Divider />
+
         {/* DRAWER FOOTER */}
-        <Box
+        <Stack
           sx={{
-            padding: "15px 20px",
-            borderTop: `1px solid ${borderColors.light}`,
             display: "flex",
+            flexDirection: "row",
             justifyContent: "flex-end",
-            gap: 2,
-            backgroundColor: bgColors.modalFooter,
+            padding: "15px 20px",
+            marginTop: "auto",
           }}
         >
-          <Button
-            variant="outlined"
-            onClick={onClose}
-            sx={{
-              ...buttonStyles.primary.outlined,
-              color: textColors.secondary,
-              borderColor: borderColors.default,
-              "&:hover": {
-                borderColor: textColors.secondary,
-                backgroundColor: bgColors.hover,
-              },
-            }}
-          >
-            Cancel
-          </Button>
           <Button
             variant="contained"
             onClick={handleSave}
             disabled={saving || !item.impl_id}
-            startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <SaveIcon size={18} />}
-            sx={buttonStyles.primary.contained}
+            startIcon={
+              saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon size={16} />
+            }
+            sx={{
+              ...buttonStyles.primary.contained,
+              gap: 2,
+              minWidth: "120px",
+              height: "36px",
+            }}
           >
             {saving ? "Saving..." : "Save"}
           </Button>
-        </Box>
+        </Stack>
       </Drawer>
     </>
   );
