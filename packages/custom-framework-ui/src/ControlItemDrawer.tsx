@@ -47,11 +47,11 @@ import {
   Link as LinkIcon,
   MessageSquare,
   FolderOpen,
-  HelpCircle,
   AlertTriangle,
   Search as SearchIcon,
 } from "lucide-react";
 import FilePickerModal from "./FilePickerModal";
+import RichTextEditor from "./RichTextEditor";
 import {
   colors,
   textColors,
@@ -186,7 +186,8 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
     implementation_details: "",
     auditor_feedback: "",
   });
-  const [users, setUsers] = useState<User[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_users, setUsers] = useState<User[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -619,20 +620,24 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
 
   if (!item) return null;
 
+  // eslint-disable-next-line no-console
+  console.debug("[ControlItemDrawer] render", {
+    drawerVersion: "system-match-850",
+    open,
+    loading,
+    itemId: item.id,
+    itemOrder: item.order_no,
+    itemTitle: item.title,
+    width: 850,
+  });
+
   // Loading state
   if (loading) {
     return (
-      <Drawer
-        open={open}
-        onClose={onClose}
-        anchor="right"
-        PaperProps={{
-          sx: { width: 600, margin: 0, borderRadius: 0 },
-        }}
-      >
+      <Drawer open={open} onClose={onClose} anchor="right">
         <Stack
           sx={{
-            width: 600,
+            width: 850,
             height: "100%",
             display: "flex",
             justifyContent: "center",
@@ -652,10 +657,10 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
       onClose={onClose}
       anchor="right"
       sx={{
-        width: 600,
-        margin: 0,
+        "width": 850,
+        "margin": 0,
         "& .MuiDrawer-paper": {
-          width: 600,
+          width: 850,
           margin: 0,
           borderRadius: 0,
           overflowX: "hidden",
@@ -666,58 +671,23 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
         },
       }}
     >
-      {/* DRAWER HEADER - matches NewControlPane exactly */}
-      <Box
-        sx={{
-          padding: "16px 20px",
-          borderBottom: "1px solid #eaecf0",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-        }}
+      {/* DRAWER HEADER */}
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        padding="15px 20px"
       >
-        <Box sx={{ flex: 1 }}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontSize: "16px",
-              fontWeight: 600,
-              color: "#1c2130",
-              mb: item.description ? 1.5 : 0,
-            }}
-          >
-            {item.order_no ? `${item.order_no} ` : ""}{item.title}
-          </Typography>
-          {/* Control Description Panel */}
-          {item.description && (
-            <Stack
-              sx={{
-                border: "1px solid #eee",
-                padding: "12px",
-                backgroundColor: "#f8f9fa",
-                borderRadius: "4px",
-              }}
-            >
-              <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
-                <strong>Description:</strong>
-              </Typography>
-              <Typography fontSize={13} color="#666">
-                {item.description}
-              </Typography>
-            </Stack>
-          )}
-        </Box>
-        <Button
-          onClick={onClose}
-          sx={{
-            minWidth: "auto",
-            padding: 0,
-            color: "#475467",
-          }}
-        >
-          <CloseIcon size={20} />
+        <Typography fontSize={15} fontWeight={700}>
+          {item.order_no ? `${item.order_no} ` : ""}
+          {item.title}
+        </Typography>
+        <Button onClick={onClose} sx={{ minWidth: "0", padding: "5px" }}>
+          <CloseIcon size={20} color="#475467" />
         </Button>
-      </Box>
+      </Stack>
+
+      <Divider />
 
       {/* OUTER TABS - LEVEL 3 ITEMS (like Subcontrols) */}
       {item.items && item.items.length > 0 && (
@@ -782,10 +752,10 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
           minHeight: 0,
         }}
       >
-        <Stack spacing={3} sx={{ padding: "20px" }}>
+        <Stack spacing={0} sx={{ padding: 0 }}>
           {/* Current Item Header (Level 3 title if exists) */}
           {item.items && item.items.length > 0 && item.items[selectedLevel3Index] && (
-            <Box>
+            <Box sx={{ padding: "15px 20px 0 20px" }}>
               <Typography
                 sx={{
                   fontSize: "16px",
@@ -801,14 +771,14 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                   sx={{
                     border: "1px solid #eee",
                     padding: "12px",
-                    backgroundColor: "#f8f9fa",
+                    backgroundColor: "background.accent",
                     borderRadius: "4px",
                   }}
                 >
                   <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
-                    <strong>Description:</strong>
+                    <strong>Question:</strong>
                   </Typography>
-                  <Typography fontSize={13} color="#666">
+                  <Typography fontSize={13} color="text.secondary">
                     {item.items[selectedLevel3Index].description}
                   </Typography>
                 </Stack>
@@ -820,7 +790,6 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
           <Box
             sx={{
               borderBottom: "1px solid #eaecf0",
-              mx: "-20px",
               px: "20px",
             }}
           >
@@ -892,41 +861,31 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
           {/* TAB CONTENT */}
           {/* Details Tab */}
           {activeTab === "details" && (
-            <Stack sx={{ mx: "-20px", padding: "15px 20px" }} gap="15px">
-                {/* Key Questions Panel - only show if no Level3 items OR at Level2 */}
-                {(!item.items || item.items.length === 0) && item.questions && item.questions.length > 0 && (
+            <Stack sx={{ padding: "15px 20px" }} gap="15px">
+                {/* Question Panel — mirrors system's Question panel; inside scroll */}
+                {item.description && (
                   <Stack
                     sx={{
-                      border: "1px solid #e8d5d5",
+                      border: "1px solid #eee",
                       padding: "12px",
-                      backgroundColor: "#fef5f5",
+                      backgroundColor: "background.accent",
                       borderRadius: "4px",
                     }}
                   >
-                    <Typography
-                      fontSize={13}
-                      sx={{ marginBottom: "8px", fontWeight: 600, display: "flex", alignItems: "center", gap: 1 }}
-                    >
-                      <HelpCircle size={14} />
-                      Key Questions:
+                    <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
+                      <strong>Question:</strong>
                     </Typography>
-                    <Stack spacing={1}>
-                      {item.questions.map((question, idx) => (
-                        <Typography
-                          key={idx}
-                          fontSize={12}
-                          color="#666"
-                          sx={{ pl: 1, position: "relative" }}
-                        >
-                          • {question}
-                        </Typography>
-                      ))}
-                    </Stack>
+                    <Typography fontSize={13} color="text.secondary">
+                      {item.description}
+                    </Typography>
                   </Stack>
                 )}
 
-                {/* Evidence Examples Panel */}
-                {item.evidence_examples && item.evidence_examples.length > 0 && (
+                {/* Hint Panel — mirrors system's Hint panel exactly (no icon). */}
+                {(((!item.items || item.items.length === 0) &&
+                  item.questions &&
+                  item.questions.length > 0) ||
+                  (item.evidence_examples && item.evidence_examples.length > 0)) && (
                   <Stack
                     sx={{
                       border: "1px solid #d5e8d5",
@@ -935,21 +894,18 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                       borderRadius: "4px",
                     }}
                   >
-                    <Typography
-                      fontSize={13}
-                      sx={{ marginBottom: "8px", fontWeight: 600, display: "flex", alignItems: "center", gap: 1 }}
-                    >
-                      <FileIcon size={14} />
-                      Evidence Examples:
+                    <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
+                      Hint:
                     </Typography>
                     <Stack spacing={1}>
-                      {item.evidence_examples.map((example, idx) => (
-                        <Typography
-                          key={idx}
-                          fontSize={12}
-                          color="#666"
-                          sx={{ pl: 1, position: "relative" }}
-                        >
+                      {(!item.items || item.items.length === 0) &&
+                        item.questions?.map((question, idx) => (
+                          <Typography key={`q-${idx}`} fontSize={13} color="#666">
+                            • {question}
+                          </Typography>
+                        ))}
+                      {item.evidence_examples?.map((example, idx) => (
+                        <Typography key={`e-${idx}`} fontSize={13} color="#666">
                           • {example}
                         </Typography>
                       ))}
@@ -957,31 +913,20 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                   </Stack>
                 )}
 
-                {/* Implementation Description */}
+                {/* Answer (Rich Text Editor) — mirrors EUAIActQuestionDrawerDialog */}
                 <Stack>
                   <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
-                    Implementation Description:
+                    Answer:
                   </Typography>
-                  <TextField
-                    multiline
-                    rows={3}
-                    value={formData.implementation_details}
-                    onChange={(e) => handleFieldChange("implementation_details", e.target.value)}
-                    placeholder="Describe how this requirement is implemented"
-                    size="small"
-                    fullWidth
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        fontSize: 13,
-                      },
-                    }}
+                  <RichTextEditor
+                    initialContent={formData.implementation_details}
+                    onContentChange={(html) => handleFieldChange("implementation_details", html)}
+                    placeholder="Type your answer..."
                   />
                 </Stack>
 
-                <Divider sx={{ my: 1 }} />
-
                 {/* Status */}
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size="small" sx={{ mt: "8px" }}>
                   <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
                     Status:
                   </Typography>
@@ -1007,114 +952,6 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                     ))}
                   </Select>
                 </FormControl>
-
-                {/* Owner */}
-                <FormControl fullWidth size="small">
-                  <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
-                    Owner:
-                  </Typography>
-                  <Select
-                    value={formData.owner}
-                    onChange={handleSelectChange("owner")}
-                    displayEmpty
-                    sx={{ height: 34, fontSize: 13 }}
-                  >
-                    <MenuItem value="">
-                      <em style={{ color: "#9ca3af" }}>Select owner</em>
-                    </MenuItem>
-                    {users.map((user) => (
-                      <MenuItem key={user.id} value={user.id.toString()}>
-                        {user.name} {user.surname}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                {/* Reviewer */}
-                <FormControl fullWidth size="small">
-                  <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
-                    Reviewer:
-                  </Typography>
-                  <Select
-                    value={formData.reviewer}
-                    onChange={handleSelectChange("reviewer")}
-                    displayEmpty
-                    sx={{ height: 34, fontSize: 13 }}
-                  >
-                    <MenuItem value="">
-                      <em style={{ color: "#9ca3af" }}>Select reviewer</em>
-                    </MenuItem>
-                    {users.map((user) => (
-                      <MenuItem key={user.id} value={user.id.toString()}>
-                        {user.name} {user.surname}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                {/* Approver */}
-                <FormControl fullWidth size="small">
-                  <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
-                    Approver:
-                  </Typography>
-                  <Select
-                    value={formData.approver}
-                    onChange={handleSelectChange("approver")}
-                    displayEmpty
-                    sx={{ height: 34, fontSize: 13 }}
-                  >
-                    <MenuItem value="">
-                      <em style={{ color: "#9ca3af" }}>Select approver</em>
-                    </MenuItem>
-                    {users.map((user) => (
-                      <MenuItem key={user.id} value={user.id.toString()}>
-                        {user.name} {user.surname}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                {/* Due Date */}
-                <Stack>
-                  <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
-                    Due date:
-                  </Typography>
-                  <TextField
-                    type="date"
-                    size="small"
-                    fullWidth
-                    value={formData.due_date}
-                    onChange={(e) => handleFieldChange("due_date", e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        height: 34,
-                        fontSize: 13,
-                      },
-                    }}
-                  />
-                </Stack>
-
-                {/* Auditor Feedback */}
-                <Stack>
-                  <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
-                    Auditor Feedback:
-                  </Typography>
-                  <TextField
-                    multiline
-                    rows={3}
-                    value={formData.auditor_feedback}
-                    onChange={(e) => handleFieldChange("auditor_feedback", e.target.value)}
-                    placeholder="Enter any feedback from internal or external audits..."
-                    size="small"
-                    fullWidth
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        fontSize: 13,
-                      },
-                    }}
-                  />
-                </Stack>
             </Stack>
           )}
 
@@ -1647,19 +1484,22 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
             flexDirection: "row",
             justifyContent: "flex-end",
             padding: "15px 20px",
+            marginTop: "auto",
           }}
         >
           <Button
             variant="contained"
             onClick={handleSave}
             disabled={saving}
-            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon size={16} />}
+            startIcon={
+              saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon size={16} />
+            }
             sx={{
-              backgroundColor: colors.primary,
-              border: `1px solid ${colors.primary}`,
-              gap: 1,
-              fontSize: 13,
-              height: 32,
+              "backgroundColor": colors.primary,
+              "border": `1px solid ${colors.primary}`,
+              "gap": 2,
+              "minWidth": "120px",
+              "height": "36px",
               "&:hover": {
                 backgroundColor: colors.primaryHover,
               },

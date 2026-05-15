@@ -198,14 +198,25 @@ export const FrameworkDetailDrawer: React.FC<FrameworkDetailDrawerProps> = ({
     return "#94A3B8";
   };
 
+  // eslint-disable-next-line no-console
+  console.debug("[FrameworkDetailDrawer] render", {
+    drawerVersion: "system-match-850",
+    open,
+    loading,
+    activeTab,
+    width: 850,
+  });
+
   return (
     <Drawer
       anchor="right"
       open={open}
       onClose={handleClose}
       sx={{
+        "width": 850,
+        "margin": 0,
         "& .MuiDrawer-paper": {
-          width: 600,
+          width: 850,
           margin: 0,
           borderRadius: 0,
           overflowX: "hidden",
@@ -551,6 +562,8 @@ export const FrameworkDetailDrawer: React.FC<FrameworkDetailDrawerProps> = ({
         ) : null}
       </Box>
 
+      <Divider />
+
       {/* Footer */}
       <Stack
         sx={{
@@ -559,19 +572,18 @@ export const FrameworkDetailDrawer: React.FC<FrameworkDetailDrawerProps> = ({
           justifyContent: "flex-end",
           padding: "15px 20px",
           marginTop: "auto",
-          borderTop: "1px solid #EAECF0",
         }}
       >
         <Button
-          variant="outlined"
+          variant="contained"
           onClick={handleClose}
           sx={{
-            height: 34,
-            fontSize: 13,
-            textTransform: "none",
-            borderColor: "#D0D5DD",
-            color: "#344054",
-            "&:hover": { backgroundColor: "#F9FAFB", borderColor: "#98A2B3" },
+            "backgroundColor": colors.primary,
+            "border": `1px solid ${colors.primary}`,
+            "gap": 2,
+            "minWidth": "120px",
+            "height": "36px",
+            "&:hover": { backgroundColor: colors.primary },
           }}
         >
           Close
