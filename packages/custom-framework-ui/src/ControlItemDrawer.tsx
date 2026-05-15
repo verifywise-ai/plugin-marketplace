@@ -47,7 +47,6 @@ import {
   Link as LinkIcon,
   MessageSquare,
   FolderOpen,
-  HelpCircle,
   AlertTriangle,
   Search as SearchIcon,
 } from "lucide-react";
@@ -690,27 +689,6 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
 
       <Divider />
 
-      {/* Control Description Panel (moved out of header to match system drawer) */}
-      {item.description && (
-        <Box sx={{ padding: "15px 20px 0 20px" }}>
-          <Stack
-            sx={{
-              border: "1px solid #eee",
-              padding: "12px",
-              backgroundColor: "#f8f9fa",
-              borderRadius: "4px",
-            }}
-          >
-            <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
-              <strong>Description:</strong>
-            </Typography>
-            <Typography fontSize={13} color="#666">
-              {item.description}
-            </Typography>
-          </Stack>
-        </Box>
-      )}
-
       {/* OUTER TABS - LEVEL 3 ITEMS (like Subcontrols) */}
       {item.items && item.items.length > 0 && (
         <Box
@@ -774,10 +752,10 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
           minHeight: 0,
         }}
       >
-        <Stack spacing={3} sx={{ padding: "20px" }}>
+        <Stack spacing={0} sx={{ padding: 0 }}>
           {/* Current Item Header (Level 3 title if exists) */}
           {item.items && item.items.length > 0 && item.items[selectedLevel3Index] && (
-            <Box>
+            <Box sx={{ padding: "15px 20px 0 20px" }}>
               <Typography
                 sx={{
                   fontSize: "16px",
@@ -793,14 +771,14 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                   sx={{
                     border: "1px solid #eee",
                     padding: "12px",
-                    backgroundColor: "#f8f9fa",
+                    backgroundColor: "background.accent",
                     borderRadius: "4px",
                   }}
                 >
                   <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
-                    <strong>Description:</strong>
+                    <strong>Question:</strong>
                   </Typography>
-                  <Typography fontSize={13} color="#666">
+                  <Typography fontSize={13} color="text.secondary">
                     {item.items[selectedLevel3Index].description}
                   </Typography>
                 </Stack>
@@ -812,7 +790,6 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
           <Box
             sx={{
               borderBottom: "1px solid #eaecf0",
-              mx: "-20px",
               px: "20px",
             }}
           >
@@ -884,41 +861,31 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
           {/* TAB CONTENT */}
           {/* Details Tab */}
           {activeTab === "details" && (
-            <Stack sx={{ mx: "-20px", padding: "15px 20px" }} gap="15px">
-                {/* Key Questions Panel - only show if no Level3 items OR at Level2 */}
-                {(!item.items || item.items.length === 0) && item.questions && item.questions.length > 0 && (
+            <Stack sx={{ padding: "15px 20px" }} gap="15px">
+                {/* Question Panel — mirrors system's Question panel; inside scroll */}
+                {item.description && (
                   <Stack
                     sx={{
-                      border: "1px solid #e8d5d5",
+                      border: "1px solid #eee",
                       padding: "12px",
-                      backgroundColor: "#fef5f5",
+                      backgroundColor: "background.accent",
                       borderRadius: "4px",
                     }}
                   >
-                    <Typography
-                      fontSize={13}
-                      sx={{ marginBottom: "8px", fontWeight: 600, display: "flex", alignItems: "center", gap: 1 }}
-                    >
-                      <HelpCircle size={14} />
-                      Key Questions:
+                    <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
+                      <strong>Question:</strong>
                     </Typography>
-                    <Stack spacing={1}>
-                      {item.questions.map((question, idx) => (
-                        <Typography
-                          key={idx}
-                          fontSize={12}
-                          color="#666"
-                          sx={{ pl: 1, position: "relative" }}
-                        >
-                          • {question}
-                        </Typography>
-                      ))}
-                    </Stack>
+                    <Typography fontSize={13} color="text.secondary">
+                      {item.description}
+                    </Typography>
                   </Stack>
                 )}
 
-                {/* Evidence Examples Panel */}
-                {item.evidence_examples && item.evidence_examples.length > 0 && (
+                {/* Hint Panel — mirrors system's Hint panel exactly (no icon). */}
+                {(((!item.items || item.items.length === 0) &&
+                  item.questions &&
+                  item.questions.length > 0) ||
+                  (item.evidence_examples && item.evidence_examples.length > 0)) && (
                   <Stack
                     sx={{
                       border: "1px solid #d5e8d5",
@@ -927,21 +894,18 @@ export const ControlItemDrawer: React.FC<ControlItemDrawerProps> = ({
                       borderRadius: "4px",
                     }}
                   >
-                    <Typography
-                      fontSize={13}
-                      sx={{ marginBottom: "8px", fontWeight: 600, display: "flex", alignItems: "center", gap: 1 }}
-                    >
-                      <FileIcon size={14} />
-                      Evidence Examples:
+                    <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
+                      Hint:
                     </Typography>
                     <Stack spacing={1}>
-                      {item.evidence_examples.map((example, idx) => (
-                        <Typography
-                          key={idx}
-                          fontSize={12}
-                          color="#666"
-                          sx={{ pl: 1, position: "relative" }}
-                        >
+                      {(!item.items || item.items.length === 0) &&
+                        item.questions?.map((question, idx) => (
+                          <Typography key={`q-${idx}`} fontSize={13} color="#666">
+                            • {question}
+                          </Typography>
+                        ))}
+                      {item.evidence_examples?.map((example, idx) => (
+                        <Typography key={`e-${idx}`} fontSize={13} color="#666">
                           • {example}
                         </Typography>
                       ))}
