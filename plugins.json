@@ -3057,6 +3057,71 @@
           }
         ]
       }
+    },
+    {
+      "key": "eucomplyhub-iso42001",
+      "name": "ISO 42001 AI Management System (eucomplyhub)",
+      "displayName": "ISO 42001 AI Management System (eucomplyhub)",
+      "description": "ISO/IEC 42001 AI Management System (AIMS) starter framework for mid-market SaaS preparing for EU AI Act Aug 2, 2026 enforcement.",
+      "region": "International",
+      "longDescription": "Community-contributed plugin implementing ISO/IEC 42001:2023 AI Management System. Covers management clauses 4-10 and selected Annex A controls mapped to EU AI Act articles (4, 9, 10, 14, 15, 26(6), 27, 50, 73). Maintained by eucomplyhub.com \u2014 EU AI Act + ISO 42001 audit specialist for mid-market SaaS ($5-15M ARR). Triple-framework methodology aligns ISO 42001 with EU AI Act + NIST AI RMF.",
+      "version": "1.0.0",
+      "author": "eucomplyhub.com",
+      "category": "compliance",
+      "iconUrl": "plugins/eucomplyhub-iso42001/icon.svg",
+      "documentationUrl": "https://eucomplyhub.com/iso42001",
+      "supportUrl": "https://eucomplyhub.com",
+      "isOfficial": false,
+      "isPublished": true,
+      "requiresConfiguration": false,
+      "installationType": "tenant_scoped",
+      "features": [
+        {
+          "name": "AIMS Clauses 4-10",
+          "description": "Management system clauses including risk assessment, impact assessment, and FRIA where Article 27 applies",
+          "displayOrder": 1
+        },
+        {
+          "name": "Annex A AI Controls",
+          "description": "Selected Annex A controls mapped to EU AI Act articles",
+          "displayOrder": 2
+        },
+        {
+          "name": "Triple-framework alignment",
+          "description": "Crosswalk to EU AI Act and NIST AI RMF for mid-market SaaS",
+          "displayOrder": 3
+        },
+        {
+          "name": "Auto-Import",
+          "description": "Framework automatically imported on plugin installation",
+          "displayOrder": 4
+        }
+      ],
+      "tags": [
+        "iso42001",
+        "iso-42001",
+        "aims",
+        "ai-management-system",
+        "eu-ai-act",
+        "triple-framework",
+        "mid-market-saas",
+        "compliance",
+        "ai-governance"
+      ],
+      "pluginPath": "plugins/eucomplyhub-iso42001",
+      "entryPoint": "dist/index.js",
+      "dependencies": {},
+      "ui": {
+        "bundleUrl": "/api/plugins/eucomplyhub-iso42001/ui/dist/index.esm.js",
+        "globalName": "PluginCustomFrameworkImport",
+        "slots": [
+          {
+            "slotId": "page.plugin.config",
+            "componentName": "FrameworkPluginConfig",
+            "renderType": "card"
+          }
+        ]
+      }
     }
   ],
   "categories": [
