@@ -1,0 +1,544 @@
+{
+  "id": "eucomplyhub-iso42001",
+  "name": "ISO/IEC 42001 AI Management System (eucomplyhub)",
+  "description": "ISO/IEC 42001:2023 AI Management System (AIMS) starter framework for mid-market SaaS. Operationalizes AI governance ahead of the August 2, 2026 EU AI Act Article 50 enforcement deadline. Maintained by eucomplyhub.com.",
+  "category": "AI Governance",
+  "tags": ["ISO 42001", "ISO/IEC 42001", "AIMS", "AI Management System", "EU AI Act", "Triple-framework", "Mid-market SaaS"],
+  "framework": {
+    "name": "ISO/IEC 42001 AI Management System (eucomplyhub)",
+    "description": "Starter framework for implementing ISO/IEC 42001:2023 AI Management System. Maps key management clauses (4-10) and Annex A AI controls. Designed for mid-market SaaS preparing for triple-framework alignment (EU AI Act + ISO 42001 + NIST AI RMF).",
+    "version": "1.0.0",
+    "is_organizational": true,
+    "hierarchy": {
+      "type": "two_level",
+      "level1_name": "Clause",
+      "level2_name": "Control"
+    },
+    "structure": [
+      {
+        "title": "Clause 4 Context of the Organization",
+        "description": "Understanding internal and external issues relevant to AI management, interested parties, AIMS scope, and the AI management system itself.",
+        "order_no": 1,
+        "items": [
+          {
+            "title": "4.1 Understanding the organization and its context",
+            "description": "Determine internal and external issues affecting AIMS outcomes including AI system roles (provider, deployer, distributor) and applicable regulatory regimes (EU AI Act, NIST AI RMF, sectoral rules).",
+            "order_no": 1,
+            "summary": "Document organizational AI context + role + regulatory exposure",
+            "questions": [
+              "What AI roles does the organization perform (provider, deployer, distributor, importer)?",
+              "Which jurisdictions and regulatory frameworks apply (EU AI Act, NIST AI RMF, sectoral)?",
+              "What internal/external issues affect AIMS outcomes?",
+              "Is the organizational AI strategy documented?"
+            ],
+            "evidence_examples": [
+              "AI context analysis document",
+              "Provider/deployer role determination per AI system",
+              "Regulatory applicability matrix",
+              "AI strategy document"
+            ]
+          },
+          {
+            "title": "4.2 Understanding needs and expectations of interested parties",
+            "description": "Identify interested parties (users, customers, regulators, employees, third parties) and their AI-related requirements.",
+            "order_no": 2,
+            "summary": "Map AI stakeholders and their requirements",
+            "questions": [
+              "Who are the interested parties for the AI systems?",
+              "What are their documented AI-related requirements?",
+              "How are conflicting stakeholder interests resolved?"
+            ],
+            "evidence_examples": [
+              "Stakeholder register",
+              "Requirements traceability matrix",
+              "Stakeholder communication log"
+            ]
+          },
+          {
+            "title": "4.3 Scope of the AIMS",
+            "description": "Define and document AIMS scope including AI systems in scope, boundaries, and exclusions with justification.",
+            "order_no": 3,
+            "summary": "Document AIMS scope statement with AI system inventory",
+            "questions": [
+              "Is the AIMS scope statement documented?",
+              "Are AI systems in scope inventoried?",
+              "Are exclusions justified?"
+            ],
+            "evidence_examples": [
+              "AIMS scope statement",
+              "AI system inventory (AI-BOM)",
+              "Scope exclusion justification"
+            ]
+          },
+          {
+            "title": "4.4 AI Management System",
+            "description": "Establish, implement, maintain, and continually improve the AIMS including required processes and their interactions.",
+            "order_no": 4,
+            "summary": "Establish AIMS with documented processes",
+            "questions": [
+              "Is the AIMS structure documented?",
+              "Are AIMS processes and interactions mapped?",
+              "Is there a continual improvement mechanism?"
+            ],
+            "evidence_examples": [
+              "AIMS manual",
+              "Process map",
+              "Continual improvement plan"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Clause 5 Leadership",
+        "description": "Top management commitment, AI policy, and roles, responsibilities, and authorities.",
+        "order_no": 2,
+        "items": [
+          {
+            "title": "5.1 Leadership and commitment",
+            "description": "Top management demonstrates leadership and commitment by ensuring AI policy and objectives are established, AIMS requirements are integrated, and resources are available.",
+            "order_no": 1,
+            "summary": "Document top management AI commitment",
+            "questions": [
+              "How does top management demonstrate AIMS commitment?",
+              "Are AI objectives integrated with business strategy?",
+              "Are adequate AI governance resources allocated?"
+            ],
+            "evidence_examples": [
+              "Management review minutes",
+              "AI governance budget allocation",
+              "Executive AI policy endorsement"
+            ]
+          },
+          {
+            "title": "5.2 AI Policy",
+            "description": "Establish, implement, and maintain an AI policy aligned with organizational strategic direction including commitment to responsible AI and continual improvement.",
+            "order_no": 2,
+            "summary": "Documented AI policy with responsible AI principles",
+            "questions": [
+              "Is the AI policy documented and communicated?",
+              "Does the policy cover responsible AI principles?",
+              "Are policy review cycles defined?"
+            ],
+            "evidence_examples": [
+              "AI policy document",
+              "Policy distribution records",
+              "Annual policy review minutes"
+            ]
+          },
+          {
+            "title": "5.3 Roles, responsibilities, and authorities",
+            "description": "Assign and communicate responsibilities and authorities for AIMS roles including AI risk owners, AI ethics officers, and Article 14 human oversight roles where applicable.",
+            "order_no": 3,
+            "summary": "RACI for AI governance roles including Article 14 oversight",
+            "questions": [
+              "Are AI governance roles documented (RACI)?",
+              "Is there a named AI risk owner?",
+              "Are Article 14 human oversight roles assigned per AI system?"
+            ],
+            "evidence_examples": [
+              "AI governance RACI matrix",
+              "Job descriptions for AI roles",
+              "Article 14 oversight assignment log"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Clause 6 Planning",
+        "description": "Actions to address AI risks and opportunities, AI objectives, planning AI changes, and AI impact assessment.",
+        "order_no": 3,
+        "items": [
+          {
+            "title": "6.1.2 AI risk assessment",
+            "description": "Define and apply an AI risk assessment process covering risks to individuals, groups, and society. Maps directly to NIST AI RMF MAP function and EU AI Act Article 9 risk management.",
+            "order_no": 1,
+            "summary": "AI risk assessment process aligned with EU AI Act Art. 9 + NIST RMF MAP",
+            "questions": [
+              "Is an AI risk assessment process documented?",
+              "Are risks to fundamental rights, safety, and fairness considered?",
+              "Does the process align with EU AI Act Article 9 and NIST AI RMF MAP?",
+              "Are risk acceptance criteria defined?"
+            ],
+            "evidence_examples": [
+              "AI risk assessment procedure",
+              "Risk register",
+              "Triple-framework crosswalk (EU AI Act Art. 9 + ISO 42001 6.1.2 + NIST RMF MAP)",
+              "Risk acceptance criteria"
+            ]
+          },
+          {
+            "title": "6.1.3 AI risk treatment",
+            "description": "Select and apply AI risk treatment options. Document residual risk acceptance. Implement Annex A controls as applicable.",
+            "order_no": 2,
+            "summary": "AI risk treatment plan with Annex A control selection",
+            "questions": [
+              "Is the AI risk treatment plan documented?",
+              "Are Annex A controls selected with justification (Statement of Applicability)?",
+              "Is residual risk accepted by risk owners?"
+            ],
+            "evidence_examples": [
+              "Statement of Applicability (SoA)",
+              "Risk treatment plan",
+              "Residual risk acceptance"
+            ]
+          },
+          {
+            "title": "6.1.4 AI system impact assessment",
+            "description": "Conduct AI system impact assessment covering individuals, groups, and society. For EU AI Act high-risk systems, aligns with Article 27 Fundamental Rights Impact Assessment (FRIA) for public-sector and creditworthiness/insurance deployers.",
+            "order_no": 3,
+            "summary": "AI impact assessment + FRIA where Article 27 applies",
+            "questions": [
+              "Is the AI impact assessment process documented?",
+              "For EU AI Act high-risk systems, has FRIA been conducted where Article 27 applies?",
+              "Are impacts to vulnerable groups considered?"
+            ],
+            "evidence_examples": [
+              "AI impact assessment report",
+              "FRIA report (Article 27 deployers)",
+              "Mitigation effectiveness review"
+            ]
+          },
+          {
+            "title": "6.2 AI objectives and planning",
+            "description": "Establish measurable AI objectives at relevant functions and levels with planning, resources, responsibilities, and evaluation methods.",
+            "order_no": 4,
+            "summary": "SMART AI objectives with measurement plan",
+            "questions": [
+              "Are AI objectives documented and measurable?",
+              "Is the planning aligned with risk treatment?",
+              "Are KPIs defined and tracked?"
+            ],
+            "evidence_examples": [
+              "AI objectives register",
+              "KPI dashboard",
+              "Annual planning document"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Clause 7 Support",
+        "description": "Resources, competence, awareness, communication, and documented information for the AIMS.",
+        "order_no": 4,
+        "items": [
+          {
+            "title": "7.2 Competence",
+            "description": "Determine necessary competence for persons affecting AI performance. Maintain training records. Includes AI literacy obligations under EU AI Act Article 4.",
+            "order_no": 1,
+            "summary": "AI competence + Article 4 AI literacy",
+            "questions": [
+              "Are required AI competencies documented?",
+              "Is Article 4 AI literacy training delivered to staff working with AI?",
+              "Are training records maintained?"
+            ],
+            "evidence_examples": [
+              "AI competence matrix",
+              "Article 4 literacy training records",
+              "Certification register"
+            ]
+          },
+          {
+            "title": "7.5 Documented information",
+            "description": "Create, update, and control documented information needed for the AIMS including Annex IV technical documentation for EU AI Act high-risk systems.",
+            "order_no": 2,
+            "summary": "Documented information control + Annex IV docs",
+            "questions": [
+              "Is documented information control procedure in place?",
+              "For EU AI Act high-risk systems, is Annex IV technical documentation maintained?",
+              "Is documentation version-controlled?"
+            ],
+            "evidence_examples": [
+              "Document control procedure",
+              "Annex IV technical documentation pack",
+              "Version control log"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Clause 8 Operation",
+        "description": "Operational planning and control, AI risk assessment performance, AI risk treatment implementation, AI impact assessment performance.",
+        "order_no": 5,
+        "items": [
+          {
+            "title": "8.1 Operational planning and control",
+            "description": "Plan, implement, and control processes needed to meet AIMS requirements including outsourced AI processes (third-party AI vendors).",
+            "order_no": 1,
+            "summary": "AI operational control including vendor management",
+            "questions": [
+              "Are AI operational processes documented?",
+              "Are third-party AI vendors managed under AIMS?",
+              "Are changes to AI systems controlled?"
+            ],
+            "evidence_examples": [
+              "Operational procedures",
+              "Third-party AI vendor register",
+              "Change management log"
+            ]
+          },
+          {
+            "title": "8.2 AI risk assessment performance",
+            "description": "Perform AI risk assessment at planned intervals and when significant changes occur. Maintain documented information.",
+            "order_no": 2,
+            "summary": "Periodic + trigger-based AI risk assessments",
+            "questions": [
+              "Are AI risk assessments conducted on schedule?",
+              "Are reassessments triggered by significant changes?",
+              "Are results documented?"
+            ],
+            "evidence_examples": [
+              "AI risk assessment schedule",
+              "Change-triggered assessment records",
+              "Updated risk register"
+            ]
+          },
+          {
+            "title": "8.4 AI system impact assessment performance",
+            "description": "Perform AI system impact assessment at planned intervals. For high-risk EU AI Act systems, maintain Article 26(6) post-market monitoring evidence.",
+            "order_no": 3,
+            "summary": "Impact assessments + Art. 26(6) post-market monitoring",
+            "questions": [
+              "Are AI impact assessments performed periodically?",
+              "For EU AI Act high-risk systems, is Article 26(6) post-market monitoring evidence collected?",
+              "Are findings reported to management?"
+            ],
+            "evidence_examples": [
+              "Impact assessment reports",
+              "Article 26(6) post-market monitoring log",
+              "Management review inputs"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Clause 9 Performance Evaluation",
+        "description": "Monitoring, measurement, analysis, evaluation, internal audit, and management review.",
+        "order_no": 6,
+        "items": [
+          {
+            "title": "9.1 Monitoring, measurement, analysis, evaluation",
+            "description": "Determine what to monitor, methods, and when. Includes Article 15 accuracy/robustness monitoring and Article 50 transparency compliance metrics.",
+            "order_no": 1,
+            "summary": "AI performance monitoring + Art. 15 + Art. 50 metrics",
+            "questions": [
+              "Are AI monitoring metrics defined?",
+              "Is Article 15 accuracy/robustness performance tracked?",
+              "Is Article 50 transparency compliance measured?"
+            ],
+            "evidence_examples": [
+              "Monitoring plan",
+              "Article 15 performance dashboard",
+              "Article 50 transparency compliance reports"
+            ]
+          },
+          {
+            "title": "9.2 Internal audit",
+            "description": "Conduct internal AIMS audits at planned intervals. Maintain audit program, criteria, and records.",
+            "order_no": 2,
+            "summary": "AIMS internal audit program",
+            "questions": [
+              "Is the internal AIMS audit program documented?",
+              "Are auditors competent and independent?",
+              "Are audit results reported to management?"
+            ],
+            "evidence_examples": [
+              "Internal audit program",
+              "Auditor qualification records",
+              "Audit reports"
+            ]
+          },
+          {
+            "title": "9.3 Management review",
+            "description": "Top management reviews the AIMS at planned intervals to ensure suitability, adequacy, and effectiveness.",
+            "order_no": 3,
+            "summary": "Periodic AIMS management review",
+            "questions": [
+              "Are management reviews conducted on schedule?",
+              "Do reviews cover required inputs (audits, risks, objectives, opportunities)?",
+              "Are decisions documented and tracked?"
+            ],
+            "evidence_examples": [
+              "Management review meeting minutes",
+              "Review input documentation",
+              "Action register from reviews"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Clause 10 Improvement",
+        "description": "Nonconformity, corrective action, and continual improvement of the AIMS.",
+        "order_no": 7,
+        "items": [
+          {
+            "title": "10.1 Continual improvement",
+            "description": "Continually improve AIMS suitability, adequacy, and effectiveness.",
+            "order_no": 1,
+            "summary": "Continual AIMS improvement",
+            "questions": [
+              "Are improvement opportunities identified systematically?",
+              "Are improvements implemented and tracked?",
+              "Is effectiveness of improvements measured?"
+            ],
+            "evidence_examples": [
+              "Improvement register",
+              "Implementation tracking",
+              "Effectiveness review reports"
+            ]
+          },
+          {
+            "title": "10.2 Nonconformity and corrective action",
+            "description": "When nonconformity occurs, react, evaluate need for action, implement, review effectiveness, and update AIMS as needed.",
+            "order_no": 2,
+            "summary": "Nonconformity + CAPA process",
+            "questions": [
+              "Is the nonconformity process documented?",
+              "Are corrective actions tracked to closure?",
+              "Is effectiveness of corrective actions verified?"
+            ],
+            "evidence_examples": [
+              "CAPA register",
+              "Root cause analysis records",
+              "Effectiveness verification"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Annex A — AI Controls (Selected)",
+        "description": "Reference AI control objectives and controls. Selection of representative controls; full Statement of Applicability covers all 38 Annex A controls.",
+        "order_no": 8,
+        "items": [
+          {
+            "title": "A.2.2 AI policy",
+            "description": "Define and document the organization's AI policy including responsible AI principles, risk appetite, and roles.",
+            "order_no": 1,
+            "summary": "Documented AI policy with responsible AI principles",
+            "questions": [
+              "Is the AI policy documented?",
+              "Does it address responsible AI principles?",
+              "Is the policy approved by management?"
+            ],
+            "evidence_examples": [
+              "AI policy v1.x",
+              "Management approval record",
+              "Policy training materials"
+            ]
+          },
+          {
+            "title": "A.3.2 AI roles and responsibilities",
+            "description": "Define, document, and assign AI-related roles and responsibilities across the AI lifecycle.",
+            "order_no": 2,
+            "summary": "AI lifecycle role assignment",
+            "questions": [
+              "Are AI roles defined across lifecycle stages?",
+              "Is there a documented assignment matrix?",
+              "Are roles communicated to assigned personnel?"
+            ],
+            "evidence_examples": [
+              "Role assignment matrix",
+              "Lifecycle role mapping",
+              "Communication records"
+            ]
+          },
+          {
+            "title": "A.6.2.2 AI impact assessment",
+            "description": "Conduct impact assessment of AI systems on individuals, groups, and society throughout the lifecycle.",
+            "order_no": 3,
+            "summary": "Lifecycle AI impact assessment",
+            "questions": [
+              "Are impact assessments performed before deployment?",
+              "Are assessments repeated at significant changes?",
+              "Are vulnerable groups specifically considered?"
+            ],
+            "evidence_examples": [
+              "Pre-deployment impact assessment",
+              "Periodic reassessment records",
+              "Vulnerable group analysis"
+            ]
+          },
+          {
+            "title": "A.7.4 Data quality for AI systems",
+            "description": "Ensure data used for AI system development and operation meets quality criteria including representativeness, accuracy, and bias mitigation. Aligns with EU AI Act Article 10.",
+            "order_no": 4,
+            "summary": "Data quality + Art. 10 bias mitigation",
+            "questions": [
+              "Are data quality criteria defined?",
+              "Is Article 10 data governance documented?",
+              "Are bias detection and mitigation procedures in place?"
+            ],
+            "evidence_examples": [
+              "Data quality procedure",
+              "Article 10 data governance documentation",
+              "Bias testing reports"
+            ]
+          },
+          {
+            "title": "A.8.2 System and computing resources documentation",
+            "description": "Document AI system architecture, computing resources, and dependencies including model cards and data sheets.",
+            "order_no": 5,
+            "summary": "AI system architecture documentation + model cards",
+            "questions": [
+              "Are AI system architectures documented?",
+              "Are model cards maintained?",
+              "Are data sheets created for training datasets?"
+            ],
+            "evidence_examples": [
+              "Architecture diagrams",
+              "Model card register",
+              "Data sheets"
+            ]
+          },
+          {
+            "title": "A.9.2 Information for interested parties (transparency)",
+            "description": "Provide appropriate information to interested parties about the AI system. Maps directly to EU AI Act Article 50 transparency obligations.",
+            "order_no": 6,
+            "summary": "Transparency disclosure + EU AI Act Art. 50",
+            "questions": [
+              "Are users informed when interacting with AI?",
+              "Is AI-generated content labeled per Article 50?",
+              "Are downstream deployers provided required information?"
+            ],
+            "evidence_examples": [
+              "Article 50 disclosure templates",
+              "User interface transparency",
+              "Provider-to-deployer documentation"
+            ]
+          },
+          {
+            "title": "A.9.3 External reporting",
+            "description": "Report on AI system performance, incidents, and impacts to external stakeholders as required. Includes EU AI Act Article 73 serious incident reporting.",
+            "order_no": 7,
+            "summary": "External reporting + Art. 73 incident reporting",
+            "questions": [
+              "Is external reporting procedure documented?",
+              "Are Article 73 serious incident reports submitted within deadlines?",
+              "Are stakeholder reports timely and accurate?"
+            ],
+            "evidence_examples": [
+              "External reporting procedure",
+              "Article 73 incident reports",
+              "Stakeholder communication log"
+            ]
+          },
+          {
+            "title": "A.10.2 Human oversight",
+            "description": "Ensure appropriate human oversight of AI systems throughout the lifecycle. Maps directly to EU AI Act Article 14 human oversight requirements.",
+            "order_no": 8,
+            "summary": "Human oversight + EU AI Act Art. 14",
+            "questions": [
+              "Are human oversight measures defined per AI system?",
+              "For EU AI Act high-risk systems, are Article 14 oversight conditions implemented?",
+              "Are override mechanisms tested?"
+            ],
+            "evidence_examples": [
+              "Human oversight design documents",
+              "Article 14 oversight assignment per system",
+              "Override mechanism test records"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
